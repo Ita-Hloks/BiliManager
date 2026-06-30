@@ -1,0 +1,21 @@
+#bili-filter-extension-badge {
+  position: fixed;
+  right: 18px;
+  bottom: 86px;
+  z-index: 2147483647;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(0, 161, 214, 0.45);
+  border-radius: 8px;
+  background: rgba(20, 22, 26, 0.92);
+  color: #f7fbff;
+  font: 700 12px/1 system-ui, sans-serif;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+#bili-filter-extension-badge:hover,
+#bili-filter-extension-badge.bili-filter-extension-badge--active {
+  background: #00a1d6;
+  border-color: #00a1d6;
+}

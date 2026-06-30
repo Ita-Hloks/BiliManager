@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "BiliManager",
+  "description": "A Bilibili management tool that allows you to focus on the current task and keep track of your browsing history!",
+  "version": "0.0.0",
+  "action": {
+    "default_title": "Bili Filter",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.bilibili.com/*",
+    "https://search.bilibili.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.bilibili.com/*",
+        "https://search.bilibili.com/*"
+      ],
+      "js": [
+        "assets/content.js"
+      ],
+      "css": [
+        "assets/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
