@@ -80,7 +80,9 @@ function PopupApp() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-zinc-100">{feature.title}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-zinc-400">{feature.description}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-zinc-400">
+                  {feature.description}
+                </span>
               </span>
               <span
                 className={[

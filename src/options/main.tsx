@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Database, KeyRound, Palette, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import "../styles/globals.css";
 import { defaultSettings, getSettings } from "../shared/storage";
 import type { ExtensionSettings } from "../shared/types";
 
 function OptionsApp() {
-  const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
+  const [_settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
 
   useEffect(() => {
     void getSettings().then(setSettings);
@@ -16,10 +16,8 @@ function OptionsApp() {
     <main className="min-h-screen bg-zinc-950 px-6 py-8 text-zinc-100">
       <div className="mx-auto max-w-5xl">
         <header className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-normal">Bili Filter 设置</h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            Demo
-          </p>
+          <h1 className="text-2xl font-semibold tracking-normal">BiliManager 设置</h1>
+          <p className="mt-2 text-sm text-zinc-400">Demo</p>
         </header>
 
         <section className="grid gap-4 md:grid-cols-2">

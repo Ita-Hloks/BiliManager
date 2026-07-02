@@ -19,7 +19,10 @@ function hasChromeStorage() {
 export async function getSettings(): Promise<ExtensionSettings> {
   if (!hasChromeStorage()) return defaultSettings;
   const result = await chrome.storage.local.get(SETTINGS_KEY);
-  return { ...defaultSettings, ...(result[SETTINGS_KEY] as Partial<ExtensionSettings> | undefined) };
+  return {
+    ...defaultSettings,
+    ...(result[SETTINGS_KEY] as Partial<ExtensionSettings> | undefined),
+  };
 }
 
 export async function saveSettings(settings: ExtensionSettings): Promise<void> {

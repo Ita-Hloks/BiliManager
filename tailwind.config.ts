@@ -8,10 +8,10 @@ export default {
         bili: {
           blue: "#00a1d6",
           pink: "#fb7299",
-          ink: "#15161a"
-        }
-      }
-    }
+          ink: "#15161a",
+        },
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 } satisfies Config;
