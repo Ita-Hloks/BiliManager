@@ -323,6 +323,10 @@ function bindFilterGateEvents() {
   document.addEventListener("auxclick", stopLockedNavigation, true);
   document.addEventListener("keydown", stopLockedKeyboardNavigation, true);
   document.addEventListener("contextmenu", handleFilteredContextMenu, true);
+  document.addEventListener("pointerover", stopLockedHoverDetails, true);
+  document.addEventListener("pointerenter", stopLockedHoverDetails, true);
+  document.addEventListener("mouseover", stopLockedHoverDetails, true);
+  document.addEventListener("mouseenter", stopLockedHoverDetails, true);
   filterGateEventsBound = true;
 }
 
@@ -338,6 +342,15 @@ function stopLockedNavigation(event: MouseEvent) {
 function stopLockedKeyboardNavigation(event: KeyboardEvent) {
   if (event.key !== "Enter" && event.key !== " ") return;
 
+  const cardEl = getEventFilteredCard(event);
+  if (!cardEl || getGateState(cardEl) === "unlocked") return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+}
+
+function stopLockedHoverDetails(event: MouseEvent | PointerEvent) {
   const cardEl = getEventFilteredCard(event);
   if (!cardEl || getGateState(cardEl) === "unlocked") return;
 
