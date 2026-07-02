@@ -24,8 +24,11 @@ const REASON_TEXT_ATTR = "data-bili-manager-filter-reason-text";
 const REASON_CLASS = "bili-manager-filter-reasons";
 const TITLE_CLASS = "bili-manager-filtered-title";
 const META_CLASS = "bili-manager-filtered-meta";
+const PAGE_DARK_CLASS = "bili-manager-page-dark";
+const PAGE_LIGHT_CLASS = "bili-manager-page-light";
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
 type FilterGateState = "locked" | "peek" | "unlocked";
+type PageTheme = "dark" | "light";
 const TEXT = {
   titleRuleLabel: "过滤词",
   uploaderRuleLabel: "UP 主过滤词",
@@ -124,6 +127,7 @@ export function applySearchFilter(settings: SearchFilterSettings): SearchFilterS
 
   const cards = collectSearchCards();
   const regexErrors = new Set<string>();
+  const pageTheme = detectPageTheme();
   let filtered = 0;
 
   for (const card of cards) {
@@ -132,7 +136,7 @@ export function applySearchFilter(settings: SearchFilterSettings): SearchFilterS
 
     if (settings.enabled && result.reasons.length > 0) {
       filtered += 1;
-      markFiltered(card, result.reasons);
+      markFiltered(card, result.reasons, pageTheme);
     } else {
       clearFilterState(card.cardEl);
     }
@@ -259,11 +263,12 @@ function evaluateCard(card: SearchCard, settings: SearchFilterSettings): FilterR
   return { reasons, regexErrors };
 }
 
-function markFiltered(card: SearchCard, reasons: string[]) {
+function markFiltered(card: SearchCard, reasons: string[], pageTheme: PageTheme) {
   bindFilterGateEvents();
   if (!card.cardEl.hasAttribute(GATE_ATTR)) card.cardEl.setAttribute(GATE_ATTR, "locked");
 
   card.cardEl.setAttribute(STATE_ATTR, "filtered");
+  applyPageThemeClass(card.cardEl, pageTheme);
   card.cardEl.classList.add("bili-manager-filtered");
   card.titleEl?.classList.add(TITLE_CLASS);
   card.metadataEls.forEach(element => element.classList.add(META_CLASS));
@@ -298,7 +303,7 @@ function clearFilterState(cardEl: HTMLElement) {
   cardEl.removeAttribute(STATE_ATTR);
   cardEl.removeAttribute(GATE_ATTR);
   cardEl.removeAttribute(REASON_TEXT_ATTR);
-  cardEl.classList.remove("bili-manager-filtered");
+  cardEl.classList.remove("bili-manager-filtered", PAGE_DARK_CLASS, PAGE_LIGHT_CLASS);
   cardEl.querySelector(`.${REASON_CLASS}`)?.remove();
   cardEl
     .querySelectorAll<HTMLElement>(".bili-manager-filtered-cover")
@@ -430,6 +435,92 @@ function restoreTitleTooltips(cardEl: HTMLElement) {
     element.removeAttribute(ORIGINAL_TITLE_ATTR);
     if (title !== null) element.setAttribute("title", title);
   });
+}
+
+function applyPageThemeClass(cardEl: HTMLElement, pageTheme: PageTheme) {
+  cardEl.classList.toggle(PAGE_DARK_CLASS, pageTheme === "dark");
+  cardEl.classList.toggle(PAGE_LIGHT_CLASS, pageTheme === "light");
+}
+
+function detectPageTheme(): PageTheme {
+  const explicitTheme = detectExplicitTheme();
+  if (explicitTheme) return explicitTheme;
+
+  const colorScheme = [
+    getComputedStyle(document.documentElement).colorScheme,
+    getComputedStyle(document.body).colorScheme,
+  ]
+    .join(" ")
+    .toLowerCase();
+  if (colorScheme.includes("dark")) return "dark";
+
+  return detectBackgroundTheme();
+}
+
+function detectExplicitTheme(): PageTheme | null {
+  const themeText = [document.documentElement, document.body]
+    .map(element =>
+      [
+        element.dataset.theme,
+        element.dataset.colorMode,
+        element.dataset.mode,
+        element.className,
+        element.getAttribute("theme"),
+      ].join(" "),
+    )
+    .join(" ")
+    .toLowerCase();
+
+  if (/\b(?:dark|night|black|theme-dark)\b/.test(themeText)) return "dark";
+  if (/\b(?:light|white|theme-light)\b/.test(themeText)) return "light";
+  return null;
+}
+
+function detectBackgroundTheme(): PageTheme {
+  const candidates = [
+    document.querySelector<HTMLElement>(".search-page"),
+    document.querySelector<HTMLElement>("#app"),
+    document.querySelector<HTMLElement>("#i_cecream"),
+    document.body,
+    document.documentElement,
+  ];
+
+  for (const element of candidates) {
+    if (!element) continue;
+
+    const color = parseRgbColor(getComputedStyle(element).backgroundColor);
+    if (!color || color.alpha < 0.2) continue;
+
+    return getRelativeLuminance(color) < 0.5 ? "dark" : "light";
+  }
+
+  return "light";
+}
+
+function parseRgbColor(
+  value: string,
+): { red: number; green: number; blue: number; alpha: number } | null {
+  const match = value.match(/rgba?\(([^)]+)\)/i);
+  if (!match?.[1]) return null;
+
+  const parts = match[1].split(",").map(part => Number.parseFloat(part.trim()));
+  if (parts.length < 3 || parts.some(part => Number.isNaN(part))) return null;
+
+  return {
+    red: parts[0] ?? 0,
+    green: parts[1] ?? 0,
+    blue: parts[2] ?? 0,
+    alpha: parts[3] ?? 1,
+  };
+}
+
+function getRelativeLuminance(color: { red: number; green: number; blue: number }) {
+  const [red, green, blue] = [color.red, color.green, color.blue].map(channel => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
 function hasTitleHighlight(titleEl: HTMLElement | null): boolean {

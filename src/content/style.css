@@ -12,9 +12,19 @@
     transform 220ms ease;
 }
 
+.bili-manager-page-light .bili-manager-filtered-cover,
+.bili-manager-page-light img:first-of-type {
+  filter: grayscale(1) blur(6px) brightness(0.86) opacity(0.88) !important;
+}
+
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover,
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] img:first-of-type {
   filter: grayscale(1) blur(6px) brightness(0.58) opacity(0.86) !important;
+}
+
+.bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover,
+.bili-manager-page-light[data-bili-manager-filter-gate="peek"] img:first-of-type {
+  filter: grayscale(1) blur(6px) brightness(0.96) opacity(0.92) !important;
 }
 
 .bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-cover,
@@ -75,9 +85,21 @@
     background 180ms ease;
 }
 
+.bili-manager-page-light .bili-manager-filter-reasons {
+  background: rgba(255, 255, 255, 0.76);
+  color: rgba(30, 41, 59, 0.72);
+  text-shadow: 0 1px 10px rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px) saturate(1.08);
+}
+
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
   background: rgba(8, 8, 10, 0.28);
   color: rgba(255, 255, 255, 0.86);
+}
+
+.bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
+  background: rgba(255, 255, 255, 0.56);
+  color: rgba(15, 23, 42, 0.86);
 }
 
 .bili-manager-filter-reasons--hidden {
