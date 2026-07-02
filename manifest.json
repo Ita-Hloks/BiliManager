@@ -12,25 +12,13 @@
     "service_worker": "assets/background.js",
     "type": "module"
   },
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "https://*.bilibili.com/*",
-    "https://search.bilibili.com/*"
-  ],
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.bilibili.com/*", "https://search.bilibili.com/*"],
   "content_scripts": [
     {
-      "matches": [
-        "https://*.bilibili.com/*",
-        "https://search.bilibili.com/*"
-      ],
-      "js": [
-        "assets/content.js"
-      ],
-      "css": [
-        "assets/content.css"
-      ],
+      "matches": ["https://*.bilibili.com/*", "https://search.bilibili.com/*"],
+      "js": ["assets/content.js"],
+      "css": ["assets/content.css"],
       "run_at": "document_idle"
     }
   ]

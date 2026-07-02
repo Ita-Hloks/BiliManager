@@ -9,7 +9,9 @@
   border-radius: 8px;
   background: rgba(20, 22, 26, 0.92);
   color: #f7fbff;
-  font: 700 12px/1 system-ui, sans-serif;
+  font:
+    700 12px/1 system-ui,
+    sans-serif;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
   cursor: pointer;
 }

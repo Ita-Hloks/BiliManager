@@ -1,0 +1,13 @@
+if command -v node >/dev/null 2>&1; then
+  npm_cli=$(node -p "const fs=require('fs'); const path=require('path'); const p=path.join(path.dirname(process.execPath),'node_modules','npm','bin','npm-cli.js'); fs.existsSync(p) ? p.replace(/\\\\/g, '/') : ''")
+  if [ -n "$npm_cli" ]; then
+    node "$npm_cli" run precommit
+    exit $?
+  fi
+fi
+
+if command -v npm.cmd >/dev/null 2>&1; then
+  npm.cmd run precommit
+else
+  npm run precommit
+fi
