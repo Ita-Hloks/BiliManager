@@ -17,6 +17,11 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
 
+    if (message.type === "BILI_FILTER_SETTINGS_UPDATED") {
+      sendResponse({ ok: true, source: "background", receivedAt: new Date().toISOString() });
+      return true;
+    }
+
     sendResponse({ ok: false, error: "Unknown message" });
     return true;
   },

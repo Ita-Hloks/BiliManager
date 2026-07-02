@@ -12,7 +12,7 @@
     "service_worker": "assets/background.js",
     "type": "module"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "host_permissions": ["https://*.bilibili.com/*", "https://search.bilibili.com/*"],
   "content_scripts": [
     {
