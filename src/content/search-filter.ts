@@ -18,10 +18,14 @@ type FilterResult = {
 };
 
 const STATE_ATTR = "data-bili-manager-filter-state";
+const GATE_ATTR = "data-bili-manager-filter-gate";
+const ORIGINAL_TITLE_ATTR = "data-bili-manager-original-title";
+const REASON_TEXT_ATTR = "data-bili-manager-filter-reason-text";
 const REASON_CLASS = "bili-manager-filter-reasons";
 const TITLE_CLASS = "bili-manager-filtered-title";
 const META_CLASS = "bili-manager-filtered-meta";
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
+type FilterGateState = "locked" | "peek" | "unlocked";
 const TEXT = {
   titleRuleLabel: "过滤词",
   uploaderRuleLabel: "UP 主过滤词",
@@ -35,6 +39,7 @@ const TEXT = {
   danmakuLabels: ["弹幕"],
   tenThousand: "万",
   hundredMillion: "亿",
+  gateGuide: "再次右键显示封面，之后可点击进入",
 };
 
 const selectors = {
@@ -255,6 +260,9 @@ function evaluateCard(card: SearchCard, settings: SearchFilterSettings): FilterR
 }
 
 function markFiltered(card: SearchCard, reasons: string[]) {
+  bindFilterGateEvents();
+  if (!card.cardEl.hasAttribute(GATE_ATTR)) card.cardEl.setAttribute(GATE_ATTR, "locked");
+
   card.cardEl.setAttribute(STATE_ATTR, "filtered");
   card.cardEl.classList.add("bili-manager-filtered");
   card.titleEl?.classList.add(TITLE_CLASS);
@@ -274,9 +282,9 @@ function markFiltered(card: SearchCard, reasons: string[]) {
   }
 
   const visibleReason = reasons.join(" / ");
-  const tooltipReason = reasons.join("\n");
-  if (reasonEl.textContent !== visibleReason) reasonEl.textContent = visibleReason;
-  if (reasonEl.title !== tooltipReason) reasonEl.title = tooltipReason;
+  card.cardEl.setAttribute(REASON_TEXT_ATTR, visibleReason);
+  updateReasonOverlay(card.cardEl, reasonEl, visibleReason);
+  suppressTitleTooltips(card.cardEl);
 }
 
 function clearAllFilterStates() {
@@ -286,7 +294,10 @@ function clearAllFilterStates() {
 }
 
 function clearFilterState(cardEl: HTMLElement) {
+  restoreTitleTooltips(cardEl);
   cardEl.removeAttribute(STATE_ATTR);
+  cardEl.removeAttribute(GATE_ATTR);
+  cardEl.removeAttribute(REASON_TEXT_ATTR);
   cardEl.classList.remove("bili-manager-filtered");
   cardEl.querySelector(`.${REASON_CLASS}`)?.remove();
   cardEl
@@ -301,6 +312,111 @@ function clearFilterState(cardEl: HTMLElement) {
   cardEl
     .querySelectorAll<HTMLElement>(".bili-manager-preview-disabled")
     .forEach(element => element.classList.remove("bili-manager-preview-disabled"));
+}
+
+let filterGateEventsBound = false;
+
+function bindFilterGateEvents() {
+  if (filterGateEventsBound) return;
+
+  document.addEventListener("click", stopLockedNavigation, true);
+  document.addEventListener("auxclick", stopLockedNavigation, true);
+  document.addEventListener("keydown", stopLockedKeyboardNavigation, true);
+  document.addEventListener("contextmenu", handleFilteredContextMenu, true);
+  filterGateEventsBound = true;
+}
+
+function stopLockedNavigation(event: MouseEvent) {
+  const cardEl = getEventFilteredCard(event);
+  if (!cardEl || getGateState(cardEl) === "unlocked") return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+}
+
+function stopLockedKeyboardNavigation(event: KeyboardEvent) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+
+  const cardEl = getEventFilteredCard(event);
+  if (!cardEl || getGateState(cardEl) === "unlocked") return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+}
+
+function handleFilteredContextMenu(event: MouseEvent) {
+  const cardEl = getEventFilteredCard(event);
+  if (!cardEl) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+
+  const currentState = getGateState(cardEl);
+  const nextState: FilterGateState =
+    currentState === "locked" ? "peek" : currentState === "peek" ? "unlocked" : "locked";
+  cardEl.setAttribute(GATE_ATTR, nextState);
+  refreshReasonOverlay(cardEl);
+}
+
+function getEventFilteredCard(event: Event): HTMLElement | null {
+  const target = event.target;
+  if (!(target instanceof Element)) return null;
+  return target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
+}
+
+function getGateState(cardEl: HTMLElement): FilterGateState {
+  const state = cardEl.getAttribute(GATE_ATTR);
+  if (state === "peek" || state === "unlocked") return state;
+  return "locked";
+}
+
+function refreshReasonOverlay(cardEl: HTMLElement) {
+  const reasonEl = cardEl.querySelector<HTMLElement>(`.${REASON_CLASS}`);
+  if (!reasonEl) return;
+
+  updateReasonOverlay(cardEl, reasonEl, cardEl.getAttribute(REASON_TEXT_ATTR) ?? "");
+}
+
+function updateReasonOverlay(cardEl: HTMLElement, reasonEl: HTMLElement, visibleReason: string) {
+  const gateState = getGateState(cardEl);
+  const text = gateState === "peek" ? TEXT.gateGuide : visibleReason;
+
+  reasonEl.classList.toggle("bili-manager-filter-reasons--hidden", gateState === "unlocked");
+  if (reasonEl.textContent !== text) reasonEl.textContent = text;
+  reasonEl.setAttribute("aria-label", text || visibleReason);
+  reasonEl.removeAttribute("title");
+}
+
+function suppressTitleTooltips(cardEl: HTMLElement) {
+  const titledElements = [
+    ...(cardEl.hasAttribute("title") ? [cardEl] : []),
+    ...cardEl.querySelectorAll<HTMLElement>("[title]"),
+  ];
+
+  titledElements.forEach(element => {
+    const title = element.getAttribute("title");
+    if (title === null) return;
+
+    if (!element.hasAttribute(ORIGINAL_TITLE_ATTR))
+      element.setAttribute(ORIGINAL_TITLE_ATTR, title);
+    element.removeAttribute("title");
+  });
+}
+
+function restoreTitleTooltips(cardEl: HTMLElement) {
+  const restoredElements = [
+    ...(cardEl.hasAttribute(ORIGINAL_TITLE_ATTR) ? [cardEl] : []),
+    ...cardEl.querySelectorAll<HTMLElement>(`[${ORIGINAL_TITLE_ATTR}]`),
+  ];
+
+  restoredElements.forEach(element => {
+    const title = element.getAttribute(ORIGINAL_TITLE_ATTR);
+    element.removeAttribute(ORIGINAL_TITLE_ATTR);
+    if (title !== null) element.setAttribute("title", title);
+  });
 }
 
 function hasTitleHighlight(titleEl: HTMLElement | null): boolean {
