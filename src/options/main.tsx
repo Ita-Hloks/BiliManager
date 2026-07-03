@@ -13,6 +13,10 @@ function OptionsApp() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
   const palette = getThemePalette(isDark);
+  const ratePercent = toRatePercent(settings.searchFilter.minDanmakuViewRate);
+  const rangeStyle = {
+    "--bm-range-progress": `${ratePercent * 100}%`,
+  } as React.CSSProperties;
 
   useEffect(() => {
     void getSettings().then(setSettings);
@@ -51,7 +55,7 @@ function OptionsApp() {
     try {
       const next = parseImportedSettings(await file.text(), settings);
       await updateSettings(next);
-      setImportMessage("已导入完整设置");
+      setImportMessage("已导入完整配置");
     } catch (error) {
       setImportMessage(error instanceof Error ? error.message : "导入失败");
     } finally {
@@ -73,133 +77,194 @@ function OptionsApp() {
     link.download = `bili-manager-settings-${formatDateForFile(new Date())}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setImportMessage("已导出完整设置");
+    setImportMessage("已导出完整配置");
   }
-
-  const ratePercent = toRatePercent(settings.searchFilter.minDanmakuViewRate);
 
   return (
     <main
-      className={`min-h-screen px-6 py-8 transition-colors duration-300 ease-out ${palette.page}`}
+      className={`min-h-screen px-4 py-6 transition-colors duration-300 ease-out sm:px-6 ${palette.page}`}
     >
-      <div className="mx-auto max-w-4xl">
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div className="mx-auto max-w-5xl">
+        <header className={palette.header}>
           <div>
-            <h1 className="text-2xl font-semibold tracking-normal">BiliManager 设置</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold tracking-normal">
+                <span className="text-bili-blue">Bili</span>{" "}
+                <span className={palette.brandText}>Manager</span>
+              </h1>
+              <span className={palette.headerBadge}>偏好中心</span>
+            </div>
             <p className={`mt-2 text-sm ${palette.mutedText}`}>
-              搜索结果过滤规则会自动保存并同步到已打开的搜索页。
+              规则会自动保存，并同步到已经打开的 B 站搜索页。
             </p>
           </div>
           <ThemeSwitch value={settings.theme} isDark={isDark} onChange={updateTheme} />
         </header>
 
-        <section
-          className={`rounded-md border shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl ${palette.panel}`}
-        >
-          <div
-            className={`flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 ${palette.panelDivider}`}
-          >
-            <div className="flex items-center gap-3">
-              <span className={palette.iconBox}>
-                <Filter className="h-5 w-5" />
-              </span>
-              <div>
-                <h2 className={`text-base font-medium ${palette.heading}`}>搜索结果过滤</h2>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                ref={importInputRef}
-                accept="application/json,.json,.txt"
-                className="hidden"
-                type="file"
-                onChange={event => {
-                  const file = event.target.files?.[0];
-                  if (file) void importSettings(file);
-                }}
-              />
-              <button
-                className={palette.secondaryButton}
-                onClick={() => importInputRef.current?.click()}
-                type="button"
-              >
-                <Upload className="h-4 w-4" />
-                导入
-              </button>
-              <button className={palette.secondaryButton} onClick={exportSettings} type="button">
-                <Download className="h-4 w-4" />
-                导出
-              </button>
-            </div>
-          </div>
+        <div className="grid gap-4 lg:grid-cols-[176px_minmax(0,1fr)]">
+          <nav className={palette.sideNav} aria-label="偏好分类">
+            <a className={palette.sideNavItemActive} href="#filter">
+              <Filter className="h-4 w-4" />
+              过滤
+            </a>
+            <a className={palette.sideNavItem} href="#appearance">
+              <Monitor className="h-4 w-4" />
+              外观
+            </a>
+            <a className={palette.sideNavItem} href="#data">
+              <Download className="h-4 w-4" />
+              配置
+            </a>
+          </nav>
 
-          <div className="space-y-5 p-5">
-            {importMessage && <p className={palette.notice}>{importMessage}</p>}
-            <RuleListEditor
-              label="过滤词正则"
-              palette={palette}
-              placeholder="输入后按回车，例如：猎奇|居然|的一集|这下"
-              value={settings.searchFilter.titlePattern}
-              onChange={titlePattern => void updateSearchFilter({ titlePattern })}
-            />
-            <RuleListEditor
-              label="UP 主过滤词正则"
-              palette={palette}
-              placeholder="输入后按回车，例如：搞笑|电影|放映"
-              value={settings.searchFilter.uploaderPattern}
-              onChange={uploaderPattern => void updateSearchFilter({ uploaderPattern })}
-            />
-            <label className="block">
-              <span className={`mb-2 block text-sm font-medium ${palette.label}`}>
-                最低弹幕/播放互动率
-              </span>
-              <div className="flex max-w-xl items-center gap-3">
-                <input
-                  className="h-2 flex-1 accent-sky-500"
-                  max="1"
-                  min="0"
-                  step="0.01"
-                  type="range"
-                  value={ratePercent.toString()}
-                  onChange={event =>
+          <div className="space-y-4">
+            <section id="filter" className={palette.panel}>
+              <div className={palette.categoryHeader}>
+                <button
+                  aria-label={settings.searchFilter.enabled ? "关闭过滤" : "开启过滤"}
+                  className={palette.categorySwitchButton}
+                  onClick={() =>
                     void updateSearchFilter({
-                      minDanmakuViewRate: fromRatePercent(event.target.value),
+                      enabled: !settings.searchFilter.enabled,
                     })
                   }
-                />
-                <input
-                  className={palette.numberInput}
-                  max="1"
-                  min="0"
-                  step="0.01"
-                  type="number"
-                  value={ratePercent.toString()}
-                  onChange={event =>
-                    void updateSearchFilter({
-                      minDanmakuViewRate: fromRatePercent(event.target.value),
-                    })
-                  }
-                />
-                <span className={`text-sm ${palette.mutedText}`}>%</span>
+                  type="button"
+                >
+                  <Switch enabled={settings.searchFilter.enabled} />
+                </button>
+                <div>
+                  <h2 className={`text-base font-medium ${palette.heading}`}>过滤</h2>
+                  <p className={`mt-1 text-sm ${palette.mutedText}`}>
+                    统一管理搜索结果过滤规则，后续过滤能力也可以继续收进这一类。
+                  </p>
+                </div>
               </div>
-              <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                0-1% 范围；弹幕为 0 时不会触发互动率过低。
-              </span>
-            </label>
-            <button
-              className={palette.toggleRow}
-              onClick={() =>
-                void updateSearchFilter({
-                  filterMissingTitleHighlight: !settings.searchFilter.filterMissingTitleHighlight,
-                })
-              }
-              type="button"
-            >
-              <span>过滤无粉红命中标题</span>
-              <Switch enabled={settings.searchFilter.filterMissingTitleHighlight} />
-            </button>
+
+              <div className="space-y-5 px-5 py-5">
+                <RuleListEditor
+                  label="标题过滤词正则"
+                  palette={palette}
+                  placeholder="输入后按回车，例如：猎奇|剧透|标题党"
+                  value={settings.searchFilter.titlePattern}
+                  onChange={titlePattern => void updateSearchFilter({ titlePattern })}
+                />
+                <RuleListEditor
+                  label="UP 主过滤词正则"
+                  palette={palette}
+                  placeholder="输入后按回车，例如：营销号|搬运|切片"
+                  value={settings.searchFilter.uploaderPattern}
+                  onChange={uploaderPattern => void updateSearchFilter({ uploaderPattern })}
+                />
+                <label className="block">
+                  <span className={`mb-2 block text-sm font-medium ${palette.label}`}>
+                    最低弹幕 / 播放互动率
+                  </span>
+                  <div className="flex max-w-2xl items-center gap-3">
+                    <input
+                      className="bm-range flex-1"
+                      max="1"
+                      min="0"
+                      step="0.01"
+                      style={rangeStyle}
+                      type="range"
+                      value={ratePercent.toString()}
+                      onChange={event =>
+                        void updateSearchFilter({
+                          minDanmakuViewRate: fromRatePercent(event.target.value),
+                        })
+                      }
+                    />
+                    <input
+                      className={palette.numberInput}
+                      max="1"
+                      min="0"
+                      step="0.01"
+                      type="number"
+                      value={ratePercent.toString()}
+                      onChange={event =>
+                        void updateSearchFilter({
+                          minDanmakuViewRate: fromRatePercent(event.target.value),
+                        })
+                      }
+                    />
+                    <span className={`text-sm ${palette.mutedText}`}>%</span>
+                  </div>
+                  <span className={`mt-1 block text-xs ${palette.mutedText}`}>
+                    取值范围 0-1%；弹幕为 0 时不会触发互动率过低。
+                  </span>
+                </label>
+                <button
+                  className={palette.toggleRow}
+                  onClick={() =>
+                    void updateSearchFilter({
+                      filterMissingTitleHighlight:
+                        !settings.searchFilter.filterMissingTitleHighlight,
+                    })
+                  }
+                  type="button"
+                >
+                  <span>
+                    <span className="block font-medium">过滤无粉色命中标题</span>
+                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
+                      搜索词没有出现在标题高亮里时，标记为低相关结果。
+                    </span>
+                  </span>
+                  <Switch enabled={settings.searchFilter.filterMissingTitleHighlight} />
+                </button>
+              </div>
+            </section>
+
+            <section id="appearance" className={palette.panel}>
+              <div className={palette.sectionHeader}>
+                <div>
+                  <h2 className={`text-base font-medium ${palette.heading}`}>外观</h2>
+                  <p className={`mt-1 text-sm ${palette.mutedText}`}>切换偏好页配色。</p>
+                </div>
+                <ThemeSwitch value={settings.theme} isDark={isDark} onChange={updateTheme} />
+              </div>
+            </section>
+
+            <section id="data" className={palette.panel}>
+              <div className={palette.sectionHeader}>
+                <div>
+                  <h2 className={`text-base font-medium ${palette.heading}`}>配置管理</h2>
+                  <p className={`mt-1 text-sm ${palette.mutedText}`}>
+                    导出备份或从 JSON / TXT 文件导入规则。
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    ref={importInputRef}
+                    accept="application/json,.json,.txt"
+                    className="hidden"
+                    type="file"
+                    onChange={event => {
+                      const file = event.target.files?.[0];
+                      if (file) void importSettings(file);
+                    }}
+                  />
+                  <button
+                    className={palette.secondaryButton}
+                    onClick={() => importInputRef.current?.click()}
+                    type="button"
+                  >
+                    <Upload className="h-4 w-4" />
+                    导入
+                  </button>
+                  <button
+                    className={palette.secondaryButton}
+                    onClick={exportSettings}
+                    type="button"
+                  >
+                    <Download className="h-4 w-4" />
+                    导出
+                  </button>
+                </div>
+              </div>
+              {importMessage && <p className={`mx-5 mb-5 ${palette.notice}`}>{importMessage}</p>}
+            </section>
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );
@@ -232,7 +297,7 @@ function RuleListEditor(props: {
         <span className={`mb-2 block text-sm font-medium ${props.palette.label}`}>
           {props.label}
         </span>
-        <div className="flex w-full max-w-xl gap-2">
+        <div className="flex w-full max-w-2xl gap-2">
           <input
             className={props.palette.textInput}
             placeholder={props.placeholder}
@@ -246,6 +311,7 @@ function RuleListEditor(props: {
             }}
           />
           <button
+            aria-label={`添加${props.label}`}
             className={props.palette.addButton}
             disabled={!draft.trim() || rules.includes(draft.trim())}
             onClick={addRule}
@@ -334,7 +400,7 @@ function Switch(props: { enabled: boolean }) {
     >
       <span
         className={[
-          "block h-4 w-4 rounded-full bg-white transition-transform duration-300 ease-out",
+          "block h-4 w-4 rounded-full bg-white transition-transform duration-300 ease-out shadow-sm",
           props.enabled ? "translate-x-4" : "translate-x-0",
         ].join(" ")}
       />
@@ -366,10 +432,25 @@ function getThemePalette(isDark: boolean) {
   if (isDark) {
     return {
       page: "bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(244,114,182,0.16),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_52%,#1e1b2e_100%)] text-slate-100",
-      panel: "border-white/10 bg-slate-950/45 transition-colors duration-300 ease-out",
-      panelDivider: "border-white/10 transition-colors duration-300 ease-out",
-      iconBox:
-        "flex h-10 w-10 items-center justify-center rounded-md bg-sky-400/15 text-sky-300 shadow-inner shadow-white/5 transition-colors duration-300 ease-out",
+      header:
+        "mb-6 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/10 bg-slate-950/45 px-5 py-4 shadow-[0_18px_80px_rgba(15,23,42,0.3)] backdrop-blur-xl transition-colors duration-300 ease-out",
+      headerBadge:
+        "rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] text-slate-300",
+      brandText: "text-white",
+      sideNav:
+        "h-fit rounded-md border border-white/10 bg-slate-950/35 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
+      sideNavItem:
+        "flex items-center gap-2 rounded px-3 py-2 text-sm text-slate-400 transition-colors duration-300 ease-out hover:bg-white/10 hover:text-slate-100",
+      sideNavItemActive:
+        "flex items-center gap-2 rounded bg-sky-400/15 px-3 py-2 text-sm font-medium text-sky-200 transition-colors duration-300 ease-out",
+      panel:
+        "rounded-md border border-white/10 bg-slate-950/45 shadow-[0_18px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl transition-colors duration-300 ease-out",
+      categoryHeader:
+        "grid gap-4 border-b border-white/10 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[56px_minmax(0,1fr)]",
+      sectionHeader:
+        "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
+      categorySwitchButton:
+        "flex h-11 w-11 items-center justify-center rounded-md border border-white/10 bg-white/10 shadow-inner shadow-white/5 transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-sky-300/10",
       heading: "text-white transition-colors duration-300 ease-out",
       label: "text-slate-100 transition-colors duration-300 ease-out",
       mutedText: "text-slate-400 transition-colors duration-300 ease-out",
@@ -384,7 +465,7 @@ function getThemePalette(isDark: boolean) {
       addButton:
         "inline-flex items-center gap-1.5 rounded-md border border-sky-300/30 bg-sky-400 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400",
       toggleRow:
-        "flex w-full max-w-xl items-center justify-between rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-white/15",
+        "flex w-full max-w-2xl items-center justify-between gap-4 rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-white/15",
       ruleChip:
         "inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2 py-1 text-xs text-slate-200 shadow-sm transition-colors duration-300 ease-out",
       ruleDeleteButton:
@@ -394,10 +475,25 @@ function getThemePalette(isDark: boolean) {
 
   return {
     page: "bg-[radial-gradient(circle_at_15%_12%,rgba(251,207,232,0.55),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(191,219,254,0.62),transparent_32%),linear-gradient(135deg,#f8fbff_0%,#eef7ff_48%,#fff1f8_100%)] text-slate-900",
-    panel: "border-white/70 bg-white/55 transition-colors duration-300 ease-out",
-    panelDivider: "border-white/70 transition-colors duration-300 ease-out",
-    iconBox:
-      "flex h-10 w-10 items-center justify-center rounded-md bg-sky-100 text-sky-600 shadow-inner shadow-white/70 transition-colors duration-300 ease-out",
+    header:
+      "mb-6 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/70 bg-white/55 px-5 py-4 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out",
+    headerBadge:
+      "rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-500",
+    brandText: "text-slate-950",
+    sideNav:
+      "h-fit rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
+    sideNavItem:
+      "flex items-center gap-2 rounded px-3 py-2 text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/75 hover:text-slate-900",
+    sideNavItemActive:
+      "flex items-center gap-2 rounded bg-sky-100 px-3 py-2 text-sm font-medium text-sky-700 transition-colors duration-300 ease-out",
+    panel:
+      "rounded-md border border-white/70 bg-white/55 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out",
+    categoryHeader:
+      "grid gap-4 border-b border-white/70 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[56px_minmax(0,1fr)]",
+    sectionHeader:
+      "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
+    categorySwitchButton:
+      "flex h-11 w-11 items-center justify-center rounded-md border border-slate-200 bg-white/65 shadow-inner shadow-white transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-sky-50",
     heading: "text-slate-950 transition-colors duration-300 ease-out",
     label: "text-slate-800 transition-colors duration-300 ease-out",
     mutedText: "text-slate-600 transition-colors duration-300 ease-out",
@@ -412,7 +508,7 @@ function getThemePalette(isDark: boolean) {
     addButton:
       "inline-flex items-center gap-1.5 rounded-md border border-sky-200 bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-300 ease-out hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500",
     toggleRow:
-      "flex w-full max-w-xl items-center justify-between rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-white/85",
+      "flex w-full max-w-2xl items-center justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-white/85",
     ruleChip:
       "inline-flex items-center gap-1.5 rounded-md border border-white/80 bg-white/75 px-2 py-1 text-xs text-slate-700 shadow-sm transition-colors duration-300 ease-out",
     ruleDeleteButton: "text-slate-400 transition-colors duration-300 ease-out hover:text-rose-500",
