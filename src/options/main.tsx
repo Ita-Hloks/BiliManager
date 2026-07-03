@@ -118,9 +118,9 @@ function OptionsApp() {
 
   return (
     <main
-      className={`min-h-screen px-4 py-6 transition-colors duration-300 ease-out sm:px-6 ${palette.page}`}
+      className={`min-h-screen px-3 py-4 transition-colors duration-300 ease-out sm:px-4 lg:px-6 ${palette.page}`}
     >
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto w-full max-w-[80rem]">
         <header className={palette.header}>
           <div>
             <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ function OptionsApp() {
           <ThemeSwitch value={settings.theme} isDark={isDark} onChange={updateTheme} />
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[176px_minmax(0,1fr)]">
+        <div className="grid gap-4 xl:grid-cols-[9rem_minmax(0,1fr)]">
           <nav className={palette.sideNav} aria-label="偏好分类">
             <button
               className={
@@ -190,7 +190,7 @@ function OptionsApp() {
                 </div>
               </div>
 
-              <div className="space-y-5 px-5 py-5">
+              <div className="space-y-5 px-4 py-5 sm:px-5">
                 <RuleListEditor
                   label="标题过滤词正则"
                   palette={palette}
@@ -209,7 +209,7 @@ function OptionsApp() {
                   <span className={`mb-2 block text-sm font-medium ${palette.label}`}>
                     最低弹幕 / 播放互动率
                   </span>
-                  <div className="flex w-full items-center gap-3">
+                  <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
                     <input
                       className="bm-range flex-1"
                       max="1"
@@ -293,7 +293,7 @@ function OptionsApp() {
                       导出备份或从 JSON / TXT 文件导入规则。
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     <input
                       ref={importInputRef}
                       accept="application/json,.json,.txt"
@@ -361,7 +361,7 @@ function RuleListEditor(props: {
         <span className={`mb-2 block text-sm font-medium ${props.palette.label}`}>
           {props.label}
         </span>
-        <div className="flex w-full gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row">
           <input
             className={props.palette.textInput}
             placeholder={props.placeholder}
@@ -497,22 +497,22 @@ function getThemePalette(isDark: boolean) {
     return {
       page: "bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(244,114,182,0.16),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_52%,#1e1b2e_100%)] text-slate-100",
       header:
-        "mb-6 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/10 bg-slate-950/45 px-5 py-4 shadow-[0_18px_80px_rgba(15,23,42,0.3)] backdrop-blur-xl transition-colors duration-300 ease-out",
+        "mb-4 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/10 bg-slate-950/45 px-4 py-4 shadow-[0_18px_80px_rgba(15,23,42,0.3)] backdrop-blur-xl transition-colors duration-300 ease-out sm:px-5 lg:mb-6",
       headerBadge:
         "rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] text-slate-300",
       brandText: "text-white",
       sideNav:
-        "flex h-fit flex-col gap-2.5 rounded-md border border-white/10 bg-slate-950/35 p-2.5 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
+        "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/10 bg-slate-950/35 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:flex-col xl:overflow-visible",
       sideNavItem:
-        "flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-400 transition-colors duration-300 ease-out hover:bg-white/[0.08] hover:text-slate-100",
+        "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-400 transition-colors duration-300 ease-out hover:bg-white/[0.08] hover:text-slate-100 xl:w-full xl:min-w-0",
       sideNavItemActive:
-        "flex w-full items-center gap-2 rounded bg-sky-400/15 px-3 py-2 text-left text-sm font-medium text-sky-200 shadow-sm shadow-sky-950/20 transition-colors duration-300 ease-out",
+        "flex min-w-28 items-center gap-2 rounded bg-sky-400/15 px-3 py-2 text-left text-sm font-medium text-sky-200 shadow-sm shadow-sky-950/20 transition-colors duration-300 ease-out xl:w-full xl:min-w-0",
       panel:
         "rounded-md border border-white/10 bg-slate-950/45 shadow-[0_18px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl transition-colors duration-300 ease-out",
       categoryHeader:
-        "grid items-center gap-4 border-b border-white/10 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)]",
+        "grid items-center gap-4 border-b border-white/10 px-4 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)] sm:px-5",
       sectionHeader:
-        "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
+        "flex flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors duration-300 ease-out sm:px-5",
       contentWrap: "flex w-full flex-wrap items-center justify-between gap-4",
       contentNotice: "mx-5 mb-5",
       categoryFilterButton:
@@ -537,7 +537,7 @@ function getThemePalette(isDark: boolean) {
       numberStepButton:
         "flex flex-1 items-center justify-center text-slate-400 transition-colors duration-300 ease-out hover:bg-sky-300/10 hover:text-sky-200",
       addButton:
-        "inline-flex items-center gap-1.5 rounded-md border border-sky-300/30 bg-sky-400 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400",
+        "inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-sky-300/30 bg-sky-400 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400 sm:w-auto",
       toggleRow:
         "flex w-full items-center justify-between gap-4 rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-white/15",
       ruleChip:
@@ -550,22 +550,22 @@ function getThemePalette(isDark: boolean) {
   return {
     page: "bg-[radial-gradient(circle_at_15%_12%,rgba(251,207,232,0.55),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(191,219,254,0.62),transparent_32%),linear-gradient(135deg,#f8fbff_0%,#eef7ff_48%,#fff1f8_100%)] text-slate-900",
     header:
-      "mb-6 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/70 bg-white/55 px-5 py-4 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out",
+      "mb-4 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/70 bg-white/55 px-4 py-4 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out sm:px-5 lg:mb-6",
     headerBadge:
       "rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-500",
     brandText: "text-slate-950",
     sideNav:
-      "flex h-fit flex-col gap-2.5 rounded-md border border-white/70 bg-white/45 p-2.5 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
+      "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:flex-col xl:overflow-visible",
     sideNavItem:
-      "flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900",
+      "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900 xl:w-full xl:min-w-0",
     sideNavItemActive:
-      "flex w-full items-center gap-2 rounded bg-sky-100 px-3 py-2 text-left text-sm font-medium text-sky-700 shadow-sm shadow-sky-100/80 transition-colors duration-300 ease-out",
+      "flex min-w-28 items-center gap-2 rounded bg-sky-100 px-3 py-2 text-left text-sm font-medium text-sky-700 shadow-sm shadow-sky-100/80 transition-colors duration-300 ease-out xl:w-full xl:min-w-0",
     panel:
       "rounded-md border border-white/70 bg-white/55 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out",
     categoryHeader:
-      "grid items-center gap-4 border-b border-white/70 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)]",
+      "grid items-center gap-4 border-b border-white/70 px-4 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)] sm:px-5",
     sectionHeader:
-      "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
+      "flex flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors duration-300 ease-out sm:px-5",
     contentWrap: "flex w-full flex-wrap items-center justify-between gap-4",
     contentNotice: "mx-5 mb-5",
     categoryFilterButton:
@@ -590,7 +590,7 @@ function getThemePalette(isDark: boolean) {
     numberStepButton:
       "flex flex-1 items-center justify-center text-slate-500 transition-colors duration-300 ease-out hover:bg-sky-50 hover:text-sky-600",
     addButton:
-      "inline-flex items-center gap-1.5 rounded-md border border-sky-200 bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-300 ease-out hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500",
+      "inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-sky-200 bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-300 ease-out hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto",
     toggleRow:
       "flex w-full items-center justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-white/85",
     ruleChip:
