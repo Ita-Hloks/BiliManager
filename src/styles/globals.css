@@ -50,6 +50,16 @@ body {
   outline: none;
 }
 
+.bm-number-input {
+  appearance: textfield;
+}
+
+.bm-number-input::-webkit-outer-spin-button,
+.bm-number-input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 .bm-filter-toggle-icon {
   position: relative;
   display: inline-flex;

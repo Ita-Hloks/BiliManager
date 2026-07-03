@@ -1,6 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Download, Filter, Monitor, Moon, Plus, Sun, Trash2, Upload } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Filter,
+  Monitor,
+  Moon,
+  Plus,
+  Sun,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import "../styles/globals.css";
 import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
 import type { ExtensionSettings, SearchFilterSettings } from "../shared/types";
@@ -58,6 +69,13 @@ function OptionsApp() {
     setFilterAnimationKey(key => key + 1);
     void updateSearchFilter({
       enabled: !settings.searchFilter.enabled,
+    });
+  }
+
+  function stepRatePercent(delta: number) {
+    const nextPercent = clamp(Number((ratePercent + delta).toFixed(2)), 0, 1);
+    void updateSearchFilter({
+      minDanmakuViewRate: fromRatePercent(nextPercent.toString()),
     });
   }
 
@@ -191,7 +209,7 @@ function OptionsApp() {
                   <span className={`mb-2 block text-sm font-medium ${palette.label}`}>
                     最低弹幕 / 播放互动率
                   </span>
-                  <div className="flex max-w-2xl items-center gap-3">
+                  <div className="flex w-full items-center gap-3">
                     <input
                       className="bm-range flex-1"
                       max="1"
@@ -206,20 +224,40 @@ function OptionsApp() {
                         })
                       }
                     />
-                    <input
-                      className={palette.numberInput}
-                      max="1"
-                      min="0"
-                      step="0.01"
-                      type="number"
-                      value={ratePercent.toString()}
-                      onChange={event =>
-                        void updateSearchFilter({
-                          minDanmakuViewRate: fromRatePercent(event.target.value),
-                        })
-                      }
-                    />
-                    <span className={`text-sm ${palette.mutedText}`}>%</span>
+                    <div className={palette.numberInputGroup}>
+                      <input
+                        className={`bm-number-input ${palette.numberInputField}`}
+                        max="1"
+                        min="0"
+                        step="0.01"
+                        type="number"
+                        value={ratePercent.toString()}
+                        onChange={event =>
+                          void updateSearchFilter({
+                            minDanmakuViewRate: fromRatePercent(event.target.value),
+                          })
+                        }
+                      />
+                      <span className={palette.numberSuffix}>%</span>
+                      <div className={palette.numberStepper}>
+                        <button
+                          aria-label="增加互动率阈值"
+                          className={palette.numberStepButton}
+                          onClick={() => stepRatePercent(0.01)}
+                          type="button"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          aria-label="减少互动率阈值"
+                          className={palette.numberStepButton}
+                          onClick={() => stepRatePercent(-0.01)}
+                          type="button"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <span className={`mt-1 block text-xs ${palette.mutedText}`}>
                     取值范围 0-1%；弹幕为 0 时不会触发互动率过低。
@@ -248,42 +286,46 @@ function OptionsApp() {
 
             <section id="data" className={`${palette.panel} scroll-mt-6`}>
               <div className={palette.sectionHeader}>
-                <div>
-                  <h2 className={`text-base font-medium ${palette.heading}`}>配置管理</h2>
-                  <p className={`mt-1 text-sm ${palette.mutedText}`}>
-                    导出备份或从 JSON / TXT 文件导入规则。
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    ref={importInputRef}
-                    accept="application/json,.json,.txt"
-                    className="hidden"
-                    type="file"
-                    onChange={event => {
-                      const file = event.target.files?.[0];
-                      if (file) void importSettings(file);
-                    }}
-                  />
-                  <button
-                    className={palette.secondaryButton}
-                    onClick={() => importInputRef.current?.click()}
-                    type="button"
-                  >
-                    <Upload className="h-4 w-4" />
-                    导入
-                  </button>
-                  <button
-                    className={palette.secondaryButton}
-                    onClick={exportSettings}
-                    type="button"
-                  >
-                    <Download className="h-4 w-4" />
-                    导出
-                  </button>
+                <div className={palette.contentWrap}>
+                  <div>
+                    <h2 className={`text-base font-medium ${palette.heading}`}>配置管理</h2>
+                    <p className={`mt-1 text-sm ${palette.mutedText}`}>
+                      导出备份或从 JSON / TXT 文件导入规则。
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={importInputRef}
+                      accept="application/json,.json,.txt"
+                      className="hidden"
+                      type="file"
+                      onChange={event => {
+                        const file = event.target.files?.[0];
+                        if (file) void importSettings(file);
+                      }}
+                    />
+                    <button
+                      className={palette.secondaryButton}
+                      onClick={() => importInputRef.current?.click()}
+                      type="button"
+                    >
+                      <Upload className="h-4 w-4" />
+                      导入
+                    </button>
+                    <button
+                      className={palette.secondaryButton}
+                      onClick={exportSettings}
+                      type="button"
+                    >
+                      <Download className="h-4 w-4" />
+                      导出
+                    </button>
+                  </div>
                 </div>
               </div>
-              {importMessage && <p className={`mx-5 mb-5 ${palette.notice}`}>{importMessage}</p>}
+              {importMessage && (
+                <p className={`${palette.contentNotice} ${palette.notice}`}>{importMessage}</p>
+              )}
             </section>
           </div>
         </div>
@@ -319,7 +361,7 @@ function RuleListEditor(props: {
         <span className={`mb-2 block text-sm font-medium ${props.palette.label}`}>
           {props.label}
         </span>
-        <div className="flex w-full max-w-2xl gap-2">
+        <div className="flex w-full gap-2">
           <input
             className={props.palette.textInput}
             placeholder={props.placeholder}
@@ -471,6 +513,8 @@ function getThemePalette(isDark: boolean) {
         "grid items-center gap-4 border-b border-white/10 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)]",
       sectionHeader:
         "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
+      contentWrap: "flex w-full flex-wrap items-center justify-between gap-4",
+      contentNotice: "mx-5 mb-5",
       categoryFilterButton:
         "group flex h-10 w-10 items-center justify-center border-0 bg-transparent p-0 transition duration-300 ease-out hover:-translate-y-0.5",
       categoryFilterButtonEnabled: "text-sky-200",
@@ -484,12 +528,18 @@ function getThemePalette(isDark: boolean) {
         "rounded-md border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-sm text-sky-100 transition-colors duration-300 ease-out",
       textInput:
         "min-w-0 flex-1 rounded-md border border-white/10 bg-slate-950/45 px-3 py-2 text-sm text-slate-100 outline-none transition-colors duration-300 ease-out placeholder:text-slate-500 focus:border-sky-300",
-      numberInput:
-        "w-24 rounded-md border border-white/10 bg-slate-950/45 px-2 py-1.5 text-right text-sm text-slate-100 outline-none transition-colors duration-300 ease-out focus:border-sky-300",
+      numberInputGroup:
+        "flex w-28 overflow-hidden rounded-md border border-white/10 bg-slate-950/45 shadow-sm transition-colors duration-300 ease-out focus-within:border-sky-300",
+      numberInputField:
+        "min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-right text-sm text-slate-100 outline-none",
+      numberSuffix: "flex w-6 items-center justify-center text-sm text-slate-400",
+      numberStepper: "flex w-7 flex-col border-l border-white/10 bg-white/[0.04]",
+      numberStepButton:
+        "flex flex-1 items-center justify-center text-slate-400 transition-colors duration-300 ease-out hover:bg-sky-300/10 hover:text-sky-200",
       addButton:
         "inline-flex items-center gap-1.5 rounded-md border border-sky-300/30 bg-sky-400 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400",
       toggleRow:
-        "flex w-full max-w-2xl items-center justify-between gap-4 rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-white/15",
+        "flex w-full items-center justify-between gap-4 rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-white/15",
       ruleChip:
         "inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2 py-1 text-xs text-slate-200 shadow-sm transition-colors duration-300 ease-out",
       ruleDeleteButton:
@@ -516,6 +566,8 @@ function getThemePalette(isDark: boolean) {
       "grid items-center gap-4 border-b border-white/70 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)]",
     sectionHeader:
       "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
+    contentWrap: "flex w-full flex-wrap items-center justify-between gap-4",
+    contentNotice: "mx-5 mb-5",
     categoryFilterButton:
       "group flex h-10 w-10 items-center justify-center border-0 bg-transparent p-0 transition duration-300 ease-out hover:-translate-y-0.5",
     categoryFilterButtonEnabled: "text-sky-600 hover:text-sky-700",
@@ -529,12 +581,18 @@ function getThemePalette(isDark: boolean) {
       "rounded-md border border-sky-100 bg-sky-50/75 px-3 py-2 text-sm text-sky-800 transition-colors duration-300 ease-out",
     textInput:
       "min-w-0 flex-1 rounded-md border border-slate-200 bg-white/75 px-3 py-2 text-sm text-slate-900 outline-none transition-colors duration-300 ease-out placeholder:text-slate-400 focus:border-sky-400",
-    numberInput:
-      "w-24 rounded-md border border-slate-200 bg-white/75 px-2 py-1.5 text-right text-sm text-slate-900 outline-none transition-colors duration-300 ease-out focus:border-sky-400",
+    numberInputGroup:
+      "flex w-28 overflow-hidden rounded-md border border-slate-200 bg-white/75 shadow-sm transition-colors duration-300 ease-out focus-within:border-sky-400",
+    numberInputField:
+      "min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-right text-sm text-slate-900 outline-none",
+    numberSuffix: "flex w-6 items-center justify-center text-sm text-slate-500",
+    numberStepper: "flex w-7 flex-col border-l border-slate-200 bg-slate-50/80",
+    numberStepButton:
+      "flex flex-1 items-center justify-center text-slate-500 transition-colors duration-300 ease-out hover:bg-sky-50 hover:text-sky-600",
     addButton:
       "inline-flex items-center gap-1.5 rounded-md border border-sky-200 bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-300 ease-out hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500",
     toggleRow:
-      "flex w-full max-w-2xl items-center justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-white/85",
+      "flex w-full items-center justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-white/85",
     ruleChip:
       "inline-flex items-center gap-1.5 rounded-md border border-white/80 bg-white/75 px-2 py-1 text-xs text-slate-700 shadow-sm transition-colors duration-300 ease-out",
     ruleDeleteButton: "text-slate-400 transition-colors duration-300 ease-out hover:text-rose-500",
