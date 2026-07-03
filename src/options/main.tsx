@@ -6,10 +6,13 @@ import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
 import type { ExtensionSettings, SearchFilterSettings } from "../shared/types";
 
 type ThemePalette = ReturnType<typeof getThemePalette>;
+type SectionId = "filter" | "data";
 
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
   const [importMessage, setImportMessage] = useState("");
+  const [activeSection, setActiveSection] = useState<SectionId>("filter");
+  const [filterAnimationKey, setFilterAnimationKey] = useState(0);
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
   const palette = getThemePalette(isDark);
@@ -49,6 +52,21 @@ function OptionsApp() {
 
   async function updateTheme(theme: ExtensionSettings["theme"]) {
     await updateSettings({ ...settings, theme });
+  }
+
+  function toggleSearchFilter() {
+    setFilterAnimationKey(key => key + 1);
+    void updateSearchFilter({
+      enabled: !settings.searchFilter.enabled,
+    });
+  }
+
+  function scrollToSection(sectionId: SectionId) {
+    setActiveSection(sectionId);
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   }
 
   async function importSettings(file: File) {
@@ -92,7 +110,6 @@ function OptionsApp() {
                 <span className="text-bili-blue">Bili</span>{" "}
                 <span className={palette.brandText}>Manager</span>
               </h1>
-              <span className={palette.headerBadge}>偏好中心</span>
             </div>
             <p className={`mt-2 text-sm ${palette.mutedText}`}>
               规则会自动保存，并同步到已经打开的 B 站搜索页。
@@ -103,40 +120,55 @@ function OptionsApp() {
 
         <div className="grid gap-4 lg:grid-cols-[176px_minmax(0,1fr)]">
           <nav className={palette.sideNav} aria-label="偏好分类">
-            <a className={palette.sideNavItemActive} href="#filter">
+            <button
+              className={
+                activeSection === "filter" ? palette.sideNavItemActive : palette.sideNavItem
+              }
+              onClick={() => scrollToSection("filter")}
+              type="button"
+            >
               <Filter className="h-4 w-4" />
               过滤
-            </a>
-            <a className={palette.sideNavItem} href="#appearance">
-              <Monitor className="h-4 w-4" />
-              外观
-            </a>
-            <a className={palette.sideNavItem} href="#data">
+            </button>
+            <button
+              className={activeSection === "data" ? palette.sideNavItemActive : palette.sideNavItem}
+              onClick={() => scrollToSection("data")}
+              type="button"
+            >
               <Download className="h-4 w-4" />
               配置
-            </a>
+            </button>
           </nav>
 
           <div className="space-y-4">
-            <section id="filter" className={palette.panel}>
+            <section id="filter" className={`${palette.panel} scroll-mt-6`}>
               <div className={palette.categoryHeader}>
                 <button
                   aria-label={settings.searchFilter.enabled ? "关闭过滤" : "开启过滤"}
-                  className={palette.categorySwitchButton}
-                  onClick={() =>
-                    void updateSearchFilter({
-                      enabled: !settings.searchFilter.enabled,
-                    })
-                  }
+                  className={[
+                    "bm-filter-toggle-button",
+                    palette.categoryFilterButton,
+                    settings.searchFilter.enabled
+                      ? palette.categoryFilterButtonEnabled
+                      : palette.categoryFilterButtonDisabled,
+                  ].join(" ")}
+                  data-enabled={settings.searchFilter.enabled ? "true" : "false"}
+                  onClick={toggleSearchFilter}
                   type="button"
                 >
-                  <Switch enabled={settings.searchFilter.enabled} />
+                  <span
+                    key={filterAnimationKey}
+                    className={[
+                      "bm-filter-toggle-icon",
+                      settings.searchFilter.enabled ? "bm-filter-toggle-icon--enabled" : "",
+                    ].join(" ")}
+                  >
+                    <Filter className="relative z-10 h-6 w-6" strokeWidth={2.2} />
+                  </span>
                 </button>
                 <div>
                   <h2 className={`text-base font-medium ${palette.heading}`}>过滤</h2>
-                  <p className={`mt-1 text-sm ${palette.mutedText}`}>
-                    统一管理搜索结果过滤规则，后续过滤能力也可以继续收进这一类。
-                  </p>
+                  <p className={`mt-1 text-sm ${palette.mutedText}`}>减少低相关搜索结果</p>
                 </div>
               </div>
 
@@ -214,17 +246,7 @@ function OptionsApp() {
               </div>
             </section>
 
-            <section id="appearance" className={palette.panel}>
-              <div className={palette.sectionHeader}>
-                <div>
-                  <h2 className={`text-base font-medium ${palette.heading}`}>外观</h2>
-                  <p className={`mt-1 text-sm ${palette.mutedText}`}>切换偏好页配色。</p>
-                </div>
-                <ThemeSwitch value={settings.theme} isDark={isDark} onChange={updateTheme} />
-              </div>
-            </section>
-
-            <section id="data" className={palette.panel}>
+            <section id="data" className={`${palette.panel} scroll-mt-6`}>
               <div className={palette.sectionHeader}>
                 <div>
                   <h2 className={`text-base font-medium ${palette.heading}`}>配置管理</h2>
@@ -438,19 +460,21 @@ function getThemePalette(isDark: boolean) {
         "rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] text-slate-300",
       brandText: "text-white",
       sideNav:
-        "h-fit rounded-md border border-white/10 bg-slate-950/35 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
+        "flex h-fit flex-col gap-2.5 rounded-md border border-white/10 bg-slate-950/35 p-2.5 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
       sideNavItem:
-        "flex items-center gap-2 rounded px-3 py-2 text-sm text-slate-400 transition-colors duration-300 ease-out hover:bg-white/10 hover:text-slate-100",
+        "flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-400 transition-colors duration-300 ease-out hover:bg-white/[0.08] hover:text-slate-100",
       sideNavItemActive:
-        "flex items-center gap-2 rounded bg-sky-400/15 px-3 py-2 text-sm font-medium text-sky-200 transition-colors duration-300 ease-out",
+        "flex w-full items-center gap-2 rounded bg-sky-400/15 px-3 py-2 text-left text-sm font-medium text-sky-200 shadow-sm shadow-sky-950/20 transition-colors duration-300 ease-out",
       panel:
         "rounded-md border border-white/10 bg-slate-950/45 shadow-[0_18px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl transition-colors duration-300 ease-out",
       categoryHeader:
-        "grid gap-4 border-b border-white/10 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[56px_minmax(0,1fr)]",
+        "grid items-center gap-4 border-b border-white/10 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)]",
       sectionHeader:
         "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
-      categorySwitchButton:
-        "flex h-11 w-11 items-center justify-center rounded-md border border-white/10 bg-white/10 shadow-inner shadow-white/5 transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-sky-300/10",
+      categoryFilterButton:
+        "group flex h-10 w-10 items-center justify-center border-0 bg-transparent p-0 transition duration-300 ease-out hover:-translate-y-0.5",
+      categoryFilterButtonEnabled: "text-sky-200",
+      categoryFilterButtonDisabled: "text-slate-500 hover:text-slate-300",
       heading: "text-white transition-colors duration-300 ease-out",
       label: "text-slate-100 transition-colors duration-300 ease-out",
       mutedText: "text-slate-400 transition-colors duration-300 ease-out",
@@ -481,19 +505,21 @@ function getThemePalette(isDark: boolean) {
       "rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-500",
     brandText: "text-slate-950",
     sideNav:
-      "h-fit rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
+      "flex h-fit flex-col gap-2.5 rounded-md border border-white/70 bg-white/45 p-2.5 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out",
     sideNavItem:
-      "flex items-center gap-2 rounded px-3 py-2 text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/75 hover:text-slate-900",
+      "flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900",
     sideNavItemActive:
-      "flex items-center gap-2 rounded bg-sky-100 px-3 py-2 text-sm font-medium text-sky-700 transition-colors duration-300 ease-out",
+      "flex w-full items-center gap-2 rounded bg-sky-100 px-3 py-2 text-left text-sm font-medium text-sky-700 shadow-sm shadow-sky-100/80 transition-colors duration-300 ease-out",
     panel:
       "rounded-md border border-white/70 bg-white/55 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out",
     categoryHeader:
-      "grid gap-4 border-b border-white/70 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[56px_minmax(0,1fr)]",
+      "grid items-center gap-4 border-b border-white/70 px-5 py-4 transition-colors duration-300 ease-out sm:grid-cols-[40px_minmax(0,1fr)]",
     sectionHeader:
       "flex flex-wrap items-center justify-between gap-4 px-5 py-4 transition-colors duration-300 ease-out",
-    categorySwitchButton:
-      "flex h-11 w-11 items-center justify-center rounded-md border border-slate-200 bg-white/65 shadow-inner shadow-white transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-sky-50",
+    categoryFilterButton:
+      "group flex h-10 w-10 items-center justify-center border-0 bg-transparent p-0 transition duration-300 ease-out hover:-translate-y-0.5",
+    categoryFilterButtonEnabled: "text-sky-600 hover:text-sky-700",
+    categoryFilterButtonDisabled: "text-slate-400 hover:text-slate-600",
     heading: "text-slate-950 transition-colors duration-300 ease-out",
     label: "text-slate-800 transition-colors duration-300 ease-out",
     mutedText: "text-slate-600 transition-colors duration-300 ease-out",
