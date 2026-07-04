@@ -1,4 +1,5 @@
-export type FeatureKey = "searchFilter" | "personalization" | "watchTimer" | "dailyStats";
+export type FeatureKey =
+  "enabled" | "searchFilter" | "personalization" | "watchTimer" | "dailyStats";
 
 export type SearchFilterSettings = {
   enabled: boolean;

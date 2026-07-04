@@ -229,14 +229,14 @@ function OptionsApp() {
                 <RuleListEditor
                   label="标题过滤词正则"
                   palette={palette}
-                  placeholder="输入后按回车，例如：猎奇|剧透|标题党"
+                  placeholder="输入后按回车，例如：关键词A|关键词B"
                   value={settings.searchFilter.titlePattern}
                   onChange={titlePattern => void updateSearchFilter({ titlePattern })}
                 />
                 <RuleListEditor
                   label="UP 主过滤词正则"
                   palette={palette}
-                  placeholder="输入后按回车，例如：营销号|搬运|切片"
+                  placeholder="输入后按回车，例如：账号名|作者关键词"
                   value={settings.searchFilter.uploaderPattern}
                   onChange={uploaderPattern => void updateSearchFilter({ uploaderPattern })}
                 />
@@ -754,6 +754,7 @@ function normalizeSettings(
     features: {
       ...currentSettings.features,
       ...value.features,
+      enabled: value.features?.enabled ?? currentSettings.features.enabled ?? true,
       searchFilter: searchFilterEnabled,
       personalization: personalizationEnabled,
     },

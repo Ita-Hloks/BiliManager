@@ -4,10 +4,9 @@ const HIDDEN_CLASS = "bili-manager-personalization-hidden";
 const HIDDEN_ATTR = "data-bili-manager-personalization-hidden";
 const AUTO_CONTROL_ATTR = "data-bili-manager-autoplay-checked";
 const VIDEO_ENDED_ATTR = "data-bili-manager-ended-bound";
+const BLOCK_RELATED_ATTR = "data-bili-manager-block-related";
+const PLAYER_PERSONALIZATION_ATTR = "data-bili-manager-player-personalization";
 
-const RELATED_LABEL_RE = /相关推荐|相关视频|推荐视频|推荐列表|接下来播放|播放下一个/;
-const EPISODE_LABEL_RE =
-  /分集|选集|合集|剧集|正片|花絮|视频列表|播放列表|目录|分P|第\s*\d+\s*[集话]/i;
 const PROTECTED_MODULE_SELECTOR = [
   ".right-container",
   ".right-container-inner",
@@ -35,9 +34,11 @@ const RECOMMEND_AD_SELECTOR = [
   ".right-container .ad-floor-exp",
   ".right-container .right-bottom-banner",
 ].join(", ");
-const AUTOPLAY_LABEL_RE = /自动连播|自动播放|播完自动|连续播放|连播/;
-const AUTOPLAY_OFF_RE = /关闭|已关闭|播完暂停|暂停连播|不连播/;
-const AUTOPLAY_ON_RE = /开启|已开启|打开|已打开|自动连播|连续播放/;
+const RELATED_TRACK_RE = /recommend_more_video|specialRecommendByOp|right_bottom\.adfloor/;
+let latestSettings: PlayerPersonalizationSettings = {
+  blockRelatedVideos: false,
+  disableRecommendationAutoplay: false,
+};
 
 export function isPlayerPage(url = location.href): boolean {
   try {
@@ -53,24 +54,52 @@ export function isPlayerPage(url = location.href): boolean {
 }
 
 export function applyPlayerPersonalization(settings: PlayerPersonalizationSettings): void {
+  latestSettings = settings;
+
   if (!isPlayerPage()) {
     clearRelatedVideoModules();
+    syncPlayerPersonalizationState(false, false);
     return;
   }
 
+  syncPlayerPersonalizationState(true, settings.blockRelatedVideos);
+
   if (settings.disableRecommendationAutoplay) {
-    bindVideoEndedGuards(settings.blockRelatedVideos);
+    bindVideoEndedGuards();
     disableRecommendationAutoplay();
   }
 
   if (settings.blockRelatedVideos) {
-    hideRelatedVideoModules();
+    hideFallbackRelatedVideoModules();
   } else {
     clearRelatedVideoModules();
   }
 }
 
-function hideRelatedVideoModules() {
+export function getPlayerObservationTargets(): HTMLElement[] {
+  const targets = [
+    document.querySelector<HTMLElement>(".right-container"),
+    document.querySelector<HTMLElement>(".video-card-ad-small"),
+    document.querySelector<HTMLElement>(".video-pod"),
+  ].filter(Boolean) as HTMLElement[];
+
+  return targets.length > 0 ? removeNestedModules(targets) : [document.body];
+}
+
+function syncPlayerPersonalizationState(isPlayer: boolean, shouldBlockRelated: boolean) {
+  const root = document.documentElement;
+  if (!isPlayer) {
+    root.removeAttribute(PLAYER_PERSONALIZATION_ATTR);
+    root.removeAttribute(BLOCK_RELATED_ATTR);
+    return;
+  }
+
+  root.setAttribute(PLAYER_PERSONALIZATION_ATTR, "true");
+  if (shouldBlockRelated) root.setAttribute(BLOCK_RELATED_ATTR, "true");
+  else root.removeAttribute(BLOCK_RELATED_ATTR);
+}
+
+function hideFallbackRelatedVideoModules() {
   collectRelatedVideoModules().forEach(element => {
     element.classList.add(HIDDEN_CLASS);
     element.setAttribute(HIDDEN_ATTR, "related-videos");
@@ -86,11 +115,14 @@ function clearRelatedVideoModules() {
 
 function collectRelatedVideoModules(): HTMLElement[] {
   const modules = new Set<HTMLElement>();
+  const rightContainer = document.querySelector<HTMLElement>(".right-container");
+
+  if (!rightContainer) return [];
 
   collectKnownRelatedModules().forEach(element => modules.add(element));
 
-  document.querySelectorAll<HTMLAnchorElement>("a[href]").forEach(link => {
-    if (!isRelatedVideoLink(link)) return;
+  rightContainer.querySelectorAll<HTMLAnchorElement>("a[href]").forEach(link => {
+    if (!isRelatedLink(link)) return;
 
     const moduleRoot = findRelatedModuleRoot(link);
     if (moduleRoot) modules.add(moduleRoot);
@@ -125,9 +157,11 @@ function findRelatedModuleRoot(link: HTMLAnchorElement): HTMLElement | null {
   return findCompactRightSideCard(link);
 }
 
-function isRelatedVideoLink(link: HTMLAnchorElement): boolean {
+function isRelatedLink(link: HTMLAnchorElement): boolean {
   const target = getUrl(link.href);
   if (!target || !target.hostname.endsWith("bilibili.com")) return false;
+  if (isCurrentEpisodeLink(target)) return false;
+  if (RELATED_TRACK_RE.test(target.href)) return true;
   if (!/^\/video\/(?:BV|av)/i.test(target.pathname)) return false;
 
   const currentVideoId = getVideoId(new URL(location.href));
@@ -135,6 +169,10 @@ function isRelatedVideoLink(link: HTMLAnchorElement): boolean {
   if (currentVideoId && targetVideoId && currentVideoId === targetVideoId) return false;
 
   return true;
+}
+
+function isCurrentEpisodeLink(target: URL) {
+  return target.searchParams.has("p") && getVideoId(target) === getVideoId(new URL(location.href));
 }
 
 function isRightSide(rect: DOMRect) {
@@ -198,100 +236,20 @@ function disableRecommendationAutoplay() {
 }
 
 function collectAutoplayControls(): HTMLElement[] {
-  const controls = new Set<HTMLElement>();
-
-  document
-    .querySelectorAll<HTMLElement>(".right-container .video-pod .continuous-btn")
-    .forEach(element => {
-      if (AUTOPLAY_LABEL_RE.test(normalizeText(element.textContent ?? ""))) {
-        controls.add(element);
-      }
-    });
-
-  document
-    .querySelectorAll<HTMLElement>(
-      "button, [role='switch'], [role='checkbox'], input[type='checkbox']",
-    )
-    .forEach(element => {
-      const context = getAutoplayContext(element);
-      if (context && AUTOPLAY_LABEL_RE.test(context)) controls.add(element);
-    });
-
-  document.querySelectorAll<HTMLElement>("span, div, label").forEach(element => {
-    if (!AUTOPLAY_LABEL_RE.test(normalizeText(element.textContent ?? ""))) return;
-    const control = element.closest<HTMLElement>(
-      "button, label, [role='switch'], [role='checkbox']",
-    );
-    if (control) controls.add(control);
-  });
-
-  return [...controls];
+  return [...document.querySelectorAll<HTMLElement>(".right-container .video-pod .continuous-btn")];
 }
 
 function shouldDisableAutoplayControl(control: HTMLElement) {
   if (control.getAttribute(AUTO_CONTROL_ATTR) === "true") return false;
 
-  if (isBilibiliContinuousButton(control)) {
-    return !!control.querySelector(".switch-btn.on");
-  }
-
-  const context = getAutoplayContext(control);
-  if (!context || AUTOPLAY_OFF_RE.test(context)) return false;
-  if (EPISODE_LABEL_RE.test(context) && !RELATED_LABEL_RE.test(context)) return false;
-
-  return isControlOn(control, context);
-}
-
-function isControlOn(control: HTMLElement, context: string) {
-  if (control instanceof HTMLInputElement) return control.checked;
-
-  const ariaChecked = control.getAttribute("aria-checked");
-  if (ariaChecked === "true") return true;
-  if (ariaChecked === "false") return false;
-
-  const ariaPressed = control.getAttribute("aria-pressed");
-  if (ariaPressed === "true") return true;
-  if (ariaPressed === "false") return false;
-
-  const datasetState = [
-    control.dataset.checked,
-    control.dataset.state,
-    control.dataset.status,
-    control.getAttribute("data-value"),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  if (/\b(?:true|on|active|checked|open)\b/.test(datasetState)) return true;
-  if (/\b(?:false|off|inactive|unchecked|close|closed)\b/.test(datasetState)) return false;
-
-  const classState = control.className.toString().toLowerCase();
-  if (/\b(?:on|active|checked|open|selected)\b/.test(classState)) return true;
-
-  return AUTOPLAY_ON_RE.test(context) && !AUTOPLAY_OFF_RE.test(context);
+  return isBilibiliContinuousButton(control) && !!control.querySelector(".switch-btn.on");
 }
 
 function isBilibiliContinuousButton(control: HTMLElement) {
   return control.matches(".right-container .video-pod .continuous-btn");
 }
 
-function getAutoplayContext(element: HTMLElement) {
-  const texts = new Set<string>();
-  let current: HTMLElement | null = element;
-  let depth = 0;
-
-  while (current && current !== document.body && depth < 4) {
-    texts.add(current.getAttribute("aria-label") ?? "");
-    texts.add(current.getAttribute("title") ?? "");
-    texts.add(current.textContent ?? "");
-    current = current.parentElement;
-    depth += 1;
-  }
-
-  return normalizeText([...texts].join(" "));
-}
-
-function bindVideoEndedGuards(shouldHideRelatedVideos: boolean) {
+function bindVideoEndedGuards() {
   document.querySelectorAll<HTMLVideoElement>("video").forEach(video => {
     if (video.getAttribute(VIDEO_ENDED_ATTR) === "true") return;
 
@@ -300,7 +258,7 @@ function bindVideoEndedGuards(shouldHideRelatedVideos: boolean) {
       window.setTimeout(() => {
         video.pause();
         disableRecommendationAutoplay();
-        if (shouldHideRelatedVideos) hideRelatedVideoModules();
+        if (latestSettings.blockRelatedVideos) hideFallbackRelatedVideoModules();
       }, 0);
     });
   });
@@ -320,8 +278,4 @@ function getUrl(value: string): URL | null {
   } catch {
     return null;
   }
-}
-
-function normalizeText(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
 }

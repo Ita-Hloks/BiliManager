@@ -4,6 +4,7 @@ const SETTINGS_KEY = "biliFilter.settings";
 
 export const defaultSettings: ExtensionSettings = {
   features: {
+    enabled: true,
     searchFilter: false,
     personalization: false,
     watchTimer: false,
