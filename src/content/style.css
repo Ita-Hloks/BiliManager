@@ -1,11 +1,13 @@
 .bili-manager-filtered {
   position: relative;
+  box-shadow: none !important;
 }
 
 .bili-manager-filtered-cover,
 .bili-manager-filtered img:first-of-type {
+  box-shadow: none !important;
   filter: grayscale(1) blur(6px) brightness(0.45) opacity(0.72) !important;
-  transform: scale(1.02);
+  transform: none;
   transition:
     filter 220ms ease,
     opacity 220ms ease,
@@ -14,7 +16,7 @@
 
 .bili-manager-page-light .bili-manager-filtered-cover,
 .bili-manager-page-light img:first-of-type {
-  filter: grayscale(1) blur(6px) brightness(0.86) opacity(0.88) !important;
+  filter: grayscale(1) blur(6px) brightness(0.72) opacity(0.82) !important;
 }
 
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover,
@@ -24,7 +26,7 @@
 
 .bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover,
 .bili-manager-page-light[data-bili-manager-filter-gate="peek"] img:first-of-type {
-  filter: grayscale(1) blur(6px) brightness(0.96) opacity(0.92) !important;
+  filter: grayscale(1) blur(6px) brightness(0.82) opacity(0.9) !important;
 }
 
 .bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-cover,
@@ -69,6 +71,7 @@
   border-radius: inherit;
   background: rgba(8, 8, 10, 0.42);
   color: rgba(255, 255, 255, 0.72);
+  box-shadow: none !important;
   font:
     700 15px/1.45 system-ui,
     -apple-system,
@@ -77,7 +80,8 @@
     sans-serif;
   text-align: center;
   white-space: pre-line;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+  text-shadow: none;
+  backdrop-filter: none;
   opacity: 1;
   pointer-events: none;
   transition:
@@ -86,10 +90,10 @@
 }
 
 .bili-manager-page-light .bili-manager-filter-reasons {
-  background: rgba(255, 255, 255, 0.76);
-  color: rgba(30, 41, 59, 0.72);
-  text-shadow: 0 1px 10px rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(6px) saturate(1.08);
+  background: rgba(241, 245, 249, 0.72);
+  color: rgba(51, 65, 85, 0.58);
+  text-shadow: none;
+  backdrop-filter: none;
 }
 
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
@@ -98,8 +102,8 @@
 }
 
 .bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
-  background: rgba(255, 255, 255, 0.56);
-  color: rgba(15, 23, 42, 0.86);
+  background: rgba(241, 245, 249, 0.48);
+  color: rgba(51, 65, 85, 0.72);
 }
 
 .bili-manager-filter-reasons--hidden {
