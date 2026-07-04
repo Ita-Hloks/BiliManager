@@ -1,4 +1,4 @@
-export type FeatureKey = "searchFilter" | "watchTimer" | "dailyStats";
+export type FeatureKey = "searchFilter" | "personalization" | "watchTimer" | "dailyStats";
 
 export type SearchFilterSettings = {
   enabled: boolean;
@@ -8,9 +8,15 @@ export type SearchFilterSettings = {
   filterMissingTitleHighlight: boolean;
 };
 
+export type PlayerPersonalizationSettings = {
+  blockRelatedVideos: boolean;
+  disableRecommendationAutoplay: boolean;
+};
+
 export type ExtensionSettings = {
   features: Record<FeatureKey, boolean>;
   searchFilter: SearchFilterSettings;
+  personalization: PlayerPersonalizationSettings;
   theme: "system" | "light" | "dark";
   updatedAt: string;
 };

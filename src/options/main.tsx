@@ -8,21 +8,26 @@ import {
   Monitor,
   Moon,
   Plus,
+  Sparkles,
   Sun,
   Trash2,
   Upload,
 } from "lucide-react";
 import "../styles/globals.css";
 import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
-import type { ExtensionSettings, SearchFilterSettings } from "../shared/types";
+import type {
+  ExtensionSettings,
+  PlayerPersonalizationSettings,
+  SearchFilterSettings,
+} from "../shared/types";
 
 type ThemePalette = ReturnType<typeof getThemePalette>;
-type SectionId = "filter" | "data";
+type SectionId = "search-filter" | "personalization" | "data";
 
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
   const [importMessage, setImportMessage] = useState("");
-  const [activeSection, setActiveSection] = useState<SectionId>("filter");
+  const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const [filterAnimationKey, setFilterAnimationKey] = useState(0);
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
@@ -58,6 +63,24 @@ function OptionsApp() {
         ...patch,
         enabled,
       },
+    });
+  }
+
+  async function updatePersonalization(patch: Partial<PlayerPersonalizationSettings>) {
+    const personalization = {
+      ...settings.personalization,
+      ...patch,
+    };
+    const enabled =
+      personalization.blockRelatedVideos || personalization.disableRecommendationAutoplay;
+
+    await updateSettings({
+      ...settings,
+      features: {
+        ...settings.features,
+        personalization: enabled,
+      },
+      personalization,
     });
   }
 
@@ -130,23 +153,35 @@ function OptionsApp() {
               </h1>
             </div>
             <p className={`mt-2 text-sm ${palette.mutedText}`}>
-              规则会自动保存，并同步到已经打开的 B 站搜索页。
+              规则会自动保存，并同步到已经打开的 B 站页面。
             </p>
           </div>
           <ThemeSwitch value={settings.theme} isDark={isDark} onChange={updateTheme} />
         </header>
 
-        <div className="grid gap-4 xl:grid-cols-[9rem_minmax(0,1fr)]">
+        <div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
           <nav className={palette.sideNav} aria-label="偏好分类">
             <button
               className={
-                activeSection === "filter" ? palette.sideNavItemActive : palette.sideNavItem
+                activeSection === "search-filter" ? palette.sideNavItemActive : palette.sideNavItem
               }
-              onClick={() => scrollToSection("filter")}
+              onClick={() => scrollToSection("search-filter")}
               type="button"
             >
               <Filter className="h-4 w-4" />
-              过滤
+              过滤搜索
+            </button>
+            <button
+              className={
+                activeSection === "personalization"
+                  ? palette.sideNavItemActive
+                  : palette.sideNavItem
+              }
+              onClick={() => scrollToSection("personalization")}
+              type="button"
+            >
+              <Sparkles className="h-4 w-4" />
+              个性化
             </button>
             <button
               className={activeSection === "data" ? palette.sideNavItemActive : palette.sideNavItem}
@@ -159,7 +194,7 @@ function OptionsApp() {
           </nav>
 
           <div className="space-y-4">
-            <section id="filter" className={`${palette.panel} scroll-mt-6`}>
+            <section id="search-filter" className={`${palette.panel} scroll-mt-6`}>
               <div className={palette.categoryHeader}>
                 <button
                   aria-label={settings.searchFilter.enabled ? "关闭过滤" : "开启过滤"}
@@ -185,7 +220,7 @@ function OptionsApp() {
                   </span>
                 </button>
                 <div>
-                  <h2 className={`text-base font-medium ${palette.heading}`}>过滤</h2>
+                  <h2 className={`text-base font-medium ${palette.heading}`}>过滤搜索</h2>
                   <p className={`mt-1 text-sm ${palette.mutedText}`}>减少低相关搜索结果</p>
                 </div>
               </div>
@@ -280,6 +315,58 @@ function OptionsApp() {
                     </span>
                   </span>
                   <Switch enabled={settings.searchFilter.filterMissingTitleHighlight} />
+                </button>
+              </div>
+            </section>
+
+            <section id="personalization" className={`${palette.panel} scroll-mt-6`}>
+              <div className={palette.sectionHeader}>
+                <div className={palette.contentWrap}>
+                  <div>
+                    <h2 className={`text-base font-medium ${palette.heading}`}>个性化</h2>
+                    <p className={`mt-1 text-sm ${palette.mutedText}`}>
+                      控制播放器页推荐列表和播完后的推荐连播。
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 px-4 pb-5 sm:px-5">
+                <button
+                  className={palette.toggleRow}
+                  onClick={() =>
+                    void updatePersonalization({
+                      blockRelatedVideos: !settings.personalization.blockRelatedVideos,
+                    })
+                  }
+                  type="button"
+                >
+                  <span>
+                    <span className="block font-medium">拦截推荐视频列表</span>
+                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
+                      隐藏播放器右侧相关推荐、相关视频、接下来播放等推荐区，保留分集/选集。
+                    </span>
+                  </span>
+                  <Switch enabled={settings.personalization.blockRelatedVideos} />
+                </button>
+
+                <button
+                  className={palette.toggleRow}
+                  onClick={() =>
+                    void updatePersonalization({
+                      disableRecommendationAutoplay:
+                        !settings.personalization.disableRecommendationAutoplay,
+                    })
+                  }
+                  type="button"
+                >
+                  <span>
+                    <span className="block font-medium">关闭推荐自动连播</span>
+                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
+                      自动关闭播放器页的推荐/接下来播放连播，不主动禁用分集切换。
+                    </span>
+                  </span>
+                  <Switch enabled={settings.personalization.disableRecommendationAutoplay} />
                 </button>
               </div>
             </section>
@@ -502,7 +589,7 @@ function getThemePalette(isDark: boolean) {
         "rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] text-slate-300",
       brandText: "text-white",
       sideNav:
-        "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/10 bg-slate-950/35 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:flex-col xl:overflow-visible",
+        "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/10 bg-slate-950/35 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible",
       sideNavItem:
         "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-400 transition-colors duration-300 ease-out hover:bg-white/[0.08] hover:text-slate-100 xl:w-full xl:min-w-0",
       sideNavItemActive:
@@ -555,7 +642,7 @@ function getThemePalette(isDark: boolean) {
       "rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-500",
     brandText: "text-slate-950",
     sideNav:
-      "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:flex-col xl:overflow-visible",
+      "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible",
     sideNavItem:
       "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900 xl:w-full xl:min-w-0",
     sideNavItemActive:
@@ -643,7 +730,7 @@ function parseImportedSettings(
 }
 
 function hasSettingsShape(value: Partial<ExtensionSettings>) {
-  return !!value.searchFilter || !!value.features || !!value.theme;
+  return !!value.searchFilter || !!value.personalization || !!value.features || !!value.theme;
 }
 
 function normalizeSettings(
@@ -652,7 +739,14 @@ function normalizeSettings(
 ): ExtensionSettings {
   const theme = normalizeTheme(value.theme, currentSettings.theme);
   const searchFilter = normalizeSearchFilter(value.searchFilter, currentSettings.searchFilter);
+  const personalization = normalizePersonalization(
+    value.personalization,
+    currentSettings.personalization,
+  );
   const searchFilterEnabled = value.features?.searchFilter ?? searchFilter.enabled;
+  const personalizationEnabled =
+    value.features?.personalization ??
+    (personalization.blockRelatedVideos || personalization.disableRecommendationAutoplay);
 
   return {
     ...currentSettings,
@@ -661,11 +755,13 @@ function normalizeSettings(
       ...currentSettings.features,
       ...value.features,
       searchFilter: searchFilterEnabled,
+      personalization: personalizationEnabled,
     },
     searchFilter: {
       ...searchFilter,
       enabled: searchFilterEnabled,
     },
+    personalization,
     theme,
     updatedAt: new Date().toISOString(),
   };
@@ -690,6 +786,23 @@ function normalizeSearchFilter(
       typeof value?.filterMissingTitleHighlight === "boolean"
         ? value.filterMissingTitleHighlight
         : currentSearchFilter.filterMissingTitleHighlight,
+  };
+}
+
+function normalizePersonalization(
+  value: Partial<PlayerPersonalizationSettings> | undefined,
+  currentPersonalization: PlayerPersonalizationSettings,
+): PlayerPersonalizationSettings {
+  return {
+    ...currentPersonalization,
+    blockRelatedVideos:
+      typeof value?.blockRelatedVideos === "boolean"
+        ? value.blockRelatedVideos
+        : currentPersonalization.blockRelatedVideos,
+    disableRecommendationAutoplay:
+      typeof value?.disableRecommendationAutoplay === "boolean"
+        ? value.disableRecommendationAutoplay
+        : currentPersonalization.disableRecommendationAutoplay,
   };
 }
 

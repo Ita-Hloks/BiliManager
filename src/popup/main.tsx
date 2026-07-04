@@ -18,6 +18,7 @@ const unavailableStats: SearchFilterStats = {
 function PopupApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
   const [stats, setStats] = useState<SearchFilterStats>(unavailableStats);
+  const [contentConnected, setContentConnected] = useState(false);
 
   useEffect(() => {
     void getSettings().then(nextSettings => {
@@ -31,10 +32,12 @@ function PopupApp() {
 
     if (response?.ok && response.source === "content") {
       setStats(response.stats);
+      setContentConnected(true);
       return;
     }
 
     setStats(unavailableStats);
+    setContentConnected(false);
   }
 
   async function setFilterEnabled(enabled: boolean) {
@@ -54,8 +57,16 @@ function PopupApp() {
     await saveSettings(next);
 
     const response = await sendActiveTabMessage({ type: "BILI_FILTER_SETTINGS_UPDATED" });
-    if (response?.ok && response.source === "content") setStats(response.stats);
+    if (response?.ok && response.source === "content") {
+      setStats(response.stats);
+      setContentConnected(true);
+      return;
+    }
+
+    setContentConnected(false);
   }
+
+  const statusText = contentConnected ? "当前页面已连接" : "当前页面未连接内容脚本";
 
   return (
     <main className="w-[320px] bg-zinc-950 text-zinc-100">
@@ -67,36 +78,34 @@ function PopupApp() {
         <div
           className={[
             "flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
-            stats.available
+            contentConnected
               ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
               : "border-zinc-800 bg-zinc-900 text-zinc-400",
           ].join(" ")}
         >
-          {stats.available ? (
+          {contentConnected ? (
             <CheckCircle2 className="h-4 w-4 shrink-0" />
           ) : (
             <AlertCircle className="h-4 w-4 shrink-0" />
           )}
-          <span>{stats.available ? "当前搜索页已连接" : "当前页面未连接过滤器"}</span>
+          <span>{statusText}</span>
         </div>
 
-        {stats.available && (
-          <button
-            className={[
-              "flex w-full items-center justify-between rounded-md border px-3 py-3 text-left text-sm transition",
-              settings.searchFilter.enabled
-                ? "border-bili-blue bg-bili-blue/10 text-zinc-100"
-                : "border-zinc-800 bg-zinc-900 text-zinc-300",
-            ].join(" ")}
-            onClick={() => void setFilterEnabled(!settings.searchFilter.enabled)}
-            type="button"
-          >
-            <span>搜索结果过滤</span>
-            <span className={settings.searchFilter.enabled ? "text-bili-blue" : "text-zinc-500"}>
-              {settings.searchFilter.enabled ? "已启用" : "已停用"}
-            </span>
-          </button>
-        )}
+        <button
+          className={[
+            "flex w-full items-center justify-between rounded-md border px-3 py-3 text-left text-sm transition",
+            settings.searchFilter.enabled
+              ? "border-bili-blue bg-bili-blue/10 text-zinc-100"
+              : "border-zinc-800 bg-zinc-900 text-zinc-300",
+          ].join(" ")}
+          onClick={() => void setFilterEnabled(!settings.searchFilter.enabled)}
+          type="button"
+        >
+          <span>搜索结果过滤</span>
+          <span className={settings.searchFilter.enabled ? "text-bili-blue" : "text-zinc-500"}>
+            {settings.searchFilter.enabled ? "已启用" : "已停用"}
+          </span>
+        </button>
 
         {stats.regexErrors.length > 0 && (
           <div className="rounded-md border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-xs leading-5 text-rose-200">

@@ -1,5 +1,11 @@
 import type { ExtensionMessage } from "../shared/messaging";
-import type { ExtensionSettings, RuntimeSnapshot, SearchFilterSettings } from "../shared/types";
+import type {
+  ExtensionSettings,
+  PlayerPersonalizationSettings,
+  RuntimeSnapshot,
+  SearchFilterSettings,
+} from "../shared/types";
+import { applyPlayerPersonalization, isPlayerPage } from "./player-personalization";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./search-filter";
 
 const SETTINGS_KEY = "biliFilter.settings";
@@ -9,6 +15,10 @@ const defaultSearchFilter: SearchFilterSettings = {
   uploaderPattern: "",
   minDanmakuViewRate: 0.005,
   filterMissingTitleHighlight: true,
+};
+const defaultPersonalization: PlayerPersonalizationSettings = {
+  blockRelatedVideos: false,
+  disableRecommendationAutoplay: false,
 };
 
 let rescanTimer: number | undefined;
@@ -25,32 +35,49 @@ function getSnapshot(): RuntimeSnapshot {
   };
 }
 
-async function scanSearchPage() {
-  const searchFilter = await getSearchFilter();
-  return applySearchFilter(searchFilter);
+async function scanCurrentPage() {
+  const settings = await getContentSettings();
+  applyPlayerPersonalization(settings.personalization);
+
+  return applySearchFilter(settings.searchFilter);
 }
 
-async function getSearchFilter(): Promise<SearchFilterSettings> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) return defaultSearchFilter;
+async function getContentSettings(): Promise<{
+  searchFilter: SearchFilterSettings;
+  personalization: PlayerPersonalizationSettings;
+}> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return {
+      searchFilter: defaultSearchFilter,
+      personalization: defaultPersonalization,
+    };
+  }
 
   const result = await chrome.storage.local.get(SETTINGS_KEY);
   const saved = result[SETTINGS_KEY] as Partial<ExtensionSettings> | undefined;
+
   return {
-    ...defaultSearchFilter,
-    ...saved?.searchFilter,
+    searchFilter: {
+      ...defaultSearchFilter,
+      ...saved?.searchFilter,
+    },
+    personalization: {
+      ...defaultPersonalization,
+      ...saved?.personalization,
+    },
   };
 }
 
 function scheduleScan(delay = 150) {
   window.clearTimeout(rescanTimer);
   rescanTimer = window.setTimeout(() => {
-    void scanSearchPage();
+    void scanCurrentPage();
   }, delay);
 }
 
-function watchSearchResults() {
+function watchManagedPage() {
   observer?.disconnect();
-  if (!isSearchPage()) return;
+  if (!isSearchPage() && !isPlayerPage()) return;
 
   observer = new MutationObserver(() => scheduleScan());
   observer.observe(document.body, { childList: true, subtree: true });
@@ -61,7 +88,7 @@ function watchUrlChanges() {
     if (location.href === currentUrl) return;
 
     currentUrl = location.href;
-    watchSearchResults();
+    watchManagedPage();
     scheduleScan(0);
   }, 500);
 }
@@ -76,7 +103,7 @@ function bindRuntimeMessages() {
   chrome.runtime.onMessage.addListener(
     (message: ExtensionMessage, _sender, sendResponse: (response: unknown) => void) => {
       if (message.type === "BILI_FILTER_GET_PAGE_STATUS") {
-        void scanSearchPage().then(stats => {
+        void scanCurrentPage().then(stats => {
           sendResponse({
             ok: true,
             source: "content",
@@ -89,7 +116,7 @@ function bindRuntimeMessages() {
       }
 
       if (message.type === "BILI_FILTER_SETTINGS_UPDATED") {
-        void scanSearchPage().then(stats => {
+        void scanCurrentPage().then(stats => {
           sendResponse({
             ok: true,
             source: "content",
@@ -109,9 +136,9 @@ function bindRuntimeMessages() {
 async function boot() {
   bindRuntimeMessages();
   bindStorageChanges();
-  watchSearchResults();
+  watchManagedPage();
   watchUrlChanges();
-  await scanSearchPage();
+  await scanCurrentPage();
   await sendRuntimeMessage({ type: "BILI_FILTER_HELLO", payload: getSnapshot() });
 }
 

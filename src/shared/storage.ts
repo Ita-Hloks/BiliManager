@@ -5,6 +5,7 @@ const SETTINGS_KEY = "biliFilter.settings";
 export const defaultSettings: ExtensionSettings = {
   features: {
     searchFilter: false,
+    personalization: false,
     watchTimer: false,
     dailyStats: false,
   },
@@ -14,6 +15,10 @@ export const defaultSettings: ExtensionSettings = {
     uploaderPattern: "",
     minDanmakuViewRate: 0.005,
     filterMissingTitleHighlight: true,
+  },
+  personalization: {
+    blockRelatedVideos: false,
+    disableRecommendationAutoplay: false,
   },
   theme: "system",
   updatedAt: new Date(0).toISOString(),
@@ -37,6 +42,10 @@ export async function getSettings(): Promise<ExtensionSettings> {
     searchFilter: {
       ...defaultSettings.searchFilter,
       ...saved?.searchFilter,
+    },
+    personalization: {
+      ...defaultSettings.personalization,
+      ...saved?.personalization,
     },
   };
 }
