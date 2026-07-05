@@ -5,14 +5,24 @@ const HIDDEN_ATTR = "data-bili-manager-personalization-hidden";
 const AUTO_CONTROL_ATTR = "data-bili-manager-autoplay-checked";
 const VIDEO_ENDED_ATTR = "data-bili-manager-ended-bound";
 const BLOCK_RELATED_ATTR = "data-bili-manager-block-related";
+const BLOCK_ADS_ATTR = "data-bili-manager-block-ads";
 const PLAYER_PERSONALIZATION_ATTR = "data-bili-manager-player-personalization";
 
-const RELATED_MODULE_SELECTOR = [
+const RELATED_VIDEO_SELECTOR = [
+  ".right-container .recommend-list-v1",
   ".right-container .rec-list",
+].join(", ");
+const PLAYER_AD_SELECTOR = [
   ".right-container .video-card-ad-small",
+  ".right-container .ad-floor-exp.right-bottom-banner",
+  ".right-container #slide_ad",
+  ".right-container .slide-ad-exp",
+  ".right-container .activity-m-v1.act-end",
+  '.right-container [class*="_ad"]',
 ].join(", ");
 let latestSettings: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
+  blockPlayerAds: false,
   disableRecommendationAutoplay: false,
 };
 
@@ -33,22 +43,28 @@ export function applyPlayerPersonalization(settings: PlayerPersonalizationSettin
   latestSettings = settings;
 
   if (!isPlayerPage()) {
-    clearRelatedVideoModules();
-    syncPlayerPersonalizationState(false, false);
+    clearPersonalizationModules();
+    syncPlayerPersonalizationState(false, false, false);
     return;
   }
 
-  syncPlayerPersonalizationState(true, settings.blockRelatedVideos);
+  syncPlayerPersonalizationState(true, settings.blockRelatedVideos, settings.blockPlayerAds);
 
-  if (settings.disableRecommendationAutoplay) {
+  if (settings.blockRelatedVideos || settings.disableRecommendationAutoplay) {
     bindVideoEndedGuards();
     disableRecommendationAutoplay();
   }
 
   if (settings.blockRelatedVideos) {
-    hideFallbackRelatedVideoModules();
+    hidePersonalizationModules(collectRelatedVideoModules(), "related-videos");
   } else {
     clearRelatedVideoModules();
+  }
+
+  if (settings.blockPlayerAds) {
+    hidePersonalizationModules(collectPlayerAdModules(), "player-ads");
+  } else {
+    clearPlayerAdModules();
   }
 }
 
@@ -57,40 +73,67 @@ export function getPlayerObservationTargets(): HTMLElement[] {
     document.querySelector<HTMLElement>(".right-container"),
     document.querySelector<HTMLElement>(".rec-list"),
     document.querySelector<HTMLElement>(".video-card-ad-small"),
+    document.querySelector<HTMLElement>("#slide_ad"),
+    document.querySelector<HTMLElement>(".slide-ad-exp"),
+    document.querySelector<HTMLElement>(".activity-m-v1.act-end"),
   ].filter(Boolean) as HTMLElement[];
 
   return targets.length > 0 ? removeNestedModules(targets) : [document.body];
 }
 
-function syncPlayerPersonalizationState(isPlayer: boolean, shouldBlockRelated: boolean) {
+function syncPlayerPersonalizationState(
+  isPlayer: boolean,
+  shouldBlockRelated: boolean,
+  shouldBlockAds: boolean,
+) {
   const root = document.documentElement;
   if (!isPlayer) {
     root.removeAttribute(PLAYER_PERSONALIZATION_ATTR);
     root.removeAttribute(BLOCK_RELATED_ATTR);
+    root.removeAttribute(BLOCK_ADS_ATTR);
     return;
   }
 
   root.setAttribute(PLAYER_PERSONALIZATION_ATTR, "true");
   if (shouldBlockRelated) root.setAttribute(BLOCK_RELATED_ATTR, "true");
   else root.removeAttribute(BLOCK_RELATED_ATTR);
+  if (shouldBlockAds) root.setAttribute(BLOCK_ADS_ATTR, "true");
+  else root.removeAttribute(BLOCK_ADS_ATTR);
 }
 
-function hideFallbackRelatedVideoModules() {
-  collectRelatedVideoModules().forEach(element => {
+function hidePersonalizationModules(modules: HTMLElement[], reason: string) {
+  modules.forEach(element => {
     element.classList.add(HIDDEN_CLASS);
-    element.setAttribute(HIDDEN_ATTR, "related-videos");
+    element.setAttribute(HIDDEN_ATTR, reason);
   });
 }
 
+function clearPersonalizationModules() {
+  clearPersonalizationModulesByReason("related-videos");
+  clearPersonalizationModulesByReason("player-ads");
+}
+
 function clearRelatedVideoModules() {
-  document.querySelectorAll<HTMLElement>(`[${HIDDEN_ATTR}]`).forEach(element => {
+  clearPersonalizationModulesByReason("related-videos");
+}
+
+function clearPlayerAdModules() {
+  clearPersonalizationModulesByReason("player-ads");
+}
+
+function clearPersonalizationModulesByReason(reason: string) {
+  document.querySelectorAll<HTMLElement>(`[${HIDDEN_ATTR}="${reason}"]`).forEach(element => {
     element.classList.remove(HIDDEN_CLASS);
     element.removeAttribute(HIDDEN_ATTR);
   });
 }
 
 function collectRelatedVideoModules(): HTMLElement[] {
-  return removeNestedModules([...document.querySelectorAll<HTMLElement>(RELATED_MODULE_SELECTOR)]);
+  return removeNestedModules([...document.querySelectorAll<HTMLElement>(RELATED_VIDEO_SELECTOR)]);
+}
+
+function collectPlayerAdModules(): HTMLElement[] {
+  return removeNestedModules([...document.querySelectorAll<HTMLElement>(PLAYER_AD_SELECTOR)]);
 }
 
 function removeNestedModules(modules: HTMLElement[]) {
@@ -132,7 +175,9 @@ function bindVideoEndedGuards() {
       window.setTimeout(() => {
         video.pause();
         disableRecommendationAutoplay();
-        if (latestSettings.blockRelatedVideos) hideFallbackRelatedVideoModules();
+        if (latestSettings.blockRelatedVideos) {
+          hidePersonalizationModules(collectRelatedVideoModules(), "related-videos");
+        }
       }, 0);
     });
   });

@@ -20,6 +20,7 @@ export const defaultSettings: ExtensionSettings = {
   },
   personalization: {
     blockRelatedVideos: false,
+    blockPlayerAds: false,
     disableRecommendationAutoplay: false,
   },
   theme: "system",

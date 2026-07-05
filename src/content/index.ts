@@ -23,6 +23,7 @@ const defaultSearchFilter: SearchFilterSettings = {
 };
 const defaultPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
+  blockPlayerAds: false,
   disableRecommendationAutoplay: false,
 };
 const disabledSearchFilter: SearchFilterSettings = {
@@ -31,6 +32,7 @@ const disabledSearchFilter: SearchFilterSettings = {
 };
 const disabledPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
+  blockPlayerAds: false,
   disableRecommendationAutoplay: false,
 };
 const unavailableSearchStats: SearchFilterStats = {
