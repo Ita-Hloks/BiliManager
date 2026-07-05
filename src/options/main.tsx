@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ChevronDown,
   ChevronUp,
+  Clock,
   Download,
   Filter,
   Monitor,
@@ -19,10 +20,11 @@ import type {
   ExtensionSettings,
   PlayerPersonalizationSettings,
   SearchFilterSettings,
+  WatchTimerSettings,
 } from "../shared/types";
 
 type ThemePalette = ReturnType<typeof getThemePalette>;
-type SectionId = "search-filter" | "personalization" | "data";
+type SectionId = "search-filter" | "personalization" | "watch-timer" | "data";
 
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
@@ -32,6 +34,8 @@ function OptionsApp() {
   const isDark = useEffectiveDarkTheme(settings.theme);
   const palette = getThemePalette(isDark);
   const ratePercent = toRatePercent(settings.searchFilter.minDanmakuViewRate);
+  const watchTimerOpacityPercent = Math.round(settings.watchTimer.opacity * 100);
+  const watchTimerOpacityProgress = ((settings.watchTimer.opacity - 0.45) / 0.55) * 100;
   const rangeStyle = {
     "--bm-range-progress": `${ratePercent * 100}%`,
   } as React.CSSProperties;
@@ -86,6 +90,16 @@ function OptionsApp() {
         personalization: enabled,
       },
       personalization,
+    });
+  }
+
+  async function updateWatchTimer(patch: Partial<WatchTimerSettings>) {
+    await updateSettings({
+      ...settings,
+      watchTimer: {
+        ...settings.watchTimer,
+        ...patch,
+      },
     });
   }
 
@@ -186,6 +200,16 @@ function OptionsApp() {
             >
               <Sparkles className="h-4 w-4" />
               个性化
+            </button>
+            <button
+              className={
+                activeSection === "watch-timer" ? palette.sideNavItemActive : palette.sideNavItem
+              }
+              onClick={() => scrollToSection("watch-timer")}
+              type="button"
+            >
+              <Clock className="h-4 w-4" />
+              定时器
             </button>
             <button
               className={activeSection === "data" ? palette.sideNavItemActive : palette.sideNavItem}
@@ -387,6 +411,109 @@ function OptionsApp() {
                   </span>
                   <Switch enabled={settings.personalization.blockPlayerAds} />
                 </button>
+              </div>
+            </section>
+
+            <section id="watch-timer" className={`${palette.panel} scroll-mt-6`}>
+              <div className={palette.sectionHeader}>
+                <div className={palette.contentWrap}>
+                  <div>
+                    <h2 className={`text-base font-medium ${palette.heading}`}>定时器</h2>
+                    <p className={`mt-1 text-sm ${palette.mutedText}`}>
+                      统计当前播放器实际播放时间
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-5 px-4 pb-5 sm:px-5">
+                <button
+                  className={palette.toggleRow}
+                  onClick={() =>
+                    void updateSettings({
+                      ...settings,
+                      features: {
+                        ...settings.features,
+                        watchTimer: !settings.features.watchTimer,
+                      },
+                    })
+                  }
+                  type="button"
+                >
+                  <span>
+                    <span className="block font-medium">启用定时器</span>
+                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
+                      播放器浮层可拖动，全屏时自动隐藏
+                    </span>
+                  </span>
+                  <Switch enabled={settings.features.watchTimer} />
+                </button>
+
+                <div
+                  className={[
+                    "grid gap-4 rounded-md border p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center",
+                    isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white/55",
+                  ].join(" ")}
+                >
+                  <div
+                    className={[
+                      "w-full rounded-lg border px-3 py-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)] backdrop-blur",
+                      isDark
+                        ? "border-sky-300/25 bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(15,23,42,0.72))] text-slate-50"
+                        : "border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(15,23,42,0.68))] text-slate-50",
+                    ].join(" ")}
+                    style={{ opacity: settings.watchTimer.opacity }}
+                  >
+                    <span className="block text-[11px] leading-tight text-slate-300">
+                      当前播放器
+                    </span>
+                    <strong className="mt-0.5 block text-[22px] leading-none tracking-normal">
+                      00:00
+                    </strong>
+                  </div>
+
+                  <label className="block min-w-0">
+                    <span className={`mb-2 block text-sm font-medium ${palette.label}`}>
+                      定时器透明度
+                    </span>
+                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                      <input
+                        className="bm-range min-w-0 flex-1"
+                        max="1"
+                        min="0.45"
+                        step="0.01"
+                        style={
+                          {
+                            "--bm-range-progress": `${watchTimerOpacityProgress}%`,
+                          } as React.CSSProperties
+                        }
+                        type="range"
+                        value={settings.watchTimer.opacity.toString()}
+                        onChange={event =>
+                          void updateWatchTimer({
+                            opacity: clamp(Number(event.target.value), 0.45, 1),
+                          })
+                        }
+                      />
+                      <div className={palette.numberInputGroup}>
+                        <input
+                          className={`bm-number-input ${palette.numberInputField}`}
+                          max="100"
+                          min="45"
+                          step="1"
+                          type="number"
+                          value={watchTimerOpacityPercent.toString()}
+                          onChange={event =>
+                            void updateWatchTimer({
+                              opacity: clamp(Number(event.target.value) / 100, 0.45, 1),
+                            })
+                          }
+                        />
+                        <span className={palette.numberSuffix}>%</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </div>
             </section>
 
@@ -799,12 +926,14 @@ function normalizeSettings(
       enabled: value.features?.enabled ?? currentSettings.features.enabled ?? true,
       searchFilter: searchFilterEnabled,
       personalization: personalizationEnabled,
+      watchTimer: value.features?.watchTimer ?? currentSettings.features.watchTimer,
     },
     searchFilter: {
       ...searchFilter,
       enabled: searchFilterEnabled,
     },
     personalization,
+    watchTimer: normalizeWatchTimer(value.watchTimer, currentSettings.watchTimer),
     theme,
     updatedAt: new Date().toISOString(),
   };
@@ -850,6 +979,19 @@ function normalizePersonalization(
       typeof value?.disableRecommendationAutoplay === "boolean"
         ? value.disableRecommendationAutoplay
         : currentPersonalization.disableRecommendationAutoplay,
+  };
+}
+
+function normalizeWatchTimer(
+  value: Partial<WatchTimerSettings> | undefined,
+  currentWatchTimer: WatchTimerSettings,
+): WatchTimerSettings {
+  return {
+    ...currentWatchTimer,
+    opacity:
+      typeof value?.opacity === "number"
+        ? clamp(value.opacity, 0.45, 1)
+        : currentWatchTimer.opacity,
   };
 }
 
