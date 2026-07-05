@@ -11,6 +11,7 @@ export type SearchFilterSettings = {
 
 export type PlayerPersonalizationSettings = {
   blockRelatedVideos: boolean;
+  blockPlayerAds: boolean;
   disableRecommendationAutoplay: boolean;
 };
 

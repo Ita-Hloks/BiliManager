@@ -65,14 +65,15 @@ export function PopupApp() {
   const statusText = contentConnected ? "当前页面已连接" : "当前页面未连接内容脚本";
   const pluginEnabled = settings.features.enabled;
   const runningText = pluginEnabled ? "BiliManager 正在运行" : "BiliManager 已暂停";
+  const runningTone = pluginEnabled ? "text-emerald-200/80" : "text-rose-200/80";
 
   return (
     <main className="flex max-h-[600px] w-[360px] flex-col bg-[radial-gradient(circle_at_12%_0%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_88%_8%,rgba(244,114,182,0.14),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_58%,#1e1b2e_100%)] text-slate-100">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
         <div className="min-w-0">
           <h1 className="truncate text-base font-semibold tracking-normal">
-            <span className="text-bili-blue">Bili</span>{" "}
-            <span>Manager {pluginEnabled ? "正在运行" : "已暂停"}</span>
+            <span className="text-bili-blue">Bili</span> <span>Manager </span>
+            <span className={runningTone}>{pluginEnabled ? "正在运行" : "已暂停"}</span>
           </h1>
         </div>
         <button
@@ -81,7 +82,7 @@ export function PopupApp() {
           className={[
             "group flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition-all duration-300 ease-out",
             pluginEnabled
-              ? "border-sky-300/45 bg-sky-400/20 text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_8px_22px_rgba(14,165,233,0.18)] hover:border-sky-300/60 hover:bg-sky-400/25"
+              ? "border-sky-300/45 bg-sky-400/20 text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_8px_22px_rgba(14,165,233,0.18)] hover:bg-sky-400/25"
               : "border-white/10 bg-slate-950/25 text-slate-500 opacity-75 hover:border-white/20 hover:bg-white/[0.05] hover:opacity-100",
           ].join(" ")}
           onClick={() => void setPluginEnabled(!pluginEnabled)}
@@ -120,8 +121,9 @@ export function PopupApp() {
       </div>
 
       <footer className="flex shrink-0 items-center justify-between border-t border-white/10 px-4 py-3 text-xs text-slate-400">
+        <span className="text-slate-500">0.0.0 测试版</span>
         <button
-          className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-slate-200 transition-colors hover:border-sky-300/40 hover:bg-white/10"
+          className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-slate-200 transition-colors hover:bg-white/10"
           onClick={() => chrome.runtime.openOptionsPage()}
           type="button"
         >

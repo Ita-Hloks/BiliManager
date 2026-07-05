@@ -71,8 +71,13 @@ function OptionsApp() {
       ...settings.personalization,
       ...patch,
     };
+    if (personalization.blockRelatedVideos) {
+      personalization.disableRecommendationAutoplay = true;
+    }
     const enabled =
-      personalization.blockRelatedVideos || personalization.disableRecommendationAutoplay;
+      personalization.blockRelatedVideos ||
+      personalization.blockPlayerAds ||
+      personalization.disableRecommendationAutoplay;
 
     await updateSettings({
       ...settings,
@@ -309,48 +314,78 @@ function OptionsApp() {
                   <div>
                     <h2 className={`text-base font-medium ${palette.heading}`}>个性化</h2>
                     <p className={`mt-1 text-sm ${palette.mutedText}`}>
-                      控制播放器页推荐列表和播完后的推荐连播
+                      控制播放器页视频推荐、广告和推荐连播
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 px-4 pb-5 sm:px-5">
-                <button
-                  className={palette.toggleRow}
-                  onClick={() =>
-                    void updatePersonalization({
-                      blockRelatedVideos: !settings.personalization.blockRelatedVideos,
-                    })
-                  }
-                  type="button"
-                >
-                  <span>
-                    <span className="block font-medium">拦截推荐视频列表</span>
-                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                      隐藏播放器右侧相关推荐、相关视频、接下来播放等推荐区，保留分集/选集
+                <div className={palette.toggleGroup}>
+                  <button
+                    className={palette.toggleGroupRow}
+                    onClick={() =>
+                      void updatePersonalization({
+                        blockRelatedVideos: !settings.personalization.blockRelatedVideos,
+                      })
+                    }
+                    type="button"
+                  >
+                    <span>
+                      <span className="block font-medium">拦截推荐视频列表</span>
+                      <span className={`mt-1 block text-xs ${palette.mutedText}`}>
+                        隐藏播放器右侧推荐视频，并自动关闭推荐自动连播
+                      </span>
                     </span>
-                  </span>
-                  <Switch enabled={settings.personalization.blockRelatedVideos} />
-                </button>
+                    <Switch enabled={settings.personalization.blockRelatedVideos} />
+                  </button>
+
+                  <button
+                    className={[
+                      palette.toggleGroupRow,
+                      palette.toggleGroupDivider,
+                      settings.personalization.blockRelatedVideos
+                        ? palette.toggleGroupRowDisabled
+                        : "",
+                    ].join(" ")}
+                    disabled={settings.personalization.blockRelatedVideos}
+                    onClick={() =>
+                      void updatePersonalization({
+                        disableRecommendationAutoplay:
+                          !settings.personalization.disableRecommendationAutoplay,
+                      })
+                    }
+                    type="button"
+                  >
+                    <span>
+                      <span className="block font-medium">关闭推荐自动连播</span>
+                      <span className={`mt-1 block text-xs ${palette.mutedText}`}>
+                        拦截推荐视频列表时自动开启
+                      </span>
+                    </span>
+                    <Switch
+                      disabled={settings.personalization.blockRelatedVideos}
+                      enabled={settings.personalization.disableRecommendationAutoplay}
+                    />
+                  </button>
+                </div>
 
                 <button
                   className={palette.toggleRow}
                   onClick={() =>
                     void updatePersonalization({
-                      disableRecommendationAutoplay:
-                        !settings.personalization.disableRecommendationAutoplay,
+                      blockPlayerAds: !settings.personalization.blockPlayerAds,
                     })
                   }
                   type="button"
                 >
                   <span>
-                    <span className="block font-medium">关闭推荐自动连播</span>
+                    <span className="block font-medium">拦截播放器广告</span>
                     <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                      自动关闭播放器页的推荐/接下来播放连播，不主动禁用分集切换
+                      隐藏播放器右侧广告、活动推广和广告位
                     </span>
                   </span>
-                  <Switch enabled={settings.personalization.disableRecommendationAutoplay} />
+                  <Switch enabled={settings.personalization.blockPlayerAds} />
                 </button>
               </div>
             </section>
@@ -525,17 +560,22 @@ function ThemeSwitch(props: {
   );
 }
 
-function Switch(props: { enabled: boolean }) {
+function Switch(props: { disabled?: boolean; enabled: boolean }) {
   return (
     <span
       className={[
         "h-5 w-9 rounded-full p-0.5 transition-colors duration-300 ease-out",
-        props.enabled ? "bg-sky-500" : "bg-slate-300",
+        props.disabled && props.enabled
+          ? "bg-sky-700/70"
+          : props.enabled
+            ? "bg-sky-500"
+            : "bg-slate-300",
       ].join(" ")}
     >
       <span
         className={[
           "block h-4 w-4 rounded-full bg-white transition-transform duration-300 ease-out shadow-sm",
+          props.disabled ? "opacity-85" : "",
           props.enabled ? "translate-x-4" : "translate-x-0",
         ].join(" ")}
       />
@@ -594,7 +634,7 @@ function getThemePalette(isDark: boolean) {
       label: "text-slate-100 transition-colors duration-300 ease-out",
       mutedText: "text-slate-400 transition-colors duration-300 ease-out",
       secondaryButton:
-        "inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-sky-300/10",
+        "inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300/10",
       notice:
         "rounded-md border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-sm text-sky-100 transition-colors duration-300 ease-out",
       textInput:
@@ -610,7 +650,15 @@ function getThemePalette(isDark: boolean) {
       addButton:
         "inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-sky-300/30 bg-sky-400 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400 sm:w-auto",
       toggleRow:
-        "flex w-full items-center justify-between gap-4 rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:border-sky-300/40 hover:bg-white/15",
+        "flex w-full items-center justify-between gap-4 rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:bg-white/15",
+      toggleRowDisabled:
+        "border-white/5 bg-white/[0.04] text-slate-500 opacity-70 hover:border-white/5 hover:bg-white/[0.04]",
+      toggleGroup:
+        "overflow-hidden rounded-md border border-white/10 bg-white/10 shadow-sm transition-colors duration-300 ease-out",
+      toggleGroupRow:
+        "flex w-full items-center justify-between gap-4 px-3 py-3 text-left text-sm text-slate-100 transition-colors duration-300 ease-out hover:bg-white/[0.05]",
+      toggleGroupDivider: "border-t border-white/10",
+      toggleGroupRowDisabled: "bg-white/[0.03] text-slate-500 opacity-75 hover:bg-white/[0.03]",
       ruleChip:
         "inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2 py-1 text-xs text-slate-200 shadow-sm transition-colors duration-300 ease-out",
       ruleDeleteButton:
@@ -647,7 +695,7 @@ function getThemePalette(isDark: boolean) {
     label: "text-slate-800 transition-colors duration-300 ease-out",
     mutedText: "text-slate-600 transition-colors duration-300 ease-out",
     secondaryButton:
-      "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-sky-50",
+      "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-50",
     notice:
       "rounded-md border border-sky-100 bg-sky-50/75 px-3 py-2 text-sm text-sky-800 transition-colors duration-300 ease-out",
     textInput:
@@ -663,7 +711,15 @@ function getThemePalette(isDark: boolean) {
     addButton:
       "inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-sky-200 bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-300 ease-out hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto",
     toggleRow:
-      "flex w-full items-center justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:border-sky-200 hover:bg-white/85",
+      "flex w-full items-center justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:bg-white/85",
+    toggleRowDisabled:
+      "border-slate-200 bg-slate-100/55 text-slate-500 hover:border-slate-200 hover:bg-slate-100/55",
+    toggleGroup:
+      "overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out",
+    toggleGroupRow:
+      "flex w-full items-center justify-between gap-4 px-3 py-3 text-left text-sm text-slate-800 transition-colors duration-300 ease-out hover:bg-white/85",
+    toggleGroupDivider: "border-t border-slate-200",
+    toggleGroupRowDisabled: "bg-slate-100/55 text-slate-500 hover:bg-slate-100/55",
     ruleChip:
       "inline-flex items-center gap-1.5 rounded-md border border-white/80 bg-white/75 px-2 py-1 text-xs text-slate-700 shadow-sm transition-colors duration-300 ease-out",
     ruleDeleteButton: "text-slate-400 transition-colors duration-300 ease-out hover:text-rose-500",
@@ -730,7 +786,9 @@ function normalizeSettings(
   const searchFilterEnabled = value.features?.searchFilter ?? searchFilter.enabled;
   const personalizationEnabled =
     value.features?.personalization ??
-    (personalization.blockRelatedVideos || personalization.disableRecommendationAutoplay);
+    (personalization.blockRelatedVideos ||
+      personalization.blockPlayerAds ||
+      personalization.disableRecommendationAutoplay);
 
   return {
     ...currentSettings,
@@ -784,6 +842,10 @@ function normalizePersonalization(
       typeof value?.blockRelatedVideos === "boolean"
         ? value.blockRelatedVideos
         : currentPersonalization.blockRelatedVideos,
+    blockPlayerAds:
+      typeof value?.blockPlayerAds === "boolean"
+        ? value.blockPlayerAds
+        : currentPersonalization.blockPlayerAds,
     disableRecommendationAutoplay:
       typeof value?.disableRecommendationAutoplay === "boolean"
         ? value.disableRecommendationAutoplay

@@ -115,9 +115,29 @@ html[data-bili-manager-player-personalization="true"][data-bili-manager-block-re
   .recommend-list-v1,
 html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
   .right-container
-  .video-card-ad-small,
+  .rec-list,
 html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
+  .bpx-player-ending-related {
+  display: none !important;
+}
+
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
   .right-container
-  .ad-floor-exp.right-bottom-banner {
+  .video-card-ad-small,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  .ad-floor-exp.right-bottom-banner,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  #slide_ad,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  .slide-ad-exp,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  .activity-m-v1.act-end,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  [class*="_ad"] {
   display: none !important;
 }
