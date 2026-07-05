@@ -1,6 +1,6 @@
 import React from "react";
 import { ChevronRight } from "lucide-react";
-import { RECENT_VIDEOS } from "../demo-data";
+import { RECENT_VIDEOS } from "../demoData";
 import type { RecentVideo } from "../types";
 
 function handleExpandRecentVideos() {

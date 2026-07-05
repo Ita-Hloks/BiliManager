@@ -23,6 +23,9 @@ export const defaultSettings: ExtensionSettings = {
     blockPlayerAds: false,
     disableRecommendationAutoplay: false,
   },
+  watchTimer: {
+    opacity: 0.86,
+  },
   theme: "system",
   updatedAt: new Date(0).toISOString(),
 };
@@ -49,6 +52,10 @@ export async function getSettings(): Promise<ExtensionSettings> {
     personalization: {
       ...defaultSettings.personalization,
       ...saved?.personalization,
+    },
+    watchTimer: {
+      ...defaultSettings.watchTimer,
+      ...saved?.watchTimer,
     },
   };
 }

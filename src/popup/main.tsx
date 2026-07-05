@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
 import "../styles/globals.css";
-import { PopupApp } from "./popup-app";
+import { PopupApp } from "./popupApp";
 
 createRoot(document.getElementById("root")!).render(<PopupApp />);

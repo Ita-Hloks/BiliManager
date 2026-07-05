@@ -15,10 +15,15 @@ export type PlayerPersonalizationSettings = {
   disableRecommendationAutoplay: boolean;
 };
 
+export type WatchTimerSettings = {
+  opacity: number;
+};
+
 export type ExtensionSettings = {
   features: Record<FeatureKey, boolean>;
   searchFilter: SearchFilterSettings;
   personalization: PlayerPersonalizationSettings;
+  watchTimer: WatchTimerSettings;
   theme: "system" | "light" | "dark";
   updatedAt: string;
 };

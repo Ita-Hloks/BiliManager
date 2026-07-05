@@ -3,8 +3,8 @@ import { AlertCircle, CheckCircle2, Power, Settings } from "lucide-react";
 import type { ExtensionMessage, ExtensionResponse } from "../shared/messaging";
 import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
 import type { ExtensionSettings, SearchFilterStats } from "../shared/types";
-import { RecentVideosCard } from "./components/recent-videos-card";
-import { StatsCard } from "./components/stats-card";
+import { RecentVideosCard } from "./components/recentVideosCard";
+import { StatsCard } from "./components/statsCard";
 
 const unavailableStats: SearchFilterStats = {
   available: false,

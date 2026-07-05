@@ -5,13 +5,15 @@ import type {
   RuntimeSnapshot,
   SearchFilterSettings,
   SearchFilterStats,
+  WatchTimerSettings,
 } from "../shared/types";
 import {
   applyPlayerPersonalization,
   getPlayerObservationTargets,
   isPlayerPage,
-} from "./player-personalization";
-import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./search-filter";
+} from "./playerPersonalization";
+import { applyPlayerWatchTimer } from "./playerWatchTimer";
+import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
 
 const SETTINGS_KEY = "biliFilter.settings";
 const defaultSearchFilter: SearchFilterSettings = {
@@ -25,6 +27,9 @@ const defaultPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+};
+const defaultWatchTimer: WatchTimerSettings = {
+  opacity: 0.86,
 };
 const disabledSearchFilter: SearchFilterSettings = {
   ...defaultSearchFilter,
@@ -63,6 +68,7 @@ async function scanCurrentPage() {
   const settings = await getContentSettings();
   const searchPage = isSearchPage();
   applyPlayerPersonalization(settings.personalization);
+  applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
 
   if (searchPage) return applySearchFilter(settings.searchFilter);
 
@@ -76,11 +82,15 @@ async function scanCurrentPage() {
 async function getContentSettings(): Promise<{
   searchFilter: SearchFilterSettings;
   personalization: PlayerPersonalizationSettings;
+  watchTimer: WatchTimerSettings;
+  watchTimerEnabled: boolean;
 }> {
   if (typeof chrome === "undefined" || !chrome.storage?.local) {
     return {
       searchFilter: defaultSearchFilter,
       personalization: defaultPersonalization,
+      watchTimer: defaultWatchTimer,
+      watchTimerEnabled: false,
     };
   }
 
@@ -96,6 +106,10 @@ async function getContentSettings(): Promise<{
     ...defaultPersonalization,
     ...saved?.personalization,
   };
+  const watchTimer = {
+    ...defaultWatchTimer,
+    ...saved?.watchTimer,
+  };
 
   return {
     searchFilter: pluginEnabled ? searchFilter : disabledSearchFilter,
@@ -103,6 +117,8 @@ async function getContentSettings(): Promise<{
       pluginEnabled && (saved?.features?.personalization ?? true)
         ? personalization
         : disabledPersonalization,
+    watchTimer,
+    watchTimerEnabled: pluginEnabled && (saved?.features?.watchTimer ?? false),
   };
 }
 
