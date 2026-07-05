@@ -15,15 +15,20 @@ function useMountedAnimation() {
 export function DurationBarChart({ data }: { data: DurationPoint[] }) {
   const mounted = useMountedAnimation();
   const max = Math.max(...data.map(point => point.minutes), 1);
-  const minWidth = Math.max(280, data.length * 20);
 
   return (
-    <div className="overflow-x-auto pb-1">
-      <div className="flex h-28 items-end justify-between gap-1.5" style={{ minWidth }}>
+    <div className="overflow-visible pb-1 pt-7">
+      <div className="flex h-28 min-w-0 items-end justify-between gap-1.5 overflow-visible">
         {data.map((point, index) => {
           const pct = (point.minutes / max) * 100;
           return (
-            <div className="flex flex-1 flex-col items-center gap-1.5" key={point.label}>
+            <div
+              className="group relative flex min-w-0 flex-1 flex-col items-center gap-1.5"
+              key={point.label}
+            >
+              <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[calc(100%+0.35rem)] whitespace-nowrap rounded border border-sky-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-medium text-sky-100 opacity-0 shadow-lg shadow-slate-950/30 transition-opacity duration-150 group-hover:opacity-100">
+                {formatDurationDetail(point.elapsedMs ?? point.minutes * 60000)}
+              </div>
               <div className="flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-white/[0.03]">
                 <div
                   className="w-full rounded-t-sm bg-gradient-to-t from-sky-500/60 to-sky-300/95 transition-[height] duration-700 ease-out"
@@ -33,7 +38,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
                   }}
                 />
               </div>
-              <span className="whitespace-nowrap text-[9px] leading-none text-slate-500">
+              <span className="max-w-full truncate text-[9px] leading-none text-slate-500">
                 {point.label}
               </span>
             </div>
@@ -42,6 +47,17 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
       </div>
     </div>
   );
+}
+
+function formatDurationDetail(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours} 小时 ${minutes} 分 ${seconds} 秒`;
+  if (minutes > 0) return `${minutes} 分 ${seconds} 秒`;
+  return `${seconds} 秒`;
 }
 
 export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
@@ -62,12 +78,8 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
   const last = points[points.length - 1];
 
   return (
-    <div className="overflow-x-auto pb-1">
-      <svg
-        className="h-24 w-full overflow-visible"
-        style={{ minWidth: width }}
-        viewBox={`0 0 ${width} ${height}`}
-      >
+    <div className="overflow-hidden pb-1">
+      <svg className="h-24 w-full overflow-visible" viewBox={`0 0 ${width} ${height}`}>
         <defs>
           <linearGradient id="hitRateFill" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="rgba(56,189,248,0.35)" />
@@ -119,12 +131,9 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
           {data[data.length - 1].rate}%
         </text>
       </svg>
-      <div
-        className="mt-1 flex justify-between text-[10px] text-slate-500"
-        style={{ minWidth: width }}
-      >
+      <div className="mt-1 flex justify-between text-[10px] text-slate-500">
         {data.map(point => (
-          <span className="whitespace-nowrap" key={point.label}>
+          <span className="min-w-0 truncate" key={point.label}>
             {point.label}
           </span>
         ))}

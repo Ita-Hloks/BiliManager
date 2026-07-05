@@ -6,6 +6,7 @@ export type StatsPeriod = "7d" | "month" | "year";
 export interface DurationPoint {
   label: string;
   minutes: number;
+  elapsedMs?: number;
 }
 
 export interface HitRatePoint {

@@ -72,6 +72,7 @@ function buildLastSevenDays(history: WatchTimerHistory, todayKey: string): Durat
     const dateKey = getLocalDateKey(date);
     return {
       label: WEEKDAY_LABELS[date.getDay()],
+      elapsedMs: history[dateKey] ?? 0,
       minutes: msToMinutes(history[dateKey] ?? 0),
     };
   });
@@ -95,6 +96,7 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): D
 
     return {
       label: `${index + 1}周`,
+      elapsedMs: totalMs,
       minutes: msToMinutes(totalMs),
     };
   });
@@ -114,6 +116,7 @@ function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): D
 
     return {
       label: `${month + 1}月`,
+      elapsedMs: totalMs,
       minutes: msToMinutes(totalMs),
     };
   });
