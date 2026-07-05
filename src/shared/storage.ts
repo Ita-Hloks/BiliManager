@@ -5,13 +5,14 @@ const SETTINGS_KEY = "biliFilter.settings";
 export const defaultSettings: ExtensionSettings = {
   features: {
     enabled: true,
-    searchFilter: false,
+    searchFilter: true,
     personalization: false,
     watchTimer: false,
     dailyStats: false,
   },
+  // searchFilter.enabled 是内容脚本实际开关，features.searchFilter 用于设置页功能分组同步。
   searchFilter: {
-    enabled: false,
+    enabled: true,
     titlePattern: "",
     uploaderPattern: "",
     minDanmakuViewRate: 0.005,

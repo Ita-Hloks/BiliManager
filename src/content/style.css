@@ -1,12 +1,13 @@
 .bili-manager-filtered {
   position: relative;
-  box-shadow: none !important;
 }
 
-.bili-manager-filtered-cover,
-.bili-manager-filtered img:first-of-type {
-  box-shadow: none !important;
-  filter: grayscale(1) blur(6px) brightness(0.45) opacity(0.72) !important;
+.bili-manager-filtered-cover-wrap {
+  overflow: hidden;
+}
+
+.bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.45) opacity(0.72);
   transform: none;
   transition:
     filter 220ms ease,
@@ -14,24 +15,20 @@
     transform 220ms ease;
 }
 
-.bili-manager-page-light .bili-manager-filtered-cover,
-.bili-manager-page-light img:first-of-type {
-  filter: grayscale(1) blur(6px) brightness(0.72) opacity(0.82) !important;
+.bili-manager-page-light .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.72) opacity(0.82);
 }
 
-.bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover,
-.bili-manager-filtered[data-bili-manager-filter-gate="peek"] img:first-of-type {
-  filter: grayscale(1) blur(6px) brightness(0.58) opacity(0.86) !important;
+.bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.58) opacity(0.86);
 }
 
-.bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover,
-.bili-manager-page-light[data-bili-manager-filter-gate="peek"] img:first-of-type {
-  filter: grayscale(1) blur(6px) brightness(0.82) opacity(0.9) !important;
+.bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.82) opacity(0.9);
 }
 
-.bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-cover,
-.bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] img:first-of-type {
-  filter: grayscale(1) blur(0) brightness(0.82) opacity(0.96) !important;
+.bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(0) brightness(0.82) opacity(0.96);
   transform: scale(1);
 }
 
@@ -71,7 +68,6 @@
   border-radius: inherit;
   background: rgba(8, 8, 10, 0.42);
   color: rgba(255, 255, 255, 0.72);
-  box-shadow: none !important;
   font:
     700 15px/1.45 system-ui,
     -apple-system,

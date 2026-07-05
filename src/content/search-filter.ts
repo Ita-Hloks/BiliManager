@@ -24,6 +24,8 @@ const REASON_TEXT_ATTR = "data-bili-manager-filter-reason-text";
 const REASON_CLASS = "bili-manager-filter-reasons";
 const TITLE_CLASS = "bili-manager-filtered-title";
 const META_CLASS = "bili-manager-filtered-meta";
+const COVER_WRAP_CLASS = "bili-manager-filtered-cover-wrap";
+const COVER_CLASS = "bili-manager-filtered-cover";
 const PAGE_DARK_CLASS = "bili-manager-page-dark";
 const PAGE_LIGHT_CLASS = "bili-manager-page-light";
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
@@ -272,7 +274,8 @@ function markFiltered(card: SearchCard, reasons: string[], pageTheme: PageTheme)
   card.cardEl.classList.add("bili-manager-filtered");
   card.titleEl?.classList.add(TITLE_CLASS);
   card.metadataEls.forEach(element => element.classList.add(META_CLASS));
-  card.thumbnailEl?.classList.add("bili-manager-filtered-cover");
+  card.thumbnailEl?.parentElement?.classList.add(COVER_WRAP_CLASS);
+  card.thumbnailEl?.classList.add(COVER_CLASS);
   card.previewEls.forEach(element => {
     element.classList.add("bili-manager-preview-disabled");
     if (element instanceof HTMLVideoElement) element.pause();
@@ -306,8 +309,11 @@ function clearFilterState(cardEl: HTMLElement) {
   cardEl.classList.remove("bili-manager-filtered", PAGE_DARK_CLASS, PAGE_LIGHT_CLASS);
   cardEl.querySelector(`.${REASON_CLASS}`)?.remove();
   cardEl
-    .querySelectorAll<HTMLElement>(".bili-manager-filtered-cover")
-    .forEach(element => element.classList.remove("bili-manager-filtered-cover"));
+    .querySelectorAll<HTMLElement>(`.${COVER_WRAP_CLASS}`)
+    .forEach(element => element.classList.remove(COVER_WRAP_CLASS));
+  cardEl
+    .querySelectorAll<HTMLElement>(`.${COVER_CLASS}`)
+    .forEach(element => element.classList.remove(COVER_CLASS));
   cardEl
     .querySelectorAll<HTMLElement>(`.${TITLE_CLASS}`)
     .forEach(element => element.classList.remove(TITLE_CLASS));
