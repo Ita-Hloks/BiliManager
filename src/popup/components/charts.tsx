@@ -14,13 +14,15 @@ function useMountedAnimation() {
 
 export function DurationBarChart({ data }: { data: DurationPoint[] }) {
   const mounted = useMountedAnimation();
-  const max = Math.max(...data.map(point => point.minutes), 1);
+  const elapsedValues = data.map(point => Math.max(0, point.elapsedMs ?? point.minutes * 60000));
+  const maxElapsed = Math.max(...elapsedValues, 1);
 
   return (
     <div className="overflow-visible pb-1 pt-7">
       <div className="flex h-28 min-w-0 items-end justify-between gap-1.5 overflow-visible">
         {data.map((point, index) => {
-          const pct = (point.minutes / max) * 100;
+          const elapsed = elapsedValues[index];
+          const pct = elapsed > 0 ? Math.max((elapsed / maxElapsed) * 90, 3) : 0;
           return (
             <div
               className="group relative flex min-w-0 flex-1 flex-col items-center gap-1.5"
