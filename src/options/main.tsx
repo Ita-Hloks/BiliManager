@@ -464,12 +464,13 @@ function OptionsApp() {
                     ].join(" ")}
                     style={{ opacity: settings.watchTimer.opacity }}
                   >
-                    <span className="block text-[11px] leading-tight text-slate-300">
-                      当前播放器
-                    </span>
-                    <strong className="mt-0.5 block text-[22px] leading-none tracking-normal">
+                    <strong className="block text-[22px] leading-none tracking-normal">
                       00:00
                     </strong>
+                    <span className="mt-2 flex justify-between text-xs font-medium text-slate-300">
+                      <span>今日：</span>
+                      <span>00:00</span>
+                    </span>
                   </div>
 
                   <label className="block min-w-0">

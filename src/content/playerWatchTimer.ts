@@ -1,6 +1,8 @@
 import type { WatchTimerSettings } from "../shared/types";
 
 const TIMER_SETTINGS_KEY = "biliManager.playerWatchTimer";
+const TIMER_DAILY_KEY = "biliManager.playerWatchTimerDaily";
+const TIMER_HISTORY_KEY = "biliManager.playerWatchTimerHistory";
 const TIMER_ROOT_ID = "bili-manager-watch-timer";
 const TIMER_STYLE_ID = "bili-manager-watch-timer-style";
 const FULLSCREEN_ATTR = "data-bili-manager-watch-timer-fullscreen";
@@ -14,12 +16,23 @@ type PlayerWatchTimerStorage = {
   top: number;
 };
 
+type PlayerWatchTimerDailyStorage = {
+  dateKey: string;
+  elapsedMs: number;
+};
+
+type PlayerWatchTimerHistory = Record<string, number>;
+
 let timerRoot: HTMLElement | undefined;
 let timeText: HTMLElement | undefined;
+let todayText: HTMLElement | undefined;
 let tickTimer: number | undefined;
 let currentPageKey = "";
 let startedAt = 0;
 let elapsedMs = 0;
+let todayElapsedMs = 0;
+let todayDateKey = getTodayKey();
+let lastDailySaveAt = 0;
 let isCounting = false;
 let latestSettings = DEFAULT_TIMER_SETTINGS;
 let dragging:
@@ -43,10 +56,16 @@ export function applyPlayerWatchTimer(enabled: boolean, settings: WatchTimerSett
 }
 
 export function destroyPlayerWatchTimer(): void {
+  commitActiveSpan();
+  void saveDailyTimer(false);
   stopTicker();
   timerRoot?.remove();
   timerRoot = undefined;
   timeText = undefined;
+  todayText = undefined;
+  todayElapsedMs = 0;
+  todayDateKey = getTodayKey();
+  lastDailySaveAt = 0;
   isCounting = false;
   dragging = undefined;
   document.documentElement.removeAttribute(FULLSCREEN_ATTR);
@@ -69,15 +88,19 @@ function ensureTimerMounted() {
   handle.title = "拖动调整位置";
   handle.addEventListener("pointerdown", startDrag);
 
-  const label = document.createElement("span");
-  label.className = "bili-manager-watch-timer__label";
-  label.textContent = "当前播放器";
-
   timeText = document.createElement("strong");
   timeText.className = "bili-manager-watch-timer__time";
   timeText.textContent = "00:00";
 
-  handle.append(label, timeText);
+  const todayRow = document.createElement("span");
+  todayRow.className = "bili-manager-watch-timer__today";
+  const todayLabel = document.createElement("span");
+  todayLabel.textContent = "今日：";
+  todayText = document.createElement("span");
+  todayText.textContent = "00:00";
+  todayRow.append(todayLabel, todayText);
+
+  handle.append(timeText, todayRow);
   root.append(handle);
   document.body.append(root);
   timerRoot = root;
@@ -89,6 +112,11 @@ function ensureTimerMounted() {
   void loadTimerSettings().then(settings => {
     latestSettings = settings;
     applyTimerSettings(settings);
+  });
+  void loadDailyTimer().then(daily => {
+    todayDateKey = daily.dateKey;
+    todayElapsedMs = daily.elapsedMs;
+    updateTimeText();
   });
   syncFullscreenState();
 }
@@ -138,21 +166,24 @@ function injectTimerStyle() {
       cursor: grabbing;
     }
 
-    .bili-manager-watch-timer__label {
-      display: block;
-      color: rgba(226, 232, 240, 0.76);
-      font-size: 11px;
-      line-height: 1.2;
-    }
-
     .bili-manager-watch-timer__time {
       display: block;
-      margin-top: 2px;
       color: #f8fafc;
       font-size: 22px;
       font-weight: 700;
       line-height: 1.12;
       letter-spacing: 0;
+    }
+
+    .bili-manager-watch-timer__today {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 7px;
+      color: rgba(226, 232, 240, 0.78);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.2;
     }
   `;
   document.head.append(style);
@@ -165,6 +196,15 @@ async function loadTimerSettings(): Promise<PlayerWatchTimerStorage> {
   return normalizeTimerSettings(saved[TIMER_SETTINGS_KEY]);
 }
 
+async function loadDailyTimer(): Promise<PlayerWatchTimerDailyStorage> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return { dateKey: getTodayKey(), elapsedMs: 0 };
+  }
+
+  const saved = await chrome.storage.local.get(TIMER_DAILY_KEY);
+  return normalizeDailyTimer(saved[TIMER_DAILY_KEY]);
+}
+
 function normalizeTimerSettings(value: unknown): PlayerWatchTimerStorage {
   if (!value || typeof value !== "object") return DEFAULT_TIMER_SETTINGS;
 
@@ -172,6 +212,19 @@ function normalizeTimerSettings(value: unknown): PlayerWatchTimerStorage {
   return {
     left: clampNumber(record.left, 8, window.innerWidth - 156, DEFAULT_TIMER_SETTINGS.left),
     top: clampNumber(record.top, 8, window.innerHeight - 94, DEFAULT_TIMER_SETTINGS.top),
+  };
+}
+
+function normalizeDailyTimer(value: unknown): PlayerWatchTimerDailyStorage {
+  const currentDateKey = getTodayKey();
+  if (!value || typeof value !== "object") return { dateKey: currentDateKey, elapsedMs: 0 };
+
+  const record = value as Partial<PlayerWatchTimerDailyStorage>;
+  if (record.dateKey !== currentDateKey) return { dateKey: currentDateKey, elapsedMs: 0 };
+
+  return {
+    dateKey: currentDateKey,
+    elapsedMs: clampNumber(record.elapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
   };
 }
 
@@ -201,9 +254,12 @@ function stopTicker() {
 }
 
 function syncPageTimer() {
+  syncTodayBoundary();
   const nextPageKey = getCurrentPageKey();
   if (nextPageKey === currentPageKey) return;
 
+  commitActiveSpan();
+  void saveDailyTimer(false);
   currentPageKey = nextPageKey;
   elapsedMs = 0;
   isCounting = isVideoActivelyPlaying();
@@ -212,17 +268,19 @@ function syncPageTimer() {
 }
 
 function syncVisibilityTiming() {
+  syncTodayBoundary();
   syncPlaybackTiming();
   updateTimeText();
 }
 
 function syncPlaybackTiming() {
+  syncTodayBoundary();
   const shouldCount = document.visibilityState === "visible" && isVideoActivelyPlaying();
   if (isCounting === shouldCount) return;
 
   if (!shouldCount) {
-    elapsedMs = getElapsedMs();
-    startedAt = Date.now();
+    commitActiveSpan();
+    void saveDailyTimer(false);
   }
 
   isCounting = shouldCount;
@@ -230,14 +288,31 @@ function syncPlaybackTiming() {
 }
 
 function updateTimeText() {
-  if (!timeText) return;
+  if (!timeText || !todayText) return;
   syncPlaybackTiming();
   timeText.textContent = formatDuration(getElapsedMs());
+  todayText.textContent = formatDuration(getTodayElapsedMs());
+  void saveDailyTimer(true);
 }
 
 function getElapsedMs() {
   if (!isCounting) return elapsedMs;
   return elapsedMs + Date.now() - startedAt;
+}
+
+function getTodayElapsedMs() {
+  if (!isCounting) return todayElapsedMs;
+  return todayElapsedMs + Date.now() - startedAt;
+}
+
+function commitActiveSpan() {
+  if (!isCounting) return;
+
+  const now = Date.now();
+  const delta = Math.max(0, now - startedAt);
+  elapsedMs += delta;
+  todayElapsedMs += delta;
+  startedAt = now;
 }
 
 function getCurrentPageKey() {
@@ -311,6 +386,43 @@ async function saveTimerSettings(settings: PlayerWatchTimerStorage) {
   await chrome.storage.local.set({ [TIMER_SETTINGS_KEY]: settings });
 }
 
+async function saveDailyTimer(throttle: boolean) {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) return;
+  const now = Date.now();
+  if (throttle && now - lastDailySaveAt < 5000) return;
+
+  lastDailySaveAt = now;
+  const elapsedMs = getTodayElapsedMs();
+  const history = await loadTimerHistory();
+  await chrome.storage.local.set({
+    [TIMER_DAILY_KEY]: {
+      dateKey: todayDateKey,
+      elapsedMs,
+    },
+    [TIMER_HISTORY_KEY]: {
+      ...history,
+      [todayDateKey]: elapsedMs,
+    },
+  });
+}
+
+async function loadTimerHistory(): Promise<PlayerWatchTimerHistory> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) return {};
+
+  const saved = await chrome.storage.local.get(TIMER_HISTORY_KEY);
+  return normalizeTimerHistory(saved[TIMER_HISTORY_KEY]);
+}
+
+function normalizeTimerHistory(value: unknown): PlayerWatchTimerHistory {
+  if (!value || typeof value !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([dateKey, elapsedMs]) => isDateKey(dateKey) && typeof elapsedMs === "number")
+      .map(([dateKey, elapsedMs]) => [dateKey, Math.max(0, Math.floor(elapsedMs as number))]),
+  );
+}
+
 function keepTimerInViewport() {
   if (!timerRoot) return;
 
@@ -352,6 +464,26 @@ function isVideoActivelyPlaying() {
   );
 }
 
+function syncTodayBoundary() {
+  const currentDateKey = getTodayKey();
+  if (currentDateKey === todayDateKey) return;
+
+  if (isCounting) {
+    elapsedMs += Math.max(0, Date.now() - startedAt);
+  }
+
+  todayDateKey = currentDateKey;
+  todayElapsedMs = 0;
+  startedAt = Date.now();
+  lastDailySaveAt = 0;
+  void saveDailyTimer(false);
+}
+
+function getTodayKey() {
+  const date = new Date();
+  return `${date.getFullYear()}-${padDate(date.getMonth() + 1)}-${padDate(date.getDate())}`;
+}
+
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(Math.max(value, min), Math.max(min, max))
@@ -360,4 +492,12 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
 
 function padTime(value: number) {
   return value.toString().padStart(2, "0");
+}
+
+function padDate(value: number) {
+  return value.toString().padStart(2, "0");
+}
+
+function isDateKey(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
