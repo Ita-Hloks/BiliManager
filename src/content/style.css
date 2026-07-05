@@ -112,12 +112,9 @@
 
 html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
   .right-container
-  .recommend-list-v1,
+  .rec-list,
 html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
   .right-container
-  .video-card-ad-small,
-html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
-  .right-container
-  .ad-floor-exp.right-bottom-banner {
+  .video-card-ad-small {
   display: none !important;
 }

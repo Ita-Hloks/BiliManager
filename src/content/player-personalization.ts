@@ -7,34 +7,10 @@ const VIDEO_ENDED_ATTR = "data-bili-manager-ended-bound";
 const BLOCK_RELATED_ATTR = "data-bili-manager-block-related";
 const PLAYER_PERSONALIZATION_ATTR = "data-bili-manager-player-personalization";
 
-const PROTECTED_MODULE_SELECTOR = [
-  ".right-container",
-  ".right-container-inner",
-  ".video-pod",
-  ".video-pod__body",
-  ".video-pod__list",
-  ".video-pod__item",
-  ".base-video-sections",
-  ".video-sections-content-list",
-  ".up-info-container",
-  ".up-panel-container",
-  ".members-info-container",
-  ".bpx-player-collapse",
-].join(", ");
-const RELATED_LIST_SELECTOR = [
-  ".right-container .recommend-list-v1",
+const RELATED_MODULE_SELECTOR = [
   ".right-container .rec-list",
-].join(", ");
-const RELATED_CARD_SELECTOR = [
-  ".right-container .video-page-card-small",
-  ".right-container .video-page-special-card-small",
-].join(", ");
-const RECOMMEND_AD_SELECTOR = [
   ".right-container .video-card-ad-small",
-  ".right-container .ad-floor-exp",
-  ".right-container .right-bottom-banner",
 ].join(", ");
-const RELATED_TRACK_RE = /recommend_more_video|specialRecommendByOp|right_bottom\.adfloor/;
 let latestSettings: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   disableRecommendationAutoplay: false,
@@ -79,8 +55,8 @@ export function applyPlayerPersonalization(settings: PlayerPersonalizationSettin
 export function getPlayerObservationTargets(): HTMLElement[] {
   const targets = [
     document.querySelector<HTMLElement>(".right-container"),
+    document.querySelector<HTMLElement>(".rec-list"),
     document.querySelector<HTMLElement>(".video-card-ad-small"),
-    document.querySelector<HTMLElement>(".video-pod"),
   ].filter(Boolean) as HTMLElement[];
 
   return targets.length > 0 ? removeNestedModules(targets) : [document.body];
@@ -114,109 +90,7 @@ function clearRelatedVideoModules() {
 }
 
 function collectRelatedVideoModules(): HTMLElement[] {
-  const modules = new Set<HTMLElement>();
-  const rightContainer = document.querySelector<HTMLElement>(".right-container");
-
-  if (!rightContainer) return [];
-
-  collectKnownRelatedModules().forEach(element => modules.add(element));
-
-  rightContainer.querySelectorAll<HTMLAnchorElement>("a[href]").forEach(link => {
-    if (!isRelatedLink(link)) return;
-
-    const moduleRoot = findRelatedModuleRoot(link);
-    if (moduleRoot) modules.add(moduleRoot);
-  });
-
-  return removeNestedModules([...modules]);
-}
-
-function collectKnownRelatedModules(): HTMLElement[] {
-  const modules = new Set<HTMLElement>();
-
-  document
-    .querySelectorAll<HTMLElement>(`${RELATED_LIST_SELECTOR}, ${RECOMMEND_AD_SELECTOR}`)
-    .forEach(element => {
-      if (isSafeRelatedTarget(element)) modules.add(element);
-    });
-
-  document.querySelectorAll<HTMLElement>(RELATED_CARD_SELECTOR).forEach(element => {
-    if (isSafeRelatedTarget(element)) modules.add(element);
-  });
-
-  return [...modules];
-}
-
-function findRelatedModuleRoot(link: HTMLAnchorElement): HTMLElement | null {
-  const knownCard = link.closest<HTMLElement>(RELATED_CARD_SELECTOR);
-  if (knownCard && isSafeRelatedTarget(knownCard)) return knownCard;
-
-  const knownList = link.closest<HTMLElement>(RELATED_LIST_SELECTOR);
-  if (knownList && isSafeRelatedTarget(knownList)) return knownList;
-
-  return findCompactRightSideCard(link);
-}
-
-function isRelatedLink(link: HTMLAnchorElement): boolean {
-  const target = getUrl(link.href);
-  if (!target || !target.hostname.endsWith("bilibili.com")) return false;
-  if (isCurrentEpisodeLink(target)) return false;
-  if (RELATED_TRACK_RE.test(target.href)) return true;
-  if (!/^\/video\/(?:BV|av)/i.test(target.pathname)) return false;
-
-  const currentVideoId = getVideoId(new URL(location.href));
-  const targetVideoId = getVideoId(target);
-  if (currentVideoId && targetVideoId && currentVideoId === targetVideoId) return false;
-
-  return true;
-}
-
-function isCurrentEpisodeLink(target: URL) {
-  return target.searchParams.has("p") && getVideoId(target) === getVideoId(new URL(location.href));
-}
-
-function isRightSide(rect: DOMRect) {
-  if (rect.width === 0) return false;
-  return (
-    rect.left >= window.innerWidth * 0.52 ||
-    (rect.right >= window.innerWidth * 0.86 && rect.width <= 680)
-  );
-}
-
-function findCompactRightSideCard(link: HTMLAnchorElement): HTMLElement | null {
-  let current = link.parentElement;
-  let depth = 0;
-
-  while (current && current !== document.body && depth < 4) {
-    if (current.matches(PROTECTED_MODULE_SELECTOR) || current.closest(".video-pod")) return null;
-
-    const rect = current.getBoundingClientRect();
-    if (
-      isRightSide(rect) &&
-      rect.width > 0 &&
-      rect.width <= 430 &&
-      rect.height > 0 &&
-      rect.height <= 180
-    ) {
-      return current;
-    }
-
-    current = current.parentElement;
-    depth += 1;
-  }
-
-  return null;
-}
-
-function isSafeRelatedTarget(element: HTMLElement) {
-  if (!element.closest(".right-container")) return false;
-  if (element.matches(".right-container, .right-container-inner, .rcmd-tab")) return false;
-  if (element.matches(PROTECTED_MODULE_SELECTOR)) return false;
-  if (element.closest(".video-pod, .base-video-sections, .video-sections-content-list")) {
-    return false;
-  }
-
-  return true;
+  return removeNestedModules([...document.querySelectorAll<HTMLElement>(RELATED_MODULE_SELECTOR)]);
 }
 
 function removeNestedModules(modules: HTMLElement[]) {
@@ -262,20 +136,4 @@ function bindVideoEndedGuards() {
       }, 0);
     });
   });
-}
-
-function getVideoId(url: URL): string | null {
-  const bv = url.pathname.match(/\/video\/(BV[\da-z]+)/i)?.[1];
-  if (bv) return bv.toUpperCase();
-
-  const av = url.pathname.match(/\/video\/av(\d+)/i)?.[1];
-  return av ? `AV${av}` : null;
-}
-
-function getUrl(value: string): URL | null {
-  try {
-    return new URL(value, location.href);
-  } catch {
-    return null;
-  }
 }
