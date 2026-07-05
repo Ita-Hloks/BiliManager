@@ -11,9 +11,9 @@ import {
   applyPlayerPersonalization,
   getPlayerObservationTargets,
   isPlayerPage,
-} from "./player-personalization";
-import { applyPlayerWatchTimer } from "./player-watch-timer";
-import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./search-filter";
+} from "./playerPersonalization";
+import { applyPlayerWatchTimer } from "./playerWatchTimer";
+import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
 
 const SETTINGS_KEY = "biliFilter.settings";
 const defaultSearchFilter: SearchFilterSettings = {

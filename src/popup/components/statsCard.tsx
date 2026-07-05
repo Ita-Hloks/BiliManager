@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Clock3, Target } from "lucide-react";
-import { DURATION_DATA, HIT_RATE_DATA, PERIOD_LABEL } from "../demo-data";
+import { DURATION_DATA, HIT_RATE_DATA, PERIOD_LABEL } from "../demoData";
 import type { SegmentedOption, StatsMetric, StatsPeriod } from "../types";
 import { DurationBarChart, HitRateLineChart } from "./charts";
-import { SegmentedControl } from "./segmented-control";
+import { SegmentedControl } from "./segmentedControl";
 
 const METRIC_OPTIONS: SegmentedOption<StatsMetric>[] = [
   { value: "duration", label: "观看时长", icon: Clock3 },

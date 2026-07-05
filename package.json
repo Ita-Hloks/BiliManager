@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "node scripts/prepare-html.mjs \u0026\u0026 vite build \u0026\u0026 node scripts/copy-manifest.mjs",
+    "build": "node scripts/prepareHtml.mjs \u0026\u0026 vite build \u0026\u0026 node scripts/copyManifest.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
@@ -13,7 +13,7 @@
     "format": "prettier \"**/*.{ts,tsx,js,jsx,json,css,md,html,mjs,cjs,yml,yaml}\" --write",
     "format:check": "prettier \"**/*.{ts,tsx,js,jsx,json,css,md,html,mjs,cjs,yml,yaml}\" --check",
     "check": "npm run typecheck \u0026\u0026 npm run lint \u0026\u0026 npm run format:check",
-    "guard:branch": "node scripts/guard-branch.mjs",
+    "guard:branch": "node scripts/guardBranch.mjs",
     "precommit": "npm run guard:branch \u0026\u0026 lint-staged \u0026\u0026 npm run typecheck \u0026\u0026 npm run format:check",
     "prepare": "husky"
   },
