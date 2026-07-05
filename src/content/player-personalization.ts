@@ -18,7 +18,7 @@ const PLAYER_AD_SELECTOR = [
   ".right-container .ad-floor-exp.right-bottom-banner",
   ".right-container #slide_ad",
   ".right-container .slide-ad-exp",
-  ".right-container .activity-m-v1.act-end",
+  ".activity-m-v1.act-end",
   '.right-container [class*="_ad"]',
 ].join(", ");
 let latestSettings: PlayerPersonalizationSettings = {
