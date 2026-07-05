@@ -9,10 +9,18 @@ export type SearchFilterSettings = {
   filterMissingTitleHighlight: boolean;
 };
 
+export type CustomBackgroundSettings = {
+  enabled: boolean;
+  imageDataUrl: string;
+  positionX: number;
+  positionY: number;
+};
+
 export type PlayerPersonalizationSettings = {
   blockRelatedVideos: boolean;
   blockPlayerAds: boolean;
   disableRecommendationAutoplay: boolean;
+  customBackground: CustomBackgroundSettings;
 };
 
 export type WatchTimerSettings = {

@@ -17,6 +17,7 @@ import {
 import "../styles/globals.css";
 import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
 import type {
+  CustomBackgroundSettings,
   ExtensionSettings,
   PlayerPersonalizationSettings,
   SearchFilterSettings,
@@ -29,6 +30,7 @@ type SectionId = "search-filter" | "personalization" | "watch-timer" | "data";
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
   const [importMessage, setImportMessage] = useState("");
+  const [backgroundMessage, setBackgroundMessage] = useState("");
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
@@ -81,7 +83,8 @@ function OptionsApp() {
     const enabled =
       personalization.blockRelatedVideos ||
       personalization.blockPlayerAds ||
-      personalization.disableRecommendationAutoplay;
+      personalization.disableRecommendationAutoplay ||
+      personalization.customBackground.enabled;
 
     await updateSettings({
       ...settings,
@@ -101,6 +104,39 @@ function OptionsApp() {
         ...patch,
       },
     });
+  }
+
+  async function updateCustomBackground(patch: Partial<CustomBackgroundSettings>) {
+    const customBackground = {
+      ...settings.personalization.customBackground,
+      ...patch,
+    };
+    await updatePersonalization({ customBackground });
+  }
+
+  async function uploadCustomBackground(file: File) {
+    try {
+      const imageDataUrl = await createBackgroundDataUrl(file);
+      await updateCustomBackground({
+        enabled: true,
+        imageDataUrl,
+        positionX: settings.personalization.customBackground.positionX,
+        positionY: settings.personalization.customBackground.positionY,
+      });
+      setBackgroundMessage("已更新背景图");
+    } catch (error) {
+      setBackgroundMessage(error instanceof Error ? error.message : "背景图上传失败");
+    }
+  }
+
+  async function clearCustomBackground() {
+    await updateCustomBackground({
+      enabled: false,
+      imageDataUrl: "",
+      positionX: 50,
+      positionY: 50,
+    });
+    setBackgroundMessage("已清除背景图");
   }
 
   async function updateTheme(theme: ExtensionSettings["theme"]) {
@@ -411,6 +447,15 @@ function OptionsApp() {
                   </span>
                   <Switch enabled={settings.personalization.blockPlayerAds} />
                 </button>
+
+                <CustomBackgroundPanel
+                  background={settings.personalization.customBackground}
+                  message={backgroundMessage}
+                  palette={palette}
+                  onChange={patch => void updateCustomBackground(patch)}
+                  onClear={() => void clearCustomBackground()}
+                  onUpload={file => void uploadCustomBackground(file)}
+                />
               </div>
             </section>
 
@@ -637,6 +682,162 @@ function RuleListEditor(props: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function CustomBackgroundPanel(props: {
+  background: CustomBackgroundSettings;
+  message: string;
+  palette: ThemePalette;
+  onChange: (patch: Partial<CustomBackgroundSettings>) => void;
+  onClear: () => void;
+  onUpload: (file: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasImage = !!props.background.imageDataUrl;
+  const rangeXStyle = {
+    "--bm-range-progress": `${props.background.positionX}%`,
+  } as React.CSSProperties;
+  const rangeYStyle = {
+    "--bm-range-progress": `${props.background.positionY}%`,
+  } as React.CSSProperties;
+
+  function updateFocus(event: React.PointerEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    props.onChange({
+      positionX: clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100),
+      positionY: clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100),
+    });
+  }
+
+  return (
+    <div className="grid gap-4 rounded-md border border-sky-300/20 bg-sky-300/[0.06] p-3 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
+      <button
+        className={[
+          "relative aspect-video w-full overflow-hidden rounded-md border text-left shadow-sm",
+          hasImage ? "border-sky-300/35" : "border-white/10 bg-slate-950/35",
+        ].join(" ")}
+        type="button"
+        onClick={updateFocus}
+        onPointerMove={event => {
+          if (event.buttons === 1) updateFocus(event);
+        }}
+      >
+        {hasImage ? (
+          <img
+            alt=""
+            className="h-full w-full object-cover"
+            src={props.background.imageDataUrl}
+            style={{
+              objectPosition: `${props.background.positionX}% ${props.background.positionY}%`,
+            }}
+          />
+        ) : (
+          <span
+            className={`flex h-full items-center justify-center text-sm ${props.palette.mutedText}`}
+          >
+            选择背景图
+          </span>
+        )}
+        {hasImage && (
+          <span
+            className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100 bg-sky-400 shadow-[0_0_0_3px_rgba(14,165,233,0.24)]"
+            style={{
+              left: `${props.background.positionX}%`,
+              top: `${props.background.positionY}%`,
+            }}
+          />
+        )}
+      </button>
+
+      <div className="min-w-0 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className={`block text-sm font-medium ${props.palette.label}`}>背景图</span>
+            <span className={`mt-1 block text-xs ${props.palette.mutedText}`}>
+              拖动预览图中的焦点适配不同窗口比例
+            </span>
+          </div>
+          <Switch enabled={props.background.enabled && hasImage} />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <input
+            ref={inputRef}
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            type="file"
+            onChange={event => {
+              const file = event.target.files?.[0];
+              if (file) props.onUpload(file);
+              if (inputRef.current) inputRef.current.value = "";
+            }}
+          />
+          <button
+            className={props.palette.secondaryButton}
+            onClick={() => inputRef.current?.click()}
+            type="button"
+          >
+            <Upload className="h-4 w-4" />
+            上传
+          </button>
+          <button
+            className={props.palette.secondaryButton}
+            disabled={!hasImage}
+            onClick={() => props.onChange({ enabled: !props.background.enabled })}
+            type="button"
+          >
+            {props.background.enabled ? "关闭" : "启用"}
+          </button>
+          <button
+            className={props.palette.secondaryButton}
+            disabled={!hasImage}
+            onClick={props.onClear}
+            type="button"
+          >
+            <Trash2 className="h-4 w-4" />
+            清除
+          </button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block min-w-0">
+            <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
+              横向焦点
+            </span>
+            <input
+              className="bm-range w-full"
+              disabled={!hasImage}
+              max="100"
+              min="0"
+              step="1"
+              style={rangeXStyle}
+              type="range"
+              value={props.background.positionX.toString()}
+              onChange={event => props.onChange({ positionX: Number(event.target.value) })}
+            />
+          </label>
+          <label className="block min-w-0">
+            <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
+              纵向焦点
+            </span>
+            <input
+              className="bm-range w-full"
+              disabled={!hasImage}
+              max="100"
+              min="0"
+              step="1"
+              style={rangeYStyle}
+              type="range"
+              value={props.background.positionY.toString()}
+              onChange={event => props.onChange({ positionY: Number(event.target.value) })}
+            />
+          </label>
+        </div>
+
+        {props.message && <p className={`${props.palette.notice} text-xs`}>{props.message}</p>}
+      </div>
     </div>
   );
 }
@@ -980,6 +1181,30 @@ function normalizePersonalization(
       typeof value?.disableRecommendationAutoplay === "boolean"
         ? value.disableRecommendationAutoplay
         : currentPersonalization.disableRecommendationAutoplay,
+    customBackground: normalizeCustomBackground(
+      value?.customBackground,
+      currentPersonalization.customBackground,
+    ),
+  };
+}
+
+function normalizeCustomBackground(
+  value: Partial<CustomBackgroundSettings> | undefined,
+  currentBackground: CustomBackgroundSettings,
+): CustomBackgroundSettings {
+  return {
+    ...currentBackground,
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : currentBackground.enabled,
+    imageDataUrl:
+      typeof value?.imageDataUrl === "string" ? value.imageDataUrl : currentBackground.imageDataUrl,
+    positionX:
+      typeof value?.positionX === "number"
+        ? clamp(value.positionX, 0, 100)
+        : currentBackground.positionX,
+    positionY:
+      typeof value?.positionY === "number"
+        ? clamp(value.positionY, 0, 100)
+        : currentBackground.positionY,
   };
 }
 
@@ -1057,6 +1282,32 @@ function fromRatePercent(value: string) {
 function clamp(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min;
   return Math.min(max, Math.max(min, value));
+}
+
+async function createBackgroundDataUrl(file: File) {
+  if (!file.type.startsWith("image/")) throw new Error("请选择图片文件");
+
+  const bitmap = await createImageBitmap(file);
+  const maxSize = 1920;
+  const ratio = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * ratio));
+  const height = Math.max(1, Math.round(bitmap.height * ratio));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    bitmap.close();
+    throw new Error("无法处理图片");
+  }
+
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+  if (dataUrl.length > 4_500_000) throw new Error("图片过大，请换一张更小的图");
+  return dataUrl;
 }
 
 createRoot(document.getElementById("root")!).render(<OptionsApp />);

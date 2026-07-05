@@ -12,6 +12,7 @@ import {
   getPlayerObservationTargets,
   isPlayerPage,
 } from "./playerPersonalization";
+import { applyCustomBackground } from "./customBackground";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
 
@@ -27,6 +28,12 @@ const defaultPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+  customBackground: {
+    enabled: false,
+    imageDataUrl: "",
+    positionX: 50,
+    positionY: 50,
+  },
 };
 const defaultWatchTimer: WatchTimerSettings = {
   opacity: 0.86,
@@ -39,6 +46,12 @@ const disabledPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+  customBackground: {
+    enabled: false,
+    imageDataUrl: "",
+    positionX: 50,
+    positionY: 50,
+  },
 };
 const unavailableSearchStats: SearchFilterStats = {
   available: false,
@@ -68,6 +81,7 @@ async function scanCurrentPage() {
   const settings = await getContentSettings();
   const searchPage = isSearchPage();
   applyPlayerPersonalization(settings.personalization);
+  applyCustomBackground(settings.personalization.customBackground);
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
 
   if (searchPage) return applySearchFilter(settings.searchFilter);

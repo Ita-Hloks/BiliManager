@@ -22,6 +22,12 @@ export const defaultSettings: ExtensionSettings = {
     blockRelatedVideos: false,
     blockPlayerAds: false,
     disableRecommendationAutoplay: false,
+    customBackground: {
+      enabled: false,
+      imageDataUrl: "",
+      positionX: 50,
+      positionY: 50,
+    },
   },
   watchTimer: {
     opacity: 0.86,
