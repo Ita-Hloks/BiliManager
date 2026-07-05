@@ -1,0 +1,147 @@
+import { useEffect, useState } from "react";
+import { AlertCircle, CheckCircle2, Power, Settings } from "lucide-react";
+import type { ExtensionMessage, ExtensionResponse } from "../shared/messaging";
+import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
+import type { ExtensionSettings, SearchFilterStats } from "../shared/types";
+import { RecentVideosCard } from "./components/recent-videos-card";
+import { StatsCard } from "./components/stats-card";
+
+const unavailableStats: SearchFilterStats = {
+  available: false,
+  enabled: false,
+  total: 0,
+  filtered: 0,
+  regexErrors: [],
+  updatedAt: new Date(0).toISOString(),
+};
+
+export function PopupApp() {
+  const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
+  const [stats, setStats] = useState<SearchFilterStats>(unavailableStats);
+  const [contentConnected, setContentConnected] = useState(false);
+
+  useEffect(() => {
+    void getSettings().then(nextSettings => {
+      setSettings(nextSettings);
+      void refreshPageStatus();
+    });
+  }, []);
+
+  async function refreshPageStatus() {
+    const response = await sendActiveTabMessage({ type: "BILI_FILTER_GET_PAGE_STATUS" });
+
+    if (response?.ok && response.source === "content") {
+      setStats(response.stats);
+      setContentConnected(true);
+      return;
+    }
+
+    setStats(unavailableStats);
+    setContentConnected(false);
+  }
+
+  async function setPluginEnabled(enabled: boolean) {
+    const next = {
+      ...settings,
+      features: {
+        ...settings.features,
+        enabled,
+      },
+    };
+
+    setSettings(next);
+    await saveSettings(next);
+
+    const response = await sendActiveTabMessage({ type: "BILI_FILTER_SETTINGS_UPDATED" });
+    if (response?.ok && response.source === "content") {
+      setStats(response.stats);
+      setContentConnected(true);
+      return;
+    }
+
+    setContentConnected(false);
+  }
+
+  const statusText = contentConnected ? "当前页面已连接" : "当前页面未连接内容脚本";
+  const pluginEnabled = settings.features.enabled;
+  const runningText = pluginEnabled ? "BiliManager 正在运行" : "BiliManager 已暂停";
+
+  return (
+    <main className="flex max-h-[600px] w-[360px] flex-col bg-[radial-gradient(circle_at_12%_0%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_88%_8%,rgba(244,114,182,0.14),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_58%,#1e1b2e_100%)] text-slate-100">
+      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-semibold tracking-normal">
+            <span className="text-bili-blue">Bili</span>{" "}
+            <span>Manager {pluginEnabled ? "正在运行" : "已暂停"}</span>
+          </h1>
+        </div>
+        <button
+          aria-checked={pluginEnabled}
+          aria-label={runningText}
+          className={[
+            "group flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition-all duration-300 ease-out",
+            pluginEnabled
+              ? "border-sky-300/45 bg-sky-400/20 text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_8px_22px_rgba(14,165,233,0.18)] hover:border-sky-300/60 hover:bg-sky-400/25"
+              : "border-white/10 bg-slate-950/25 text-slate-500 opacity-75 hover:border-white/20 hover:bg-white/[0.05] hover:opacity-100",
+          ].join(" ")}
+          onClick={() => void setPluginEnabled(!pluginEnabled)}
+          role="switch"
+          type="button"
+        >
+          <Power className="h-4 w-4" />
+        </button>
+      </header>
+
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div
+          className={[
+            "flex items-center gap-2 rounded-md border px-3 py-2 text-xs backdrop-blur-xl",
+            contentConnected
+              ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
+              : "border-white/10 bg-slate-950/30 text-slate-400",
+          ].join(" ")}
+        >
+          {contentConnected ? (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 shrink-0" />
+          )}
+          <span>{statusText}</span>
+        </div>
+
+        {stats.regexErrors.length > 0 && (
+          <div className="rounded-md border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-xs leading-5 text-rose-200">
+            {stats.regexErrors.join("；")}
+          </div>
+        )}
+
+        <StatsCard />
+        <RecentVideosCard />
+      </div>
+
+      <footer className="flex shrink-0 items-center justify-between border-t border-white/10 px-4 py-3 text-xs text-slate-400">
+        <button
+          className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-slate-200 transition-colors hover:border-sky-300/40 hover:bg-white/10"
+          onClick={() => chrome.runtime.openOptionsPage()}
+          type="button"
+        >
+          <Settings className="h-3.5 w-3.5" />
+          设置
+        </button>
+      </footer>
+    </main>
+  );
+}
+
+async function sendActiveTabMessage(message: ExtensionMessage): Promise<ExtensionResponse | null> {
+  if (typeof chrome === "undefined" || !chrome.tabs?.query) return null;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return null;
+
+  try {
+    return await chrome.tabs.sendMessage(tab.id, message);
+  } catch {
+    // 非 B 站页面或内容脚本未注入时会走这里，popup 只展示未连接状态。
+    return null;
+  }
+}

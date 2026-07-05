@@ -5,6 +5,8 @@ import prettier from "prettier";
 const root = process.cwd();
 await mkdir(resolve(root, "dist"), { recursive: true });
 await copyFile(resolve(root, "manifest.json"), resolve(root, "dist/manifest.json"));
+await mkdir(resolve(root, "dist/assets"), { recursive: true });
+await copyFile(resolve(root, "src/content/style.css"), resolve(root, "dist/assets/content.css"));
 
 // Chrome users often select the project folder instead of dist/.
 await rm(resolve(root, "assets"), { recursive: true, force: true });
@@ -19,6 +21,8 @@ const assetFiles = await readdir(resolve(root, "dist/assets"));
 for (const file of assetFiles) {
   await copyFile(resolve(root, `dist/assets/${file}`), resolve(root, `assets/${file}`));
 }
+
+await copyFile(resolve(root, "src/content/style.css"), resolve(root, "assets/content.css"));
 
 async function formatHtml(filePath) {
   const config = await prettier.resolveConfig(filePath);
