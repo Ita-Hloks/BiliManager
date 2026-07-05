@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Clock3, Target } from "lucide-react";
-import { DURATION_DATA, HIT_RATE_DATA, PERIOD_LABEL } from "../demoData";
-import type { SegmentedOption, StatsMetric, StatsPeriod } from "../types";
+import { HIT_RATE_DATA, PERIOD_LABEL } from "../demoData";
+import { getWatchDurationData } from "../../shared/watchTimerStats";
+import type { DurationPoint, SegmentedOption, StatsMetric, StatsPeriod } from "../types";
 import { DurationBarChart, HitRateLineChart } from "./charts";
 import { SegmentedControl } from "./segmentedControl";
 
@@ -27,13 +28,17 @@ function formatMinutes(totalMinutes: number): string {
 export function StatsCard() {
   const [metric, setMetric] = useState<StatsMetric>("duration");
   const [period, setPeriod] = useState<StatsPeriod>("7d");
+  const [durationPoints, setDurationPoints] = useState<DurationPoint[]>([]);
 
-  const durationPoints = DURATION_DATA[period];
   const hitRatePoints = HIT_RATE_DATA[period];
   const totalMinutes = durationPoints.reduce((sum, point) => sum + point.minutes, 0);
   const avgHitRate = Math.round(
     hitRatePoints.reduce((sum, point) => sum + point.rate, 0) / hitRatePoints.length,
   );
+
+  useEffect(() => {
+    void getWatchDurationData(period).then(setDurationPoints);
+  }, [period]);
 
   return (
     <div className="rounded-md border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl">
@@ -62,10 +67,6 @@ export function StatsCard() {
           </React.Fragment>
         )}
       </div>
-
-      <p className="mt-3 border-t border-white/5 pt-2 text-center text-[10px] text-slate-600">
-        占位数据 · 后续接入真实统计
-      </p>
     </div>
   );
 }

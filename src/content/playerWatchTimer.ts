@@ -1,7 +1,11 @@
 import type { WatchTimerSettings } from "../shared/types";
+import {
+  getTodayKey,
+  loadWatchTimerDaily,
+  saveWatchTimerDailyElapsed,
+} from "../shared/watchTimerStats";
 
 const TIMER_SETTINGS_KEY = "biliManager.playerWatchTimer";
-const TIMER_DAILY_KEY = "biliManager.playerWatchTimerDaily";
 const TIMER_ROOT_ID = "bili-manager-watch-timer";
 const TIMER_STYLE_ID = "bili-manager-watch-timer-style";
 const FULLSCREEN_ATTR = "data-bili-manager-watch-timer-fullscreen";
@@ -13,11 +17,6 @@ const DEFAULT_TIMER_SETTINGS: PlayerWatchTimerStorage = {
 type PlayerWatchTimerStorage = {
   left: number;
   top: number;
-};
-
-type PlayerWatchTimerDailyStorage = {
-  dateKey: string;
-  elapsedMs: number;
 };
 
 let timerRoot: HTMLElement | undefined;
@@ -110,7 +109,7 @@ function ensureTimerMounted() {
     latestSettings = settings;
     applyTimerSettings(settings);
   });
-  void loadDailyTimer().then(daily => {
+  void loadWatchTimerDaily().then(daily => {
     todayDateKey = daily.dateKey;
     todayElapsedMs = daily.elapsedMs;
     updateTimeText();
@@ -193,15 +192,6 @@ async function loadTimerSettings(): Promise<PlayerWatchTimerStorage> {
   return normalizeTimerSettings(saved[TIMER_SETTINGS_KEY]);
 }
 
-async function loadDailyTimer(): Promise<PlayerWatchTimerDailyStorage> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
-    return { dateKey: getTodayKey(), elapsedMs: 0 };
-  }
-
-  const saved = await chrome.storage.local.get(TIMER_DAILY_KEY);
-  return normalizeDailyTimer(saved[TIMER_DAILY_KEY]);
-}
-
 function normalizeTimerSettings(value: unknown): PlayerWatchTimerStorage {
   if (!value || typeof value !== "object") return DEFAULT_TIMER_SETTINGS;
 
@@ -209,19 +199,6 @@ function normalizeTimerSettings(value: unknown): PlayerWatchTimerStorage {
   return {
     left: clampNumber(record.left, 8, window.innerWidth - 156, DEFAULT_TIMER_SETTINGS.left),
     top: clampNumber(record.top, 8, window.innerHeight - 94, DEFAULT_TIMER_SETTINGS.top),
-  };
-}
-
-function normalizeDailyTimer(value: unknown): PlayerWatchTimerDailyStorage {
-  const currentDateKey = getTodayKey();
-  if (!value || typeof value !== "object") return { dateKey: currentDateKey, elapsedMs: 0 };
-
-  const record = value as Partial<PlayerWatchTimerDailyStorage>;
-  if (record.dateKey !== currentDateKey) return { dateKey: currentDateKey, elapsedMs: 0 };
-
-  return {
-    dateKey: currentDateKey,
-    elapsedMs: clampNumber(record.elapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
   };
 }
 
@@ -384,17 +361,11 @@ async function saveTimerSettings(settings: PlayerWatchTimerStorage) {
 }
 
 async function saveDailyTimer(throttle: boolean) {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) return;
   const now = Date.now();
   if (throttle && now - lastDailySaveAt < 5000) return;
 
   lastDailySaveAt = now;
-  await chrome.storage.local.set({
-    [TIMER_DAILY_KEY]: {
-      dateKey: todayDateKey,
-      elapsedMs: getTodayElapsedMs(),
-    },
-  });
+  await saveWatchTimerDailyElapsed(todayDateKey, getTodayElapsedMs());
 }
 
 function keepTimerInViewport() {
@@ -453,11 +424,6 @@ function syncTodayBoundary() {
   void saveDailyTimer(false);
 }
 
-function getTodayKey() {
-  const date = new Date();
-  return `${date.getFullYear()}-${padDate(date.getMonth() + 1)}-${padDate(date.getDate())}`;
-}
-
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(Math.max(value, min), Math.max(min, max))
@@ -465,9 +431,5 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
 }
 
 function padTime(value: number) {
-  return value.toString().padStart(2, "0");
-}
-
-function padDate(value: number) {
   return value.toString().padStart(2, "0");
 }
