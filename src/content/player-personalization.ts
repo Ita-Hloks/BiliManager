@@ -11,6 +11,7 @@ const PLAYER_PERSONALIZATION_ATTR = "data-bili-manager-player-personalization";
 const RELATED_VIDEO_SELECTOR = [
   ".right-container .recommend-list-v1",
   ".right-container .rec-list",
+  ".bpx-player-ending-related",
 ].join(", ");
 const PLAYER_AD_SELECTOR = [
   ".right-container .video-card-ad-small",
@@ -72,6 +73,7 @@ export function getPlayerObservationTargets(): HTMLElement[] {
   const targets = [
     document.querySelector<HTMLElement>(".right-container"),
     document.querySelector<HTMLElement>(".rec-list"),
+    document.querySelector<HTMLElement>(".bpx-player-ending-related"),
     document.querySelector<HTMLElement>(".video-card-ad-small"),
     document.querySelector<HTMLElement>("#slide_ad"),
     document.querySelector<HTMLElement>(".slide-ad-exp"),
