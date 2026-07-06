@@ -191,14 +191,14 @@ function OptionsApp() {
   }
 
   return (
-    <main className="bm-page min-h-screen px-3 py-4 transition-colors duration-300 ease-out sm:px-4 lg:px-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_15%_12%,rgba(251,207,232,0.55),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(191,219,254,0.62),transparent_32%),linear-gradient(135deg,#f8fbff_0%,#eef7ff_48%,#fff1f8_100%)] px-3 py-4 text-slate-900 transition-colors duration-300 ease-out sm:px-4 lg:px-6 dark:bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(244,114,182,0.16),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_52%,#1e1b2e_100%)] dark:text-slate-100">
       <div className="mx-auto w-full max-w-[80rem]">
-        <header className="bm-shell-header">
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/70 bg-white/55 px-4 py-4 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out sm:px-5 lg:mb-6 dark:border-white/10 dark:bg-slate-950/45 dark:shadow-[0_18px_80px_rgba(15,23,42,0.3)]">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold tracking-normal">
                 <span className="text-bili-blue">Bili</span>{" "}
-                <span className="bm-brand-text">Manager</span>
+                <span className="text-slate-950 dark:text-white">Manager</span>
               </h1>
             </div>
             <p className="bm-text-muted mt-2 text-sm">
@@ -209,14 +209,19 @@ function OptionsApp() {
         </header>
 
         <div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
-          <nav className="bm-side-nav" aria-label="偏好分类">
+          <nav
+            aria-label="偏好分类"
+            className="flex h-fit gap-2 overflow-x-auto rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible dark:border-white/10 dark:bg-slate-950/35"
+          >
             {sectionNavItems.map(item => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   className={
-                    activeSection === item.id ? "bm-side-nav-item-active" : "bm-side-nav-item"
+                    activeSection === item.id
+                      ? "flex min-w-28 items-center gap-2 rounded bg-sky-100 px-3 py-2 text-left text-sm font-medium text-sky-700 shadow-sm shadow-sky-100/80 transition-colors duration-300 ease-out xl:w-full xl:min-w-0 dark:bg-sky-400/15 dark:text-sky-200 dark:shadow-sky-950/20"
+                      : "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900 xl:w-full xl:min-w-0 dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-slate-100"
                   }
                   onClick={() => scrollToSection(item.id)}
                   type="button"

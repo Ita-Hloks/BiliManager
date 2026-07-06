@@ -56,7 +56,10 @@ export function RuleListEditor(props: {
       {rules.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {rules.map(rule => (
-            <span key={rule} className="bm-rule-chip">
+            <span
+              key={rule}
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/80 bg-white/75 px-2 py-1 text-xs text-slate-700 shadow-sm transition-colors duration-300 ease-out dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+            >
               {rule}
               <Button
                 aria-label="删除规则"

@@ -24,7 +24,7 @@ export function PersonalizationPanel(props: {
       </div>
 
       <div className="space-y-3 px-4 pb-5 sm:px-5">
-        <div className="bm-toggle-group">
+        <div className="overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out dark:border-white/10 dark:bg-white/10">
           <Button
             onClick={() =>
               props.onChange({

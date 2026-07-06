@@ -39,7 +39,7 @@ export function DataPanel(props: {
           </div>
         </div>
       </div>
-      {props.importMessage && <p className="bm-content-notice bm-notice">{props.importMessage}</p>}
+      {props.importMessage && <p className="bm-notice mx-5 mb-5">{props.importMessage}</p>}
     </section>
   );
 }

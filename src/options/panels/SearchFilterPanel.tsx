@@ -22,7 +22,7 @@ export function SearchFilterPanel(props: {
 
   return (
     <section id="search-filter" className="bm-panel scroll-mt-6">
-      <div className="bm-category-header">
+      <div className="flex items-center justify-between gap-4 border-b border-white/70 px-4 py-4 transition-colors duration-300 ease-out sm:px-5 dark:border-white/10">
         <button
           aria-label={props.settings.enabled ? "关闭过滤" : "开启过滤"}
           className="order-2 flex shrink-0 items-center justify-center"
@@ -84,7 +84,7 @@ export function SearchFilterPanel(props: {
                 }
               />
               <span className="bm-number-suffix">%</span>
-              <div className="bm-number-stepper">
+              <div className="flex w-7 flex-col border-l border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04]">
                 <Button
                   aria-label="增加互动率阈值"
                   icon={<ChevronUp className="h-3 w-3" />}
