@@ -11,43 +11,50 @@ body {
   margin: 0;
 }
 
-.bm-filter-toggle-button {
-  position: relative;
-  isolation: isolate;
-  cursor: pointer;
-}
+@layer components {
+  .bm-panel {
+    @apply rounded-md border border-white/70 bg-white/55 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out dark:border-white/10 dark:bg-slate-950/45 dark:shadow-[0_18px_80px_rgba(15,23,42,0.28)];
+  }
 
-.bm-filter-toggle-button::before {
-  position: absolute;
-  inset: -0.35rem;
-  z-index: 0;
-  content: "";
-  border-radius: 0.9rem;
-  background: linear-gradient(180deg, rgb(148 163 184 / 0.12), rgb(148 163 184 / 0.04));
-  opacity: 0;
-  transform: scale(0.84);
-  transition:
-    opacity 180ms ease,
-    transform 220ms ease,
-    background 320ms ease;
-}
+  .bm-section-header {
+    @apply flex flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors duration-300 ease-out sm:px-5;
+  }
 
-.bm-filter-toggle-button:hover::before,
-.bm-filter-toggle-button:focus-visible::before {
-  opacity: 1;
-  transform: scale(1);
-}
+  .bm-content-wrap {
+    @apply flex w-full flex-wrap items-center justify-between gap-4;
+  }
 
-.bm-filter-toggle-button[data-enabled="true"]::before {
-  background: linear-gradient(180deg, rgb(56 189 248 / 0.16), rgb(2 132 199 / 0.08));
-}
+  .bm-text-heading {
+    @apply text-slate-950 transition-colors duration-300 ease-out dark:text-white;
+  }
 
-.bm-filter-toggle-button:active::before {
-  transform: scale(0.92);
-}
+  .bm-text-label {
+    @apply text-slate-800 transition-colors duration-300 ease-out dark:text-slate-100;
+  }
 
-.bm-filter-toggle-button:focus-visible {
-  outline: none;
+  .bm-text-muted {
+    @apply text-slate-600 transition-colors duration-300 ease-out dark:text-slate-400;
+  }
+
+  .bm-notice {
+    @apply rounded-md border border-sky-100 bg-sky-50/75 px-3 py-2 text-sm text-sky-800 transition-colors duration-300 ease-out dark:border-sky-300/20 dark:bg-sky-300/10 dark:text-sky-100;
+  }
+
+  .bm-text-input {
+    @apply min-w-0 flex-1 rounded-md border border-slate-200 bg-white/75 px-3 py-2 text-sm text-slate-900 outline-none transition-colors duration-300 ease-out placeholder:text-slate-400 focus:border-sky-400 dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-300;
+  }
+
+  .bm-number-input-group {
+    @apply flex w-28 overflow-hidden rounded-md border border-slate-200 bg-white/75 shadow-sm transition-colors duration-300 ease-out focus-within:border-sky-400 dark:border-white/10 dark:bg-slate-950/45 dark:focus-within:border-sky-300;
+  }
+
+  .bm-number-input-field {
+    @apply min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-right text-sm text-slate-900 outline-none dark:text-slate-100;
+  }
+
+  .bm-number-suffix {
+    @apply flex w-6 items-center justify-center text-sm text-slate-500 dark:text-slate-400;
+  }
 }
 
 .bm-number-input {
@@ -58,59 +65,6 @@ body {
 .bm-number-input::-webkit-inner-spin-button {
   margin: 0;
   appearance: none;
-}
-
-.bm-filter-toggle-icon {
-  position: relative;
-  display: inline-flex;
-  width: 2.25rem;
-  height: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-radius: 0.65rem;
-  animation: bm-filter-spin 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  color: rgb(148 163 184);
-  transition:
-    color 520ms ease,
-    transform 260ms ease;
-  z-index: 1;
-}
-
-.bm-filter-toggle-button:hover .bm-filter-toggle-icon,
-.bm-filter-toggle-button:focus-visible .bm-filter-toggle-icon {
-  transform: translateY(-1px);
-}
-
-.bm-filter-toggle-icon::before {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background: linear-gradient(180deg, rgb(56 189 248 / 0.95), rgb(2 132 199 / 0.95));
-  transform: translateY(100%);
-  transition: transform 520ms ease;
-}
-
-.bm-filter-toggle-icon--enabled {
-  color: #e0f2fe;
-}
-
-.bm-filter-toggle-icon--enabled::before {
-  transform: translateY(0);
-}
-
-@keyframes bm-filter-spin {
-  0% {
-    transform: rotate(0deg) scale(0.96);
-  }
-
-  55% {
-    transform: rotate(190deg) scale(1.06);
-  }
-
-  100% {
-    transform: rotate(360deg) scale(1);
-  }
 }
 
 .bm-range {

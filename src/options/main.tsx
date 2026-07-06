@@ -1,19 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Download,
-  Filter,
-  Monitor,
-  Moon,
-  Plus,
-  Sparkles,
-  Sun,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Clock, Download, Filter, Sparkles } from "lucide-react";
 import "../styles/globals.css";
 import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
 import type {
@@ -23,9 +10,27 @@ import type {
   SearchFilterSettings,
   WatchTimerSettings,
 } from "../shared/types";
+import { ThemeSwitch } from "./components/themeSwitch";
+import { DataPanel } from "./panels/dataPanel";
+import { PersonalizationPanel } from "./panels/personalizationPanel";
+import { SearchFilterPanel } from "./panels/searchFilterPanel";
+import { WatchTimerPanel } from "./panels/watchTimerPanel";
+import { parseImportedSettings } from "./settingsImport";
+import { useEffectiveDarkTheme } from "./theme";
+import { createBackgroundDataUrl, formatDateForFile } from "./utils";
 
-type ThemePalette = ReturnType<typeof getThemePalette>;
 type SectionId = "search-filter" | "personalization" | "watch-timer" | "data";
+
+const sectionNavItems = [
+  { id: "search-filter", label: "过滤搜索", icon: Filter },
+  { id: "personalization", label: "个性化", icon: Sparkles },
+  { id: "watch-timer", label: "定时器", icon: Clock },
+  { id: "data", label: "配置", icon: Download },
+] as const satisfies ReadonlyArray<{
+  id: SectionId;
+  label: string;
+  icon: typeof Filter;
+}>;
 
 function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
@@ -34,19 +39,13 @@ function OptionsApp() {
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
-  const palette = getThemePalette(isDark);
-  const ratePercent = toRatePercent(settings.searchFilter.minDanmakuViewRate);
-  const watchTimerOpacityPercent = Math.round(settings.watchTimer.opacity * 100);
-  const watchTimerOpacityProgress = ((settings.watchTimer.opacity - 0.45) / 0.55) * 100;
-  const rangeStyle = {
-    "--bm-range-progress": `${ratePercent * 100}%`,
-  } as React.CSSProperties;
 
   useEffect(() => {
     void getSettings().then(setSettings);
   }, []);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   }, [isDark]);
 
@@ -72,6 +71,7 @@ function OptionsApp() {
     });
   }
 
+  // 个性化功能是多个子开关的聚合状态；这里统一推导 features.personalization，避免面板各自重复计算。
   async function updatePersonalization(patch: Partial<PlayerPersonalizationSettings>) {
     const personalization = {
       ...settings.personalization,
@@ -106,6 +106,17 @@ function OptionsApp() {
     });
   }
 
+  async function updateWatchTimerEnabled(enabled: boolean) {
+    await updateSettings({
+      ...settings,
+      features: {
+        ...settings.features,
+        watchTimer: enabled,
+      },
+    });
+  }
+
+  // 自定义背景属于 personalization 的子设置，所有背景改动都从这里进入以复用功能启用状态推导。
   async function updateCustomBackground(patch: Partial<CustomBackgroundSettings>) {
     const customBackground = {
       ...settings.personalization.customBackground,
@@ -114,6 +125,7 @@ function OptionsApp() {
     await updatePersonalization({ customBackground });
   }
 
+  // 上传背景图会先压缩成可存入 chrome.storage 的 data URL，再复用背景设置更新链路。
   async function uploadCustomBackground(file: File) {
     try {
       const imageDataUrl = await createBackgroundDataUrl(file);
@@ -145,19 +157,6 @@ function OptionsApp() {
     await updateSettings({ ...settings, theme });
   }
 
-  function toggleSearchFilter() {
-    void updateSearchFilter({
-      enabled: !settings.searchFilter.enabled,
-    });
-  }
-
-  function stepRatePercent(delta: number) {
-    const nextPercent = clamp(Number((ratePercent + delta).toFixed(2)), 0, 1);
-    void updateSearchFilter({
-      minDanmakuViewRate: fromRatePercent(nextPercent.toString()),
-    });
-  }
-
   function scrollToSection(sectionId: SectionId) {
     setActiveSection(sectionId);
     document.getElementById(sectionId)?.scrollIntoView({
@@ -166,6 +165,7 @@ function OptionsApp() {
     });
   }
 
+  // 导入入口只负责文件读取和提示文案；格式解析与字段归一化交给 settingsImport 统一处理。
   async function importSettings(file: File) {
     try {
       const next = parseImportedSettings(await file.text(), settings);
@@ -179,12 +179,7 @@ function OptionsApp() {
   }
 
   function exportSettings() {
-    const payload = {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      settings,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
@@ -196,1144 +191,78 @@ function OptionsApp() {
   }
 
   return (
-    <main
-      className={`min-h-screen px-3 py-4 transition-colors duration-300 ease-out sm:px-4 lg:px-6 ${palette.page}`}
-    >
+    <main className="min-h-screen bg-[radial-gradient(circle_at_15%_12%,rgba(251,207,232,0.55),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(191,219,254,0.62),transparent_32%),linear-gradient(135deg,#f8fbff_0%,#eef7ff_48%,#fff1f8_100%)] px-3 py-4 text-slate-900 transition-colors duration-300 ease-out sm:px-4 lg:px-6 dark:bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(244,114,182,0.16),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_52%,#1e1b2e_100%)] dark:text-slate-100">
       <div className="mx-auto w-full max-w-[80rem]">
-        <header className={palette.header}>
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/70 bg-white/55 px-4 py-4 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out sm:px-5 lg:mb-6 dark:border-white/10 dark:bg-slate-950/45 dark:shadow-[0_18px_80px_rgba(15,23,42,0.3)]">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold tracking-normal">
                 <span className="text-bili-blue">Bili</span>{" "}
-                <span className={palette.brandText}>Manager</span>
+                <span className="text-slate-950 dark:text-white">Manager</span>
               </h1>
             </div>
-            <p className={`mt-2 text-sm ${palette.mutedText}`}>
+            <p className="bm-text-muted mt-2 text-sm">
               规则会自动保存，并同步到已经打开的 B 站页面
             </p>
           </div>
-          <ThemeSwitch value={settings.theme} isDark={isDark} onChange={updateTheme} />
+          <ThemeSwitch value={settings.theme} onChange={updateTheme} />
         </header>
 
         <div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
-          <nav className={palette.sideNav} aria-label="偏好分类">
-            <button
-              className={
-                activeSection === "search-filter" ? palette.sideNavItemActive : palette.sideNavItem
-              }
-              onClick={() => scrollToSection("search-filter")}
-              type="button"
-            >
-              <Filter className="h-4 w-4" />
-              过滤搜索
-            </button>
-            <button
-              className={
-                activeSection === "personalization"
-                  ? palette.sideNavItemActive
-                  : palette.sideNavItem
-              }
-              onClick={() => scrollToSection("personalization")}
-              type="button"
-            >
-              <Sparkles className="h-4 w-4" />
-              个性化
-            </button>
-            <button
-              className={
-                activeSection === "watch-timer" ? palette.sideNavItemActive : palette.sideNavItem
-              }
-              onClick={() => scrollToSection("watch-timer")}
-              type="button"
-            >
-              <Clock className="h-4 w-4" />
-              定时器
-            </button>
-            <button
-              className={activeSection === "data" ? palette.sideNavItemActive : palette.sideNavItem}
-              onClick={() => scrollToSection("data")}
-              type="button"
-            >
-              <Download className="h-4 w-4" />
-              配置
-            </button>
+          <nav
+            aria-label="偏好分类"
+            className="flex h-fit gap-2 overflow-x-auto rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible dark:border-white/10 dark:bg-slate-950/35"
+          >
+            {sectionNavItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  className={
+                    activeSection === item.id
+                      ? "flex min-w-28 items-center gap-2 rounded bg-sky-100 px-3 py-2 text-left text-sm font-medium text-sky-700 shadow-sm shadow-sky-100/80 transition-colors duration-300 ease-out xl:w-full xl:min-w-0 dark:bg-sky-400/15 dark:text-sky-200 dark:shadow-sky-950/20"
+                      : "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900 xl:w-full xl:min-w-0 dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-slate-100"
+                  }
+                  onClick={() => scrollToSection(item.id)}
+                  type="button"
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              );
+            })}
           </nav>
 
           <div className="space-y-4">
-            <section id="search-filter" className={`${palette.panel} scroll-mt-6`}>
-              <div className={palette.categoryHeader}>
-                <button
-                  aria-label={settings.searchFilter.enabled ? "关闭过滤" : "开启过滤"}
-                  className="order-2 flex shrink-0 items-center justify-center"
-                  onClick={toggleSearchFilter}
-                  type="button"
-                >
-                  <Switch enabled={settings.searchFilter.enabled} />
-                </button>
-                <div>
-                  <h2 className={`text-base font-medium ${palette.heading}`}>过滤搜索</h2>
-                  <p className={`mt-1 text-sm ${palette.mutedText}`}>减少低相关搜索结果</p>
-                </div>
-              </div>
-
-              <div className="space-y-5 px-4 py-5 sm:px-5">
-                <RuleListEditor
-                  label="标题过滤词正则"
-                  palette={palette}
-                  placeholder="输入后按回车，例如：关键词A|关键词B"
-                  value={settings.searchFilter.titlePattern}
-                  onChange={titlePattern => void updateSearchFilter({ titlePattern })}
-                />
-                <RuleListEditor
-                  label="UP 主过滤词正则"
-                  palette={palette}
-                  placeholder="输入后按回车，例如：账号名|作者关键词"
-                  value={settings.searchFilter.uploaderPattern}
-                  onChange={uploaderPattern => void updateSearchFilter({ uploaderPattern })}
-                />
-                <label className="block">
-                  <span className={`mb-2 block text-sm font-medium ${palette.label}`}>
-                    最低弹幕 / 播放互动率
-                  </span>
-                  <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
-                    <input
-                      className="bm-range flex-1"
-                      max="1"
-                      min="0"
-                      step="0.01"
-                      style={rangeStyle}
-                      type="range"
-                      value={ratePercent.toString()}
-                      onChange={event =>
-                        void updateSearchFilter({
-                          minDanmakuViewRate: fromRatePercent(event.target.value),
-                        })
-                      }
-                    />
-                    <div className={palette.numberInputGroup}>
-                      <input
-                        className={`bm-number-input ${palette.numberInputField}`}
-                        max="1"
-                        min="0"
-                        step="0.01"
-                        type="number"
-                        value={ratePercent.toString()}
-                        onChange={event =>
-                          void updateSearchFilter({
-                            minDanmakuViewRate: fromRatePercent(event.target.value),
-                          })
-                        }
-                      />
-                      <span className={palette.numberSuffix}>%</span>
-                      <div className={palette.numberStepper}>
-                        <button
-                          aria-label="增加互动率阈值"
-                          className={palette.numberStepButton}
-                          onClick={() => stepRatePercent(0.01)}
-                          type="button"
-                        >
-                          <ChevronUp className="h-3 w-3" />
-                        </button>
-                        <button
-                          aria-label="减少互动率阈值"
-                          className={palette.numberStepButton}
-                          onClick={() => stepRatePercent(-0.01)}
-                          type="button"
-                        >
-                          <ChevronDown className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                    取值范围 0-1%；弹幕为 0 时不会触发互动率过低
-                  </span>
-                </label>
-                <button
-                  className={palette.toggleRow}
-                  onClick={() =>
-                    void updateSearchFilter({
-                      filterMissingTitleHighlight:
-                        !settings.searchFilter.filterMissingTitleHighlight,
-                    })
-                  }
-                  type="button"
-                >
-                  <span>
-                    <span className="block font-medium">过滤无粉色命中标题</span>
-                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                      搜索词没有出现在标题高亮里时，标记为低相关结果
-                    </span>
-                  </span>
-                  <Switch enabled={settings.searchFilter.filterMissingTitleHighlight} />
-                </button>
-              </div>
-            </section>
-
-            <section id="personalization" className={`${palette.panel} scroll-mt-6`}>
-              <div className={palette.sectionHeader}>
-                <div className={palette.contentWrap}>
-                  <div>
-                    <h2 className={`text-base font-medium ${palette.heading}`}>个性化</h2>
-                    <p className={`mt-1 text-sm ${palette.mutedText}`}>
-                      控制播放器页视频推荐、广告和推荐连播
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3 px-4 pb-5 sm:px-5">
-                <div className={palette.toggleGroup}>
-                  <button
-                    className={palette.toggleGroupRow}
-                    onClick={() =>
-                      void updatePersonalization({
-                        blockRelatedVideos: !settings.personalization.blockRelatedVideos,
-                      })
-                    }
-                    type="button"
-                  >
-                    <span>
-                      <span className="block font-medium">拦截推荐视频列表</span>
-                      <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                        隐藏播放器右侧推荐视频，并自动关闭推荐自动连播
-                      </span>
-                    </span>
-                    <Switch enabled={settings.personalization.blockRelatedVideos} />
-                  </button>
-
-                  <button
-                    className={[
-                      palette.toggleGroupRow,
-                      palette.toggleGroupDivider,
-                      settings.personalization.blockRelatedVideos
-                        ? palette.toggleGroupRowDisabled
-                        : "",
-                    ].join(" ")}
-                    disabled={settings.personalization.blockRelatedVideos}
-                    onClick={() =>
-                      void updatePersonalization({
-                        disableRecommendationAutoplay:
-                          !settings.personalization.disableRecommendationAutoplay,
-                      })
-                    }
-                    type="button"
-                  >
-                    <span>
-                      <span className="block font-medium">关闭推荐自动连播</span>
-                      <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                        拦截推荐视频列表时自动开启
-                      </span>
-                    </span>
-                    <Switch
-                      disabled={settings.personalization.blockRelatedVideos}
-                      enabled={settings.personalization.disableRecommendationAutoplay}
-                    />
-                  </button>
-                </div>
-
-                <button
-                  className={palette.toggleRow}
-                  onClick={() =>
-                    void updatePersonalization({
-                      blockPlayerAds: !settings.personalization.blockPlayerAds,
-                    })
-                  }
-                  type="button"
-                >
-                  <span>
-                    <span className="block font-medium">拦截播放器广告</span>
-                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                      隐藏播放器右侧广告、活动推广和广告位
-                    </span>
-                  </span>
-                  <Switch enabled={settings.personalization.blockPlayerAds} />
-                </button>
-
-                <CustomBackgroundPanel
-                  background={settings.personalization.customBackground}
-                  isDark={isDark}
-                  message={backgroundMessage}
-                  palette={palette}
-                  onChange={patch => void updateCustomBackground(patch)}
-                  onClear={() => void clearCustomBackground()}
-                  onUpload={file => void uploadCustomBackground(file)}
-                />
-              </div>
-            </section>
-
-            <section id="watch-timer" className={`${palette.panel} scroll-mt-6`}>
-              <div className={palette.sectionHeader}>
-                <div className={palette.contentWrap}>
-                  <div>
-                    <h2 className={`text-base font-medium ${palette.heading}`}>定时器</h2>
-                    <p className={`mt-1 text-sm ${palette.mutedText}`}>
-                      统计当前播放器实际播放时间
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-5 px-4 pb-5 sm:px-5">
-                <button
-                  className={palette.toggleRow}
-                  onClick={() =>
-                    void updateSettings({
-                      ...settings,
-                      features: {
-                        ...settings.features,
-                        watchTimer: !settings.features.watchTimer,
-                      },
-                    })
-                  }
-                  type="button"
-                >
-                  <span>
-                    <span className="block font-medium">启用定时器</span>
-                    <span className={`mt-1 block text-xs ${palette.mutedText}`}>
-                      播放器浮层可拖动，全屏时自动隐藏
-                    </span>
-                  </span>
-                  <Switch enabled={settings.features.watchTimer} />
-                </button>
-
-                <div
-                  className={[
-                    "grid gap-4 rounded-md border p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center",
-                    isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white/55",
-                  ].join(" ")}
-                >
-                  <div
-                    className={[
-                      "w-full rounded-lg border px-3 py-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)] backdrop-blur",
-                      isDark
-                        ? "border-sky-300/25 bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(15,23,42,0.72))] text-slate-50"
-                        : "border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(15,23,42,0.68))] text-slate-50",
-                    ].join(" ")}
-                    style={{ opacity: settings.watchTimer.opacity }}
-                  >
-                    <strong className="block text-[22px] leading-none tracking-normal">
-                      00:00
-                    </strong>
-                    <span className="mt-2 flex justify-between text-xs font-medium text-slate-300">
-                      <span>今日：</span>
-                      <span>00:00</span>
-                    </span>
-                  </div>
-
-                  <label className="block min-w-0">
-                    <span className={`mb-2 block text-sm font-medium ${palette.label}`}>
-                      定时器透明度
-                    </span>
-                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
-                      <input
-                        className="bm-range min-w-0 flex-1"
-                        max="1"
-                        min="0.45"
-                        step="0.01"
-                        style={
-                          {
-                            "--bm-range-progress": `${watchTimerOpacityProgress}%`,
-                          } as React.CSSProperties
-                        }
-                        type="range"
-                        value={settings.watchTimer.opacity.toString()}
-                        onChange={event =>
-                          void updateWatchTimer({
-                            opacity: clamp(Number(event.target.value), 0.45, 1),
-                          })
-                        }
-                      />
-                      <div className={palette.numberInputGroup}>
-                        <input
-                          className={`bm-number-input ${palette.numberInputField}`}
-                          max="100"
-                          min="45"
-                          step="1"
-                          type="number"
-                          value={watchTimerOpacityPercent.toString()}
-                          onChange={event =>
-                            void updateWatchTimer({
-                              opacity: clamp(Number(event.target.value) / 100, 0.45, 1),
-                            })
-                          }
-                        />
-                        <span className={palette.numberSuffix}>%</span>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </section>
-
-            <section id="data" className={`${palette.panel} scroll-mt-6`}>
-              <div className={palette.sectionHeader}>
-                <div className={palette.contentWrap}>
-                  <div>
-                    <h2 className={`text-base font-medium ${palette.heading}`}>配置管理</h2>
-                    <p className={`mt-1 text-sm ${palette.mutedText}`}>
-                      导出备份或从 JSON / TXT 文件导入规则
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <input
-                      ref={importInputRef}
-                      accept="application/json,.json,.txt"
-                      className="hidden"
-                      type="file"
-                      onChange={event => {
-                        const file = event.target.files?.[0];
-                        if (file) void importSettings(file);
-                      }}
-                    />
-                    <button
-                      className={palette.secondaryButton}
-                      onClick={() => importInputRef.current?.click()}
-                      type="button"
-                    >
-                      <Upload className="h-4 w-4" />
-                      导入
-                    </button>
-                    <button
-                      className={palette.secondaryButton}
-                      onClick={exportSettings}
-                      type="button"
-                    >
-                      <Download className="h-4 w-4" />
-                      导出
-                    </button>
-                  </div>
-                </div>
-              </div>
-              {importMessage && (
-                <p className={`${palette.contentNotice} ${palette.notice}`}>{importMessage}</p>
-              )}
-            </section>
+            <SearchFilterPanel
+              settings={settings.searchFilter}
+              onChange={patch => void updateSearchFilter(patch)}
+            />
+            <PersonalizationPanel
+              backgroundMessage={backgroundMessage}
+              settings={settings.personalization}
+              onBackgroundChange={patch => void updateCustomBackground(patch)}
+              onBackgroundClear={() => void clearCustomBackground()}
+              onBackgroundUpload={file => void uploadCustomBackground(file)}
+              onChange={patch => void updatePersonalization(patch)}
+            />
+            <WatchTimerPanel
+              enabled={settings.features.watchTimer}
+              settings={settings.watchTimer}
+              onChange={patch => void updateWatchTimer(patch)}
+              onEnabledChange={enabled => void updateWatchTimerEnabled(enabled)}
+            />
+            <DataPanel
+              importInputRef={importInputRef}
+              importMessage={importMessage}
+              onExport={exportSettings}
+              onImport={file => void importSettings(file)}
+            />
           </div>
         </div>
       </div>
     </main>
   );
-}
-
-function RuleListEditor(props: {
-  label: string;
-  palette: ThemePalette;
-  placeholder: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [draft, setDraft] = useState("");
-  const rules = splitRules(props.value);
-
-  function addRule() {
-    const trimmed = draft.trim();
-    if (!trimmed || rules.includes(trimmed)) return;
-    props.onChange([...rules, trimmed].join("|"));
-    setDraft("");
-  }
-
-  function removeRule(rule: string) {
-    props.onChange(rules.filter(item => item !== rule).join("|"));
-  }
-
-  return (
-    <div>
-      <label className="block">
-        <span className={`mb-2 block text-sm font-medium ${props.palette.label}`}>
-          {props.label}
-        </span>
-        <div className="flex w-full flex-col gap-2 sm:flex-row">
-          <input
-            className={props.palette.textInput}
-            placeholder={props.placeholder}
-            type="text"
-            value={draft}
-            onChange={event => setDraft(event.target.value)}
-            onKeyDown={event => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              addRule();
-            }}
-          />
-          <button
-            aria-label={`添加${props.label}`}
-            className={props.palette.addButton}
-            disabled={!draft.trim() || rules.includes(draft.trim())}
-            onClick={addRule}
-            type="button"
-          >
-            <Plus className="h-4 w-4" />
-            添加
-          </button>
-        </div>
-      </label>
-      {rules.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {rules.map(rule => (
-            <span key={rule} className={props.palette.ruleChip}>
-              {rule}
-              <button
-                className={props.palette.ruleDeleteButton}
-                onClick={() => removeRule(rule)}
-                title="删除"
-                type="button"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CustomBackgroundPanel(props: {
-  background: CustomBackgroundSettings;
-  isDark: boolean;
-  message: string;
-  palette: ThemePalette;
-  onChange: (patch: Partial<CustomBackgroundSettings>) => void;
-  onClear: () => void;
-  onUpload: (file: File) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const hasImage = !!props.background.imageDataUrl;
-  const maskOpacityPercent = Math.round(props.background.maskOpacity * 100);
-  const maskOpacityStyle = {
-    "--bm-range-progress": `${(props.background.maskOpacity / 0.7) * 100}%`,
-  } as React.CSSProperties;
-  const rangeXStyle = {
-    "--bm-range-progress": `${props.background.positionX}%`,
-  } as React.CSSProperties;
-  const rangeYStyle = {
-    "--bm-range-progress": `${props.background.positionY}%`,
-  } as React.CSSProperties;
-
-  return (
-    <div className="grid gap-4 rounded-md border border-sky-300/20 bg-sky-300/[0.06] p-3 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
-      <div
-        className={[
-          "relative aspect-video w-full overflow-hidden rounded-md border text-left shadow-sm",
-          hasImage ? "border-sky-300/35" : "border-white/10 bg-slate-950/35",
-        ].join(" ")}
-      >
-        <span className="absolute left-2 top-2 z-10 rounded border border-white/15 bg-slate-950/55 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">
-          预览
-        </span>
-        {hasImage ? (
-          <img
-            alt=""
-            className="h-full w-full object-cover"
-            src={props.background.imageDataUrl}
-            style={{
-              objectPosition: `${props.background.positionX}% ${props.background.positionY}%`,
-            }}
-          />
-        ) : (
-          <span
-            className={`flex h-full items-center justify-center text-sm ${props.palette.mutedText}`}
-          >
-            选择背景图
-          </span>
-        )}
-        {hasImage && (
-          <span
-            className={[
-              "pointer-events-none absolute inset-0",
-              props.isDark ? "bg-slate-950" : "bg-white",
-            ].join(" ")}
-            style={{
-              opacity: props.background.maskOpacity,
-            }}
-          />
-        )}
-      </div>
-
-      <div className="min-w-0 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <span className={`block text-sm font-medium ${props.palette.label}`}>背景图</span>
-            <span className={`mt-1 block text-xs ${props.palette.mutedText}`}>
-              调整图片位置与遮罩透明度
-            </span>
-          </div>
-          <button
-            aria-label={props.background.enabled ? "关闭背景图" : "启用背景图"}
-            className="inline-flex shrink-0 items-center justify-center rounded-full p-1 transition-opacity duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!hasImage}
-            onClick={() => props.onChange({ enabled: !props.background.enabled })}
-            type="button"
-          >
-            <Switch enabled={props.background.enabled && hasImage} />
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <input
-            ref={inputRef}
-            accept="image/png,image/jpeg,image/webp"
-            className="hidden"
-            type="file"
-            onChange={event => {
-              const file = event.target.files?.[0];
-              if (file) props.onUpload(file);
-              if (inputRef.current) inputRef.current.value = "";
-            }}
-          />
-          <button
-            className={props.palette.secondaryButton}
-            onClick={() => inputRef.current?.click()}
-            type="button"
-          >
-            <Upload className="h-4 w-4" />
-            上传
-          </button>
-          <button
-            className={props.palette.secondaryButton}
-            disabled={!hasImage}
-            onClick={props.onClear}
-            type="button"
-          >
-            <Trash2 className="h-4 w-4" />
-            清除
-          </button>
-        </div>
-
-        <label className="block min-w-0">
-          <span
-            className={`mb-2 flex items-center justify-between text-xs font-medium ${props.palette.mutedText}`}
-          >
-            <span>遮罩透明度</span>
-            <span>{maskOpacityPercent}%</span>
-          </span>
-          <input
-            className="bm-range w-full"
-            disabled={!hasImage}
-            max="0.7"
-            min="0"
-            step="0.01"
-            style={maskOpacityStyle}
-            type="range"
-            value={props.background.maskOpacity.toString()}
-            onChange={event =>
-              props.onChange({ maskOpacity: clamp(Number(event.target.value), 0, 0.7) })
-            }
-          />
-        </label>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block min-w-0">
-            <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
-              横向位置
-            </span>
-            <input
-              className="bm-range w-full"
-              disabled={!hasImage}
-              max="100"
-              min="0"
-              step="1"
-              style={rangeXStyle}
-              type="range"
-              value={props.background.positionX.toString()}
-              onChange={event => props.onChange({ positionX: Number(event.target.value) })}
-            />
-          </label>
-          <label className="block min-w-0">
-            <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
-              纵向位置
-            </span>
-            <input
-              className="bm-range w-full"
-              disabled={!hasImage}
-              max="100"
-              min="0"
-              step="1"
-              style={rangeYStyle}
-              type="range"
-              value={props.background.positionY.toString()}
-              onChange={event => props.onChange({ positionY: Number(event.target.value) })}
-            />
-          </label>
-        </div>
-
-        {props.message && <p className={`${props.palette.notice} text-xs`}>{props.message}</p>}
-      </div>
-    </div>
-  );
-}
-
-function ThemeSwitch(props: {
-  value: ExtensionSettings["theme"];
-  isDark: boolean;
-  onChange: (theme: ExtensionSettings["theme"]) => void;
-}) {
-  const options = [
-    { value: "system", label: "系统", icon: Monitor },
-    { value: "light", label: "亮色", icon: Sun },
-    { value: "dark", label: "暗色", icon: Moon },
-  ] as const;
-
-  return (
-    <div
-      className={[
-        "inline-flex rounded-md border p-1 shadow-sm backdrop-blur transition-colors duration-300 ease-out",
-        props.isDark ? "border-white/10 bg-slate-950/35" : "border-white/70 bg-white/55",
-      ].join(" ")}
-    >
-      {options.map(option => {
-        const Icon = option.icon;
-        const selected = props.value === option.value;
-
-        return (
-          <button
-            key={option.value}
-            className={[
-              "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm transition-colors duration-300 ease-out",
-              selected
-                ? props.isDark
-                  ? "bg-sky-400 text-slate-950"
-                  : "bg-sky-500 text-white"
-                : props.isDark
-                  ? "text-slate-300 hover:bg-white/10"
-                  : "text-slate-600 hover:bg-white/75",
-            ].join(" ")}
-            onClick={() => props.onChange(option.value)}
-            type="button"
-          >
-            <Icon className="h-4 w-4" />
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Switch(props: { disabled?: boolean; enabled: boolean }) {
-  return (
-    <span
-      className={[
-        "inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300 ease-out",
-        props.disabled && props.enabled
-          ? "bg-sky-700/70"
-          : props.enabled
-            ? "bg-sky-500"
-            : "bg-slate-300",
-      ].join(" ")}
-    >
-      <span
-        className={[
-          "block h-4 w-4 shrink-0 rounded-full bg-white transition-transform duration-300 ease-out shadow-sm",
-          props.disabled ? "opacity-85" : "",
-          props.enabled ? "translate-x-4" : "translate-x-0",
-        ].join(" ")}
-      />
-    </span>
-  );
-}
-
-function useEffectiveDarkTheme(theme: ExtensionSettings["theme"]) {
-  const [systemDark, setSystemDark] = useState(() => getSystemDarkTheme());
-
-  useEffect(() => {
-    if (!window.matchMedia) return;
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const syncSystemTheme = () => setSystemDark(media.matches);
-
-    media.addEventListener("change", syncSystemTheme);
-    return () => media.removeEventListener("change", syncSystemTheme);
-  }, []);
-
-  return theme === "dark" || (theme === "system" && systemDark);
-}
-
-function getSystemDarkTheme() {
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-}
-
-function getThemePalette(isDark: boolean) {
-  if (isDark) {
-    return {
-      page: "bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(244,114,182,0.16),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_52%,#1e1b2e_100%)] text-slate-100",
-      header:
-        "mb-4 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/10 bg-slate-950/45 px-4 py-4 shadow-[0_18px_80px_rgba(15,23,42,0.3)] backdrop-blur-xl transition-colors duration-300 ease-out sm:px-5 lg:mb-6",
-      headerBadge:
-        "rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[11px] text-slate-300",
-      brandText: "text-white",
-      sideNav:
-        "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/10 bg-slate-950/35 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible",
-      sideNavItem:
-        "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-400 transition-colors duration-300 ease-out hover:bg-white/[0.08] hover:text-slate-100 xl:w-full xl:min-w-0",
-      sideNavItemActive:
-        "flex min-w-28 items-center gap-2 rounded bg-sky-400/15 px-3 py-2 text-left text-sm font-medium text-sky-200 shadow-sm shadow-sky-950/20 transition-colors duration-300 ease-out xl:w-full xl:min-w-0",
-      panel:
-        "rounded-md border border-white/10 bg-slate-950/45 shadow-[0_18px_80px_rgba(15,23,42,0.28)] backdrop-blur-xl transition-colors duration-300 ease-out",
-      categoryHeader:
-        "flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4 transition-colors duration-300 ease-out sm:px-5",
-      sectionHeader:
-        "flex flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors duration-300 ease-out sm:px-5",
-      contentWrap: "flex w-full flex-wrap items-center justify-between gap-4",
-      contentNotice: "mx-5 mb-5",
-      categoryFilterButton:
-        "group flex h-10 w-10 items-center justify-center border-0 bg-transparent p-0 transition duration-300 ease-out hover:-translate-y-0.5",
-      categoryFilterButtonEnabled: "text-sky-200",
-      categoryFilterButtonDisabled: "text-slate-500 hover:text-slate-300",
-      heading: "text-white transition-colors duration-300 ease-out",
-      label: "text-slate-100 transition-colors duration-300 ease-out",
-      mutedText: "text-slate-400 transition-colors duration-300 ease-out",
-      secondaryButton:
-        "inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300/10",
-      notice:
-        "rounded-md border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-sm text-sky-100 transition-colors duration-300 ease-out",
-      textInput:
-        "min-w-0 flex-1 rounded-md border border-white/10 bg-slate-950/45 px-3 py-2 text-sm text-slate-100 outline-none transition-colors duration-300 ease-out placeholder:text-slate-500 focus:border-sky-300",
-      numberInputGroup:
-        "flex w-28 overflow-hidden rounded-md border border-white/10 bg-slate-950/45 shadow-sm transition-colors duration-300 ease-out focus-within:border-sky-300",
-      numberInputField:
-        "min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-right text-sm text-slate-100 outline-none",
-      numberSuffix: "flex w-6 items-center justify-center text-sm text-slate-400",
-      numberStepper: "flex w-7 flex-col border-l border-white/10 bg-white/[0.04]",
-      numberStepButton:
-        "flex flex-1 items-center justify-center text-slate-400 transition-colors duration-300 ease-out hover:bg-sky-300/10 hover:text-sky-200",
-      addButton:
-        "inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-sky-300/30 bg-sky-400 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-300 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400 sm:w-auto",
-      toggleRow:
-        "flex w-full items-center justify-between gap-4 rounded-md border border-white/10 bg-white/10 px-3 py-3 text-left text-sm text-slate-100 shadow-sm transition-colors duration-300 ease-out hover:bg-white/15",
-      toggleRowDisabled:
-        "border-white/5 bg-white/[0.04] text-slate-500 opacity-70 hover:border-white/5 hover:bg-white/[0.04]",
-      toggleGroup:
-        "overflow-hidden rounded-md border border-white/10 bg-white/10 shadow-sm transition-colors duration-300 ease-out",
-      toggleGroupRow:
-        "flex w-full items-center justify-between gap-4 px-3 py-3 text-left text-sm text-slate-100 transition-colors duration-300 ease-out hover:bg-white/[0.05]",
-      toggleGroupDivider: "border-t border-white/10",
-      toggleGroupRowDisabled: "bg-white/[0.03] text-slate-500 opacity-75 hover:bg-white/[0.03]",
-      ruleChip:
-        "inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2 py-1 text-xs text-slate-200 shadow-sm transition-colors duration-300 ease-out",
-      ruleDeleteButton:
-        "text-slate-500 transition-colors duration-300 ease-out hover:text-rose-300",
-    };
-  }
-
-  return {
-    page: "bg-[radial-gradient(circle_at_15%_12%,rgba(251,207,232,0.55),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(191,219,254,0.62),transparent_32%),linear-gradient(135deg,#f8fbff_0%,#eef7ff_48%,#fff1f8_100%)] text-slate-900",
-    header:
-      "mb-4 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/70 bg-white/55 px-4 py-4 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out sm:px-5 lg:mb-6",
-    headerBadge:
-      "rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-500",
-    brandText: "text-slate-950",
-    sideNav:
-      "flex h-fit gap-2 overflow-x-auto rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible",
-    sideNavItem:
-      "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900 xl:w-full xl:min-w-0",
-    sideNavItemActive:
-      "flex min-w-28 items-center gap-2 rounded bg-sky-100 px-3 py-2 text-left text-sm font-medium text-sky-700 shadow-sm shadow-sky-100/80 transition-colors duration-300 ease-out xl:w-full xl:min-w-0",
-    panel:
-      "rounded-md border border-white/70 bg-white/55 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out",
-    categoryHeader:
-      "flex items-center justify-between gap-4 border-b border-white/70 px-4 py-4 transition-colors duration-300 ease-out sm:px-5",
-    sectionHeader:
-      "flex flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors duration-300 ease-out sm:px-5",
-    contentWrap: "flex w-full flex-wrap items-center justify-between gap-4",
-    contentNotice: "mx-5 mb-5",
-    categoryFilterButton:
-      "group flex h-10 w-10 items-center justify-center border-0 bg-transparent p-0 transition duration-300 ease-out hover:-translate-y-0.5",
-    categoryFilterButtonEnabled: "text-sky-600 hover:text-sky-700",
-    categoryFilterButtonDisabled: "text-slate-400 hover:text-slate-600",
-    heading: "text-slate-950 transition-colors duration-300 ease-out",
-    label: "text-slate-800 transition-colors duration-300 ease-out",
-    mutedText: "text-slate-600 transition-colors duration-300 ease-out",
-    secondaryButton:
-      "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white/70 px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors duration-300 ease-out hover:bg-sky-50",
-    notice:
-      "rounded-md border border-sky-100 bg-sky-50/75 px-3 py-2 text-sm text-sky-800 transition-colors duration-300 ease-out",
-    textInput:
-      "min-w-0 flex-1 rounded-md border border-slate-200 bg-white/75 px-3 py-2 text-sm text-slate-900 outline-none transition-colors duration-300 ease-out placeholder:text-slate-400 focus:border-sky-400",
-    numberInputGroup:
-      "flex w-28 overflow-hidden rounded-md border border-slate-200 bg-white/75 shadow-sm transition-colors duration-300 ease-out focus-within:border-sky-400",
-    numberInputField:
-      "min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-right text-sm text-slate-900 outline-none",
-    numberSuffix: "flex w-6 items-center justify-center text-sm text-slate-500",
-    numberStepper: "flex w-7 flex-col border-l border-slate-200 bg-slate-50/80",
-    numberStepButton:
-      "flex flex-1 items-center justify-center text-slate-500 transition-colors duration-300 ease-out hover:bg-sky-50 hover:text-sky-600",
-    addButton:
-      "inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-sky-200 bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-300 ease-out hover:bg-sky-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto",
-    toggleRow:
-      "flex w-full items-center justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm transition-colors duration-300 ease-out hover:bg-white/85",
-    toggleRowDisabled:
-      "border-slate-200 bg-slate-100/55 text-slate-500 hover:border-slate-200 hover:bg-slate-100/55",
-    toggleGroup:
-      "overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out",
-    toggleGroupRow:
-      "flex w-full items-center justify-between gap-4 px-3 py-3 text-left text-sm text-slate-800 transition-colors duration-300 ease-out hover:bg-white/85",
-    toggleGroupDivider: "border-t border-slate-200",
-    toggleGroupRowDisabled: "bg-slate-100/55 text-slate-500 hover:bg-slate-100/55",
-    ruleChip:
-      "inline-flex items-center gap-1.5 rounded-md border border-white/80 bg-white/75 px-2 py-1 text-xs text-slate-700 shadow-sm transition-colors duration-300 ease-out",
-    ruleDeleteButton: "text-slate-400 transition-colors duration-300 ease-out hover:text-rose-500",
-  };
-}
-
-function splitRules(value: string) {
-  return value
-    .split("|")
-    .map(rule => rule.trim())
-    .filter(Boolean);
-}
-
-function parseImportedSettings(
-  text: string,
-  currentSettings: ExtensionSettings,
-): ExtensionSettings {
-  const trimmed = text.trim();
-  if (!trimmed) throw new Error("导入文件为空");
-
-  try {
-    const payload = JSON.parse(trimmed) as Partial<ExtensionSettings> & {
-      settings?: Partial<ExtensionSettings>;
-      searchFilter?: { titlePattern?: unknown; uploaderPattern?: unknown };
-      titlePattern?: unknown;
-      uploaderPattern?: unknown;
-      titleRules?: unknown;
-      uploaderRules?: unknown;
-    };
-    const candidate = payload.settings ?? payload;
-
-    if (hasSettingsShape(candidate)) return normalizeSettings(candidate, currentSettings);
-    return normalizeLegacyRuleImport(payload, currentSettings);
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      return {
-        ...currentSettings,
-        searchFilter: {
-          ...currentSettings.searchFilter,
-          titlePattern: splitRules(trimmed.replace(/\r?\n/g, "|")).join("|"),
-        },
-        updatedAt: new Date().toISOString(),
-      };
-    }
-
-    throw error;
-  }
-}
-
-function hasSettingsShape(value: Partial<ExtensionSettings>) {
-  return !!value.searchFilter || !!value.personalization || !!value.features || !!value.theme;
-}
-
-function normalizeSettings(
-  value: Partial<ExtensionSettings>,
-  currentSettings: ExtensionSettings,
-): ExtensionSettings {
-  const theme = normalizeTheme(value.theme, currentSettings.theme);
-  const searchFilter = normalizeSearchFilter(value.searchFilter, currentSettings.searchFilter);
-  const personalization = normalizePersonalization(
-    value.personalization,
-    currentSettings.personalization,
-  );
-  const searchFilterEnabled = value.features?.searchFilter ?? searchFilter.enabled;
-  const personalizationEnabled =
-    value.features?.personalization ??
-    (personalization.blockRelatedVideos ||
-      personalization.blockPlayerAds ||
-      personalization.disableRecommendationAutoplay);
-
-  return {
-    ...currentSettings,
-    ...value,
-    features: {
-      ...currentSettings.features,
-      ...value.features,
-      enabled: value.features?.enabled ?? currentSettings.features.enabled ?? true,
-      searchFilter: searchFilterEnabled,
-      personalization: personalizationEnabled,
-      watchTimer: value.features?.watchTimer ?? currentSettings.features.watchTimer,
-    },
-    searchFilter: {
-      ...searchFilter,
-      enabled: searchFilterEnabled,
-    },
-    personalization,
-    watchTimer: normalizeWatchTimer(value.watchTimer, currentSettings.watchTimer),
-    theme,
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function normalizeSearchFilter(
-  value: Partial<SearchFilterSettings> | undefined,
-  currentSearchFilter: SearchFilterSettings,
-): SearchFilterSettings {
-  return {
-    ...currentSearchFilter,
-    ...value,
-    enabled: typeof value?.enabled === "boolean" ? value.enabled : currentSearchFilter.enabled,
-    titlePattern: getStringPattern(value?.titlePattern) || currentSearchFilter.titlePattern,
-    uploaderPattern:
-      getStringPattern(value?.uploaderPattern) || currentSearchFilter.uploaderPattern,
-    minDanmakuViewRate:
-      typeof value?.minDanmakuViewRate === "number"
-        ? clamp(value.minDanmakuViewRate, 0, 0.01)
-        : currentSearchFilter.minDanmakuViewRate,
-    filterMissingTitleHighlight:
-      typeof value?.filterMissingTitleHighlight === "boolean"
-        ? value.filterMissingTitleHighlight
-        : currentSearchFilter.filterMissingTitleHighlight,
-  };
-}
-
-function normalizePersonalization(
-  value: Partial<PlayerPersonalizationSettings> | undefined,
-  currentPersonalization: PlayerPersonalizationSettings,
-): PlayerPersonalizationSettings {
-  return {
-    ...currentPersonalization,
-    blockRelatedVideos:
-      typeof value?.blockRelatedVideos === "boolean"
-        ? value.blockRelatedVideos
-        : currentPersonalization.blockRelatedVideos,
-    blockPlayerAds:
-      typeof value?.blockPlayerAds === "boolean"
-        ? value.blockPlayerAds
-        : currentPersonalization.blockPlayerAds,
-    disableRecommendationAutoplay:
-      typeof value?.disableRecommendationAutoplay === "boolean"
-        ? value.disableRecommendationAutoplay
-        : currentPersonalization.disableRecommendationAutoplay,
-    customBackground: normalizeCustomBackground(
-      value?.customBackground,
-      currentPersonalization.customBackground,
-    ),
-  };
-}
-
-function normalizeCustomBackground(
-  value: Partial<CustomBackgroundSettings> | undefined,
-  currentBackground: CustomBackgroundSettings,
-): CustomBackgroundSettings {
-  return {
-    ...currentBackground,
-    enabled: typeof value?.enabled === "boolean" ? value.enabled : currentBackground.enabled,
-    imageDataUrl:
-      typeof value?.imageDataUrl === "string" ? value.imageDataUrl : currentBackground.imageDataUrl,
-    maskOpacity:
-      typeof value?.maskOpacity === "number"
-        ? clamp(value.maskOpacity, 0, 0.7)
-        : currentBackground.maskOpacity,
-    positionX:
-      typeof value?.positionX === "number"
-        ? clamp(value.positionX, 0, 100)
-        : currentBackground.positionX,
-    positionY:
-      typeof value?.positionY === "number"
-        ? clamp(value.positionY, 0, 100)
-        : currentBackground.positionY,
-  };
-}
-
-function normalizeWatchTimer(
-  value: Partial<WatchTimerSettings> | undefined,
-  currentWatchTimer: WatchTimerSettings,
-): WatchTimerSettings {
-  return {
-    ...currentWatchTimer,
-    opacity:
-      typeof value?.opacity === "number"
-        ? clamp(value.opacity, 0.45, 1)
-        : currentWatchTimer.opacity,
-  };
-}
-
-function normalizeLegacyRuleImport(
-  payload: {
-    searchFilter?: { titlePattern?: unknown; uploaderPattern?: unknown };
-    titlePattern?: unknown;
-    uploaderPattern?: unknown;
-    titleRules?: unknown;
-    uploaderRules?: unknown;
-  },
-  currentSettings: ExtensionSettings,
-) {
-  return {
-    ...currentSettings,
-    searchFilter: {
-      ...currentSettings.searchFilter,
-      titlePattern: normalizeImportedRules(
-        payload.titleRules,
-        getStringPattern(payload.titlePattern ?? payload.searchFilter?.titlePattern),
-      ).join("|"),
-      uploaderPattern: normalizeImportedRules(
-        payload.uploaderRules,
-        getStringPattern(payload.uploaderPattern ?? payload.searchFilter?.uploaderPattern),
-      ).join("|"),
-    },
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function normalizeTheme(value: unknown, fallback: ExtensionSettings["theme"]) {
-  return value === "system" || value === "light" || value === "dark" ? value : fallback;
-}
-
-function getStringPattern(value: unknown) {
-  return typeof value === "string" ? value : "";
-}
-
-function normalizeImportedRules(value: unknown, fallbackPattern: string) {
-  if (Array.isArray(value)) {
-    return value
-      .filter((item): item is string => typeof item === "string")
-      .map(rule => rule.trim())
-      .filter(Boolean);
-  }
-
-  return splitRules(fallbackPattern);
-}
-
-function formatDateForFile(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function toRatePercent(rate: number) {
-  return Number(clamp(rate * 100, 0, 1).toFixed(2));
-}
-
-function fromRatePercent(value: string) {
-  return clamp(Number(value), 0, 1) / 100;
-}
-
-function clamp(value: number, min: number, max: number) {
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
-
-async function createBackgroundDataUrl(file: File) {
-  if (!file.type.startsWith("image/")) throw new Error("请选择图片文件");
-
-  const bitmap = await createImageBitmap(file);
-  const maxSize = 1920;
-  const ratio = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * ratio));
-  const height = Math.max(1, Math.round(bitmap.height * ratio));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    bitmap.close();
-    throw new Error("无法处理图片");
-  }
-
-  context.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-  if (dataUrl.length > 4_500_000) throw new Error("图片过大，请换一张更小的图");
-  return dataUrl;
 }
 
 createRoot(document.getElementById("root")!).render(<OptionsApp />);
