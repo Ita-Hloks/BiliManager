@@ -25,6 +25,7 @@ export const defaultSettings: ExtensionSettings = {
     customBackground: {
       enabled: false,
       imageDataUrl: "",
+      maskOpacity: 0.18,
       positionX: 50,
       positionY: 50,
     },
@@ -58,6 +59,10 @@ export async function getSettings(): Promise<ExtensionSettings> {
     personalization: {
       ...defaultSettings.personalization,
       ...saved?.personalization,
+      customBackground: {
+        ...defaultSettings.personalization.customBackground,
+        ...saved?.personalization?.customBackground,
+      },
     },
     watchTimer: {
       ...defaultSettings.watchTimer,

@@ -12,6 +12,7 @@ export type SearchFilterSettings = {
 export type CustomBackgroundSettings = {
   enabled: boolean;
   imageDataUrl: string;
+  maskOpacity: number;
   positionX: number;
   positionY: number;
 };

@@ -28,6 +28,7 @@ let latestSettings: PlayerPersonalizationSettings = {
   customBackground: {
     enabled: false,
     imageDataUrl: "",
+    maskOpacity: 0.18,
     positionX: 50,
     positionY: 50,
   },

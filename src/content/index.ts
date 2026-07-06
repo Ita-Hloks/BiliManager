@@ -32,6 +32,7 @@ const defaultPersonalization: PlayerPersonalizationSettings = {
   customBackground: {
     enabled: false,
     imageDataUrl: "",
+    maskOpacity: 0.18,
     positionX: 50,
     positionY: 50,
   },
@@ -50,6 +51,7 @@ const disabledPersonalization: PlayerPersonalizationSettings = {
   customBackground: {
     enabled: false,
     imageDataUrl: "",
+    maskOpacity: 0.18,
     positionX: 50,
     positionY: 50,
   },
@@ -121,6 +123,10 @@ async function getContentSettings(): Promise<{
   const personalization = {
     ...defaultPersonalization,
     ...saved?.personalization,
+    customBackground: {
+      ...defaultPersonalization.customBackground,
+      ...saved?.personalization?.customBackground,
+    },
   };
   const watchTimer = {
     ...defaultWatchTimer,

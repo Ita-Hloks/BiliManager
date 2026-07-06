@@ -15,6 +15,10 @@ export function applyCustomBackground(settings: CustomBackgroundSettings): void 
 
   const root = ensureRoot();
   root.style.backgroundImage = `url("${settings.imageDataUrl}")`;
+  root.style.setProperty(
+    "--bili-manager-custom-background-mask-opacity",
+    clamp(settings.maskOpacity, 0, 0.7).toString(),
+  );
   root.style.backgroundPosition = `${clamp(settings.positionX, 0, 100)}% ${clamp(
     settings.positionY,
     0,
@@ -79,6 +83,7 @@ function ensureStyle() {
   style.id = STYLE_ID;
   style.textContent = `
     #${ROOT_ID} {
+      --bili-manager-custom-background-mask-opacity: 0.18;
       position: fixed;
       inset: 0;
       z-index: -1;
@@ -94,11 +99,11 @@ function ensureStyle() {
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background: rgba(15, 23, 42, 0.18);
+      background: rgb(15 23 42 / var(--bili-manager-custom-background-mask-opacity));
     }
 
     #${ROOT_ID}.bili-manager-page-light::after {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgb(255 255 255 / var(--bili-manager-custom-background-mask-opacity));
     }
 
     html[${ENABLED_ATTR}="true"],

@@ -120,6 +120,7 @@ function OptionsApp() {
       await updateCustomBackground({
         enabled: true,
         imageDataUrl,
+        maskOpacity: settings.personalization.customBackground.maskOpacity,
         positionX: settings.personalization.customBackground.positionX,
         positionY: settings.personalization.customBackground.positionY,
       });
@@ -133,6 +134,7 @@ function OptionsApp() {
     await updateCustomBackground({
       enabled: false,
       imageDataUrl: "",
+      maskOpacity: defaultSettings.personalization.customBackground.maskOpacity,
       positionX: 50,
       positionY: 50,
     });
@@ -450,6 +452,7 @@ function OptionsApp() {
 
                 <CustomBackgroundPanel
                   background={settings.personalization.customBackground}
+                  isDark={isDark}
                   message={backgroundMessage}
                   palette={palette}
                   onChange={patch => void updateCustomBackground(patch)}
@@ -688,6 +691,7 @@ function RuleListEditor(props: {
 
 function CustomBackgroundPanel(props: {
   background: CustomBackgroundSettings;
+  isDark: boolean;
   message: string;
   palette: ThemePalette;
   onChange: (patch: Partial<CustomBackgroundSettings>) => void;
@@ -696,6 +700,10 @@ function CustomBackgroundPanel(props: {
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasImage = !!props.background.imageDataUrl;
+  const maskOpacityPercent = Math.round(props.background.maskOpacity * 100);
+  const maskOpacityStyle = {
+    "--bm-range-progress": `${(props.background.maskOpacity / 0.7) * 100}%`,
+  } as React.CSSProperties;
   const rangeXStyle = {
     "--bm-range-progress": `${props.background.positionX}%`,
   } as React.CSSProperties;
@@ -703,27 +711,17 @@ function CustomBackgroundPanel(props: {
     "--bm-range-progress": `${props.background.positionY}%`,
   } as React.CSSProperties;
 
-  function updateFocus(event: React.PointerEvent<HTMLButtonElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    props.onChange({
-      positionX: clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100),
-      positionY: clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100),
-    });
-  }
-
   return (
     <div className="grid gap-4 rounded-md border border-sky-300/20 bg-sky-300/[0.06] p-3 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
-      <button
+      <div
         className={[
           "relative aspect-video w-full overflow-hidden rounded-md border text-left shadow-sm",
           hasImage ? "border-sky-300/35" : "border-white/10 bg-slate-950/35",
         ].join(" ")}
-        type="button"
-        onClick={updateFocus}
-        onPointerMove={event => {
-          if (event.buttons === 1) updateFocus(event);
-        }}
       >
+        <span className="absolute left-2 top-2 z-10 rounded border border-white/15 bg-slate-950/55 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">
+          预览
+        </span>
         {hasImage ? (
           <img
             alt=""
@@ -742,21 +740,23 @@ function CustomBackgroundPanel(props: {
         )}
         {hasImage && (
           <span
-            className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100 bg-sky-400 shadow-[0_0_0_3px_rgba(14,165,233,0.24)]"
+            className={[
+              "pointer-events-none absolute inset-0",
+              props.isDark ? "bg-slate-950" : "bg-white",
+            ].join(" ")}
             style={{
-              left: `${props.background.positionX}%`,
-              top: `${props.background.positionY}%`,
+              opacity: props.background.maskOpacity,
             }}
           />
         )}
-      </button>
+      </div>
 
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className={`block text-sm font-medium ${props.palette.label}`}>背景图</span>
             <span className={`mt-1 block text-xs ${props.palette.mutedText}`}>
-              拖动预览图中的焦点适配不同窗口比例
+              调整图片位置与遮罩透明度
             </span>
           </div>
           <Switch enabled={props.background.enabled && hasImage} />
@@ -785,14 +785,6 @@ function CustomBackgroundPanel(props: {
           <button
             className={props.palette.secondaryButton}
             disabled={!hasImage}
-            onClick={() => props.onChange({ enabled: !props.background.enabled })}
-            type="button"
-          >
-            {props.background.enabled ? "关闭" : "启用"}
-          </button>
-          <button
-            className={props.palette.secondaryButton}
-            disabled={!hasImage}
             onClick={props.onClear}
             type="button"
           >
@@ -801,10 +793,32 @@ function CustomBackgroundPanel(props: {
           </button>
         </div>
 
+        <label className="block min-w-0">
+          <span
+            className={`mb-2 flex items-center justify-between text-xs font-medium ${props.palette.mutedText}`}
+          >
+            <span>遮罩透明度</span>
+            <span>{maskOpacityPercent}%</span>
+          </span>
+          <input
+            className="bm-range w-full"
+            disabled={!hasImage}
+            max="0.7"
+            min="0"
+            step="0.01"
+            style={maskOpacityStyle}
+            type="range"
+            value={props.background.maskOpacity.toString()}
+            onChange={event =>
+              props.onChange({ maskOpacity: clamp(Number(event.target.value), 0, 0.7) })
+            }
+          />
+        </label>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block min-w-0">
             <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
-              横向焦点
+              横向位置
             </span>
             <input
               className="bm-range w-full"
@@ -820,7 +834,7 @@ function CustomBackgroundPanel(props: {
           </label>
           <label className="block min-w-0">
             <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
-              纵向焦点
+              纵向位置
             </span>
             <input
               className="bm-range w-full"
@@ -1197,6 +1211,10 @@ function normalizeCustomBackground(
     enabled: typeof value?.enabled === "boolean" ? value.enabled : currentBackground.enabled,
     imageDataUrl:
       typeof value?.imageDataUrl === "string" ? value.imageDataUrl : currentBackground.imageDataUrl,
+    maskOpacity:
+      typeof value?.maskOpacity === "number"
+        ? clamp(value.maskOpacity, 0, 0.7)
+        : currentBackground.maskOpacity,
     positionX:
       typeof value?.positionX === "number"
         ? clamp(value.positionX, 0, 100)
