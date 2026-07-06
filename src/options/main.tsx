@@ -759,7 +759,15 @@ function CustomBackgroundPanel(props: {
               调整图片位置与遮罩透明度
             </span>
           </div>
-          <Switch enabled={props.background.enabled && hasImage} />
+          <button
+            aria-label={props.background.enabled ? "关闭背景图" : "启用背景图"}
+            className="inline-flex shrink-0 items-center justify-center rounded-full p-1 transition-opacity duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!hasImage}
+            onClick={() => props.onChange({ enabled: !props.background.enabled })}
+            type="button"
+          >
+            <Switch enabled={props.background.enabled && hasImage} />
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -907,7 +915,7 @@ function Switch(props: { disabled?: boolean; enabled: boolean }) {
   return (
     <span
       className={[
-        "h-5 w-9 rounded-full p-0.5 transition-colors duration-300 ease-out",
+        "inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300 ease-out",
         props.disabled && props.enabled
           ? "bg-sky-700/70"
           : props.enabled
@@ -917,7 +925,7 @@ function Switch(props: { disabled?: boolean; enabled: boolean }) {
     >
       <span
         className={[
-          "block h-4 w-4 rounded-full bg-white transition-transform duration-300 ease-out shadow-sm",
+          "block h-4 w-4 shrink-0 rounded-full bg-white transition-transform duration-300 ease-out shadow-sm",
           props.disabled ? "opacity-85" : "",
           props.enabled ? "translate-x-4" : "translate-x-0",
         ].join(" ")}
