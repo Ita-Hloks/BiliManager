@@ -1,5 +1,5 @@
 import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../shared/types";
-import type { BilibiliPageTheme } from "./pageTheme";
+import type { BilibiliPageThemeDetection } from "./pageTheme";
 import { detectBilibiliPageTheme } from "./pageTheme";
 
 type SearchCard = {
@@ -266,7 +266,7 @@ function evaluateCard(card: SearchCard, settings: SearchFilterSettings): FilterR
   return { reasons, regexErrors };
 }
 
-function markFiltered(card: SearchCard, reasons: string[], pageTheme: BilibiliPageTheme) {
+function markFiltered(card: SearchCard, reasons: string[], pageTheme: BilibiliPageThemeDetection) {
   bindFilterGateEvents();
   if (!card.cardEl.hasAttribute(GATE_ATTR)) card.cardEl.setAttribute(GATE_ATTR, "locked");
 
@@ -444,7 +444,9 @@ function restoreTitleTooltips(cardEl: HTMLElement) {
   });
 }
 
-function applyPageThemeClass(cardEl: HTMLElement, pageTheme: BilibiliPageTheme) {
+function applyPageThemeClass(cardEl: HTMLElement, pageTheme: BilibiliPageThemeDetection) {
+  if (pageTheme === "unknown") return;
+
   cardEl.classList.toggle(PAGE_DARK_CLASS, pageTheme === "dark");
   cardEl.classList.toggle(PAGE_LIGHT_CLASS, pageTheme === "light");
 }
