@@ -16,7 +16,7 @@ export function DataPanel(props: {
           <div>
             <h2 className={`text-base font-medium ${props.palette.heading}`}>配置管理</h2>
             <p className={`mt-1 text-sm ${props.palette.mutedText}`}>
-              导出备份或从 JSON / TXT 文件导入规则
+              导出备份，支持 JSON 配置与 TXT 规则导入
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
