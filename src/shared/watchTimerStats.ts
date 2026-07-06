@@ -84,8 +84,9 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): D
   const month = today.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const weekCount = Math.ceil(daysInMonth / 7);
+  const currentWeekIndex = Math.floor((today.getDate() - 1) / 7);
 
-  return Array.from({ length: weekCount }, (_, index) => {
+  const points = Array.from({ length: weekCount }, (_, index) => {
     const startDay = index * 7 + 1;
     const endDay = Math.min(startDay + 6, daysInMonth);
     let totalMs = 0;
@@ -100,13 +101,19 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): D
       minutes: msToMinutes(totalMs),
     };
   });
+
+  return Array.from(
+    { length: weekCount },
+    (_, index) => points[(currentWeekIndex + index + 1) % weekCount],
+  );
 }
 
 function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): DurationPoint[] {
   const today = parseLocalDateKey(todayKey);
   const year = today.getFullYear();
+  const currentMonth = today.getMonth();
 
-  return Array.from({ length: 12 }, (_, month) => {
+  const points = Array.from({ length: 12 }, (_, month) => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     let totalMs = 0;
 
@@ -120,6 +127,8 @@ function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): D
       minutes: msToMinutes(totalMs),
     };
   });
+
+  return Array.from({ length: 12 }, (_, index) => points[(currentMonth + index + 1) % 12]);
 }
 
 async function loadWatchTimerHistory(): Promise<WatchTimerHistory> {

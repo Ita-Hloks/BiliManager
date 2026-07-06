@@ -1,11 +1,14 @@
 import type { WatchTimerSettings } from "../shared/types";
+import {
+  loadActiveSession,
+  saveActiveSession as saveActiveSessionStorage,
+} from "./playerWatchTimerStorage";
+import type { PlayerWatchTimerActiveSessionStorage } from "./playerWatchTimerStorage";
 
 const TIMER_SETTINGS_KEY = "biliManager.playerWatchTimer";
 const TIMER_DAILY_KEY = "biliManager.playerWatchTimerDaily";
 const TIMER_HISTORY_KEY = "biliManager.playerWatchTimerHistory";
-const TIMER_ACTIVE_SESSION_KEY = "biliManager.playerWatchTimerActiveSession";
 const ACTIVE_SESSION_SAVE_INTERVAL_MS = 1000;
-const ACTIVE_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 const TIMER_ROOT_ID = "bili-manager-watch-timer";
 const TIMER_STYLE_ID = "bili-manager-watch-timer-style";
 const FULLSCREEN_ATTR = "data-bili-manager-watch-timer-fullscreen";
@@ -22,14 +25,6 @@ type PlayerWatchTimerStorage = {
 type PlayerWatchTimerDailyStorage = {
   dateKey: string;
   elapsedMs: number;
-};
-
-type PlayerWatchTimerActiveSessionStorage = {
-  pageKey: string;
-  dateKey: string;
-  elapsedMs: number;
-  todayElapsedMs: number;
-  updatedAt: number;
 };
 
 type PlayerWatchTimerHistory = Record<string, number>;
@@ -217,13 +212,6 @@ async function loadDailyTimer(): Promise<PlayerWatchTimerDailyStorage> {
   return normalizeDailyTimer(saved[TIMER_DAILY_KEY]);
 }
 
-async function loadActiveSession(): Promise<PlayerWatchTimerActiveSessionStorage | undefined> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) return undefined;
-
-  const saved = await chrome.storage.local.get(TIMER_ACTIVE_SESSION_KEY);
-  return normalizeActiveSession(saved[TIMER_ACTIVE_SESSION_KEY]);
-}
-
 async function loadPersistentTimerState() {
   const loadId = ++persistentLoadId;
   const [settings, daily, activeSession] = await Promise.all([
@@ -265,24 +253,6 @@ function normalizeDailyTimer(value: unknown): PlayerWatchTimerDailyStorage {
   return {
     dateKey: currentDateKey,
     elapsedMs: clampNumber(record.elapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
-  };
-}
-
-function normalizeActiveSession(value: unknown): PlayerWatchTimerActiveSessionStorage | undefined {
-  if (!value || typeof value !== "object") return undefined;
-
-  const record = value as Partial<PlayerWatchTimerActiveSessionStorage>;
-  if (typeof record.pageKey !== "string" || record.pageKey.length === 0) return undefined;
-  if (typeof record.dateKey !== "string" || !isDateKey(record.dateKey)) return undefined;
-  if (typeof record.updatedAt !== "number" || !Number.isFinite(record.updatedAt)) return undefined;
-  if (Date.now() - record.updatedAt > ACTIVE_SESSION_MAX_AGE_MS) return undefined;
-
-  return {
-    pageKey: record.pageKey,
-    dateKey: record.dateKey,
-    elapsedMs: clampNumber(record.elapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
-    todayElapsedMs: clampNumber(record.todayElapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
-    updatedAt: Math.max(0, Math.floor(record.updatedAt)),
   };
 }
 
@@ -462,20 +432,17 @@ async function saveTimerSettings(settings: PlayerWatchTimerStorage) {
 
 async function saveActiveSession(throttle: boolean) {
   if (!persistentTimerReady || !currentPageKey) return;
-  if (typeof chrome === "undefined" || !chrome.storage?.local) return;
 
   const now = Date.now();
   if (throttle && now - lastActiveSessionSaveAt < ACTIVE_SESSION_SAVE_INTERVAL_MS) return;
 
   lastActiveSessionSaveAt = now;
-  await chrome.storage.local.set({
-    [TIMER_ACTIVE_SESSION_KEY]: {
-      pageKey: currentPageKey,
-      dateKey: todayDateKey,
-      elapsedMs: Math.max(0, Math.floor(getElapsedMs())),
-      todayElapsedMs: Math.max(0, Math.floor(getTodayElapsedMs())),
-      updatedAt: now,
-    },
+  await saveActiveSessionStorage({
+    pageKey: currentPageKey,
+    dateKey: todayDateKey,
+    elapsedMs: getElapsedMs(),
+    todayElapsedMs: getTodayElapsedMs(),
+    updatedAt: now,
   });
 }
 
