@@ -13,6 +13,7 @@ import {
   isPlayerPage,
 } from "./playerPersonalization";
 import { applyCustomBackground } from "./customBackground";
+import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
 
@@ -66,6 +67,7 @@ let rescanTimer: number | undefined;
 let observer: MutationObserver | undefined;
 let currentUrl = location.href;
 let scanQueued = false;
+let unbindPageThemeUpdates: (() => void) | undefined;
 
 function getSnapshot(): RuntimeSnapshot {
   return {
@@ -183,6 +185,12 @@ function bindStorageChanges() {
   });
 }
 
+function bindPageThemeUpdates() {
+  if (unbindPageThemeUpdates) return;
+
+  unbindPageThemeUpdates = bindBilibiliPageThemeUpdates(() => scheduleScan(0));
+}
+
 function bindRuntimeMessages() {
   chrome.runtime.onMessage.addListener(
     (message: ExtensionMessage, _sender, sendResponse: (response: unknown) => void) => {
@@ -220,6 +228,7 @@ function bindRuntimeMessages() {
 async function boot() {
   bindRuntimeMessages();
   bindStorageChanges();
+  bindPageThemeUpdates();
   watchManagedPage();
   watchUrlChanges();
   await scanCurrentPage();

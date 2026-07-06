@@ -1,6 +1,9 @@
 export type BilibiliPageTheme = "dark" | "light";
 
 export function detectBilibiliPageTheme(): BilibiliPageTheme {
+  const officialTheme = detectOfficialAvatarTheme();
+  if (officialTheme) return officialTheme;
+
   const explicitTheme = detectExplicitTheme();
   if (explicitTheme) return explicitTheme;
 
@@ -13,6 +16,35 @@ export function detectBilibiliPageTheme(): BilibiliPageTheme {
   if (colorScheme.includes("dark")) return "dark";
 
   return detectBackgroundTheme();
+}
+
+function detectOfficialAvatarTheme(): BilibiliPageTheme | null {
+  const candidates = [
+    ".header-avatar-wrap .single-link-item",
+    ".header-avatar-wrap .links-item",
+    ".avatar-panel-popover .single-link-item",
+    ".avatar-panel-popover .links-item",
+    ".right-entry .single-link-item",
+    ".right-entry .links-item",
+  ];
+
+  for (const selector of candidates) {
+    for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+      const theme = parseOfficialThemeText(element.textContent ?? "");
+      if (theme) return theme;
+    }
+  }
+
+  return parseOfficialThemeText(document.querySelector(".header-avatar-wrap")?.textContent ?? "");
+}
+
+function parseOfficialThemeText(text: string): BilibiliPageTheme | null {
+  const match = normalizeText(text).match(
+    /主题\s*[:：]\s*(浅色|亮色|白色|light|深色|暗色|黑色|dark)/i,
+  );
+  if (!match?.[1]) return null;
+
+  return /深色|暗色|黑色|dark/i.test(match[1]) ? "dark" : "light";
 }
 
 function detectExplicitTheme(): BilibiliPageTheme | null {
@@ -79,4 +111,8 @@ function getRelativeLuminance(color: { red: number; green: number; blue: number 
   });
 
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function normalizeText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
 }
