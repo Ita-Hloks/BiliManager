@@ -25,6 +25,13 @@ let latestSettings: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+  customBackground: {
+    enabled: false,
+    imageDataUrl: "",
+    maskOpacity: 0.18,
+    positionX: 50,
+    positionY: 50,
+  },
 };
 
 export function isPlayerPage(url = location.href): boolean {

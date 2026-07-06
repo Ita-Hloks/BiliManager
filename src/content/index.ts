@@ -12,6 +12,8 @@ import {
   getPlayerObservationTargets,
   isPlayerPage,
 } from "./playerPersonalization";
+import { applyCustomBackground } from "./customBackground";
+import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
 
@@ -27,6 +29,13 @@ const defaultPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+  customBackground: {
+    enabled: false,
+    imageDataUrl: "",
+    maskOpacity: 0.18,
+    positionX: 50,
+    positionY: 50,
+  },
 };
 const defaultWatchTimer: WatchTimerSettings = {
   opacity: 0.86,
@@ -39,6 +48,13 @@ const disabledPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+  customBackground: {
+    enabled: false,
+    imageDataUrl: "",
+    maskOpacity: 0.18,
+    positionX: 50,
+    positionY: 50,
+  },
 };
 const unavailableSearchStats: SearchFilterStats = {
   available: false,
@@ -53,6 +69,7 @@ let rescanTimer: number | undefined;
 let observer: MutationObserver | undefined;
 let currentUrl = location.href;
 let scanQueued = false;
+let unbindPageThemeUpdates: (() => void) | undefined;
 
 function getSnapshot(): RuntimeSnapshot {
   return {
@@ -68,6 +85,7 @@ async function scanCurrentPage() {
   const settings = await getContentSettings();
   const searchPage = isSearchPage();
   applyPlayerPersonalization(settings.personalization);
+  applyCustomBackground(settings.personalization.customBackground);
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
 
   if (searchPage) return applySearchFilter(settings.searchFilter);
@@ -105,6 +123,10 @@ async function getContentSettings(): Promise<{
   const personalization = {
     ...defaultPersonalization,
     ...saved?.personalization,
+    customBackground: {
+      ...defaultPersonalization.customBackground,
+      ...saved?.personalization?.customBackground,
+    },
   };
   const watchTimer = {
     ...defaultWatchTimer,
@@ -169,6 +191,12 @@ function bindStorageChanges() {
   });
 }
 
+function bindPageThemeUpdates() {
+  if (unbindPageThemeUpdates) return;
+
+  unbindPageThemeUpdates = bindBilibiliPageThemeUpdates(() => scheduleScan(0));
+}
+
 function bindRuntimeMessages() {
   chrome.runtime.onMessage.addListener(
     (message: ExtensionMessage, _sender, sendResponse: (response: unknown) => void) => {
@@ -206,6 +234,7 @@ function bindRuntimeMessages() {
 async function boot() {
   bindRuntimeMessages();
   bindStorageChanges();
+  bindPageThemeUpdates();
   watchManagedPage();
   watchUrlChanges();
   await scanCurrentPage();
