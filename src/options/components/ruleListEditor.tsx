@@ -1,12 +1,11 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { ThemePalette } from "../theme";
+import { Button } from "./button";
 import { splitRules } from "../utils";
 
 // 把底层 `|` 拼接的正则字符串编辑成可增删的规则列表，避免各面板重复处理规则格式。
 export function RuleListEditor(props: {
   label: string;
-  palette: ThemePalette;
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
@@ -28,12 +27,10 @@ export function RuleListEditor(props: {
   return (
     <div>
       <label className="block">
-        <span className={`mb-2 block text-sm font-medium ${props.palette.label}`}>
-          {props.label}
-        </span>
+        <span className="bm-text-label mb-2 block text-sm font-medium">{props.label}</span>
         <div className="flex w-full flex-col gap-2 sm:flex-row">
           <input
-            className={props.palette.textInput}
+            className="bm-text-input"
             placeholder={props.placeholder}
             type="text"
             value={draft}
@@ -44,31 +41,31 @@ export function RuleListEditor(props: {
               addRule();
             }}
           />
-          <button
+          <Button
             aria-label={`添加${props.label}`}
-            className={props.palette.addButton}
             disabled={!draft.trim() || rules.includes(draft.trim())}
+            icon={<Plus className="h-4 w-4" />}
             onClick={addRule}
-            type="button"
+            size="full"
+            variant="primary"
           >
-            <Plus className="h-4 w-4" />
             添加
-          </button>
+          </Button>
         </div>
       </label>
       {rules.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {rules.map(rule => (
-            <span key={rule} className={props.palette.ruleChip}>
+            <span key={rule} className="bm-rule-chip">
               {rule}
-              <button
-                className={props.palette.ruleDeleteButton}
+              <Button
+                aria-label="删除规则"
+                icon={<Trash2 className="h-3 w-3" />}
                 onClick={() => removeRule(rule)}
+                size="sm"
                 title="删除"
-                type="button"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
+                variant="icon"
+              />
             </span>
           ))}
         </div>

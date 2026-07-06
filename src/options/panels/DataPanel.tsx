@@ -1,23 +1,20 @@
 import { Download, Upload } from "lucide-react";
 import type { RefObject } from "react";
-import type { ThemePalette } from "../theme";
+import { Button } from "../components/button";
 
 export function DataPanel(props: {
   importInputRef: RefObject<HTMLInputElement | null>;
   importMessage: string;
-  palette: ThemePalette;
   onExport: () => void;
   onImport: (file: File) => void;
 }) {
   return (
-    <section id="data" className={`${props.palette.panel} scroll-mt-6`}>
-      <div className={props.palette.sectionHeader}>
-        <div className={props.palette.contentWrap}>
+    <section id="data" className="bm-panel scroll-mt-6">
+      <div className="bm-section-header">
+        <div className="bm-content-wrap">
           <div>
-            <h2 className={`text-base font-medium ${props.palette.heading}`}>配置管理</h2>
-            <p className={`mt-1 text-sm ${props.palette.mutedText}`}>
-              导出备份，支持 JSON 配置与 TXT 规则导入
-            </p>
+            <h2 className="bm-text-heading text-base font-medium">配置管理</h2>
+            <p className="bm-text-muted mt-1 text-sm">导出备份，支持 JSON 配置与 TXT 规则导入</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <input
@@ -30,30 +27,19 @@ export function DataPanel(props: {
                 if (file) props.onImport(file);
               }}
             />
-            <button
-              className={props.palette.secondaryButton}
+            <Button
+              icon={<Upload className="h-4 w-4" />}
               onClick={() => props.importInputRef.current?.click()}
-              type="button"
             >
-              <Upload className="h-4 w-4" />
               导入
-            </button>
-            <button
-              className={props.palette.secondaryButton}
-              onClick={props.onExport}
-              type="button"
-            >
-              <Download className="h-4 w-4" />
+            </Button>
+            <Button icon={<Download className="h-4 w-4" />} onClick={props.onExport}>
               导出
-            </button>
+            </Button>
           </div>
         </div>
       </div>
-      {props.importMessage && (
-        <p className={`${props.palette.contentNotice} ${props.palette.notice}`}>
-          {props.importMessage}
-        </p>
-      )}
+      {props.importMessage && <p className="bm-content-notice bm-notice">{props.importMessage}</p>}
     </section>
   );
 }

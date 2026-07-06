@@ -1,12 +1,11 @@
 import type { WatchTimerSettings } from "../../shared/types";
+import { Button } from "../components/button";
 import { Switch } from "../components/switch";
-import type { ThemePalette } from "../theme";
 import { clamp, getRangeProgressStyle } from "../utils";
 
 // 定时器面板把功能启用状态和浮层参数分开回传，避免 features.watchTimer 与 watchTimer 设置互相污染。
 export function WatchTimerPanel(props: {
   enabled: boolean;
-  palette: ThemePalette;
   settings: WatchTimerSettings;
   onChange: (patch: Partial<WatchTimerSettings>) => void;
   onEnabledChange: (enabled: boolean) => void;
@@ -15,30 +14,26 @@ export function WatchTimerPanel(props: {
   const opacityProgress = ((props.settings.opacity - 0.45) / 0.55) * 100;
 
   return (
-    <section id="watch-timer" className={`${props.palette.panel} scroll-mt-6`}>
-      <div className={props.palette.sectionHeader}>
-        <div className={props.palette.contentWrap}>
+    <section id="watch-timer" className="bm-panel scroll-mt-6">
+      <div className="bm-section-header">
+        <div className="bm-content-wrap">
           <div>
-            <h2 className={`text-base font-medium ${props.palette.heading}`}>定时器</h2>
-            <p className={`mt-1 text-sm ${props.palette.mutedText}`}>统计当前播放器实际播放时间</p>
+            <h2 className="bm-text-heading text-base font-medium">定时器</h2>
+            <p className="bm-text-muted mt-1 text-sm">统计当前播放器实际播放时间</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-5 px-4 pb-5 sm:px-5">
-        <button
-          className={props.palette.toggleRow}
-          onClick={() => props.onEnabledChange(!props.enabled)}
-          type="button"
-        >
+        <Button onClick={() => props.onEnabledChange(!props.enabled)} variant="toggleRow">
           <span>
             <span className="block font-medium">启用定时器</span>
-            <span className={`mt-1 block text-xs ${props.palette.mutedText}`}>
+            <span className="bm-text-muted mt-1 block text-xs">
               播放器浮层可拖动，全屏时自动隐藏
             </span>
           </span>
           <Switch enabled={props.enabled} />
-        </button>
+        </Button>
 
         <div className="grid gap-4 rounded-md border border-slate-200 bg-white/55 p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:border-white/10 dark:bg-white/[0.04]">
           <div
@@ -53,9 +48,7 @@ export function WatchTimerPanel(props: {
           </div>
 
           <label className="block min-w-0">
-            <span className={`mb-2 block text-sm font-medium ${props.palette.label}`}>
-              定时器透明度
-            </span>
+            <span className="bm-text-label mb-2 block text-sm font-medium">定时器透明度</span>
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 className="bm-range min-w-0 flex-1"
@@ -71,9 +64,9 @@ export function WatchTimerPanel(props: {
                   })
                 }
               />
-              <div className={props.palette.numberInputGroup}>
+              <div className="bm-number-input-group">
                 <input
-                  className={`bm-number-input ${props.palette.numberInputField}`}
+                  className="bm-number-input bm-number-input-field"
                   max="100"
                   min="45"
                   step="1"
@@ -85,7 +78,7 @@ export function WatchTimerPanel(props: {
                     })
                   }
                 />
-                <span className={props.palette.numberSuffix}>%</span>
+                <span className="bm-number-suffix">%</span>
               </div>
             </div>
           </label>

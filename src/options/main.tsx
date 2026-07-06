@@ -11,12 +11,12 @@ import type {
   WatchTimerSettings,
 } from "../shared/types";
 import { ThemeSwitch } from "./components/themeSwitch";
-import { DataPanel } from "./panels/DataPanel";
-import { PersonalizationPanel } from "./panels/PersonalizationPanel";
-import { SearchFilterPanel } from "./panels/SearchFilterPanel";
-import { WatchTimerPanel } from "./panels/WatchTimerPanel";
+import { DataPanel } from "./panels/dataPanel";
+import { PersonalizationPanel } from "./panels/personalizationPanel";
+import { SearchFilterPanel } from "./panels/searchFilterPanel";
+import { WatchTimerPanel } from "./panels/watchTimerPanel";
 import { parseImportedSettings } from "./settingsImport";
-import { getThemePalette, useEffectiveDarkTheme } from "./theme";
+import { useEffectiveDarkTheme } from "./theme";
 import { createBackgroundDataUrl, formatDateForFile } from "./utils";
 
 type SectionId = "search-filter" | "personalization" | "watch-timer" | "data";
@@ -39,7 +39,6 @@ function OptionsApp() {
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
-  const palette = getThemePalette();
 
   useEffect(() => {
     void getSettings().then(setSettings);
@@ -166,7 +165,7 @@ function OptionsApp() {
     });
   }
 
-  // 导入入口只负责文件读取和提示文案；格式兼容与字段归一化交给 settingsImport 统一处理。
+  // 导入入口只负责文件读取和提示文案；格式解析与字段归一化交给 settingsImport 统一处理。
   async function importSettings(file: File) {
     try {
       const next = parseImportedSettings(await file.text(), settings);
@@ -180,12 +179,7 @@ function OptionsApp() {
   }
 
   function exportSettings() {
-    const payload = {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      settings,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
@@ -197,19 +191,17 @@ function OptionsApp() {
   }
 
   return (
-    <main
-      className={`min-h-screen px-3 py-4 transition-colors duration-300 ease-out sm:px-4 lg:px-6 ${palette.page}`}
-    >
+    <main className="bm-page min-h-screen px-3 py-4 transition-colors duration-300 ease-out sm:px-4 lg:px-6">
       <div className="mx-auto w-full max-w-[80rem]">
-        <header className={palette.header}>
+        <header className="bm-shell-header">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold tracking-normal">
                 <span className="text-bili-blue">Bili</span>{" "}
-                <span className={palette.brandText}>Manager</span>
+                <span className="bm-brand-text">Manager</span>
               </h1>
             </div>
-            <p className={`mt-2 text-sm ${palette.mutedText}`}>
+            <p className="bm-text-muted mt-2 text-sm">
               规则会自动保存，并同步到已经打开的 B 站页面
             </p>
           </div>
@@ -217,14 +209,14 @@ function OptionsApp() {
         </header>
 
         <div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
-          <nav className={palette.sideNav} aria-label="偏好分类">
+          <nav className="bm-side-nav" aria-label="偏好分类">
             {sectionNavItems.map(item => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   className={
-                    activeSection === item.id ? palette.sideNavItemActive : palette.sideNavItem
+                    activeSection === item.id ? "bm-side-nav-item-active" : "bm-side-nav-item"
                   }
                   onClick={() => scrollToSection(item.id)}
                   type="button"
@@ -238,13 +230,11 @@ function OptionsApp() {
 
           <div className="space-y-4">
             <SearchFilterPanel
-              palette={palette}
               settings={settings.searchFilter}
               onChange={patch => void updateSearchFilter(patch)}
             />
             <PersonalizationPanel
               backgroundMessage={backgroundMessage}
-              palette={palette}
               settings={settings.personalization}
               onBackgroundChange={patch => void updateCustomBackground(patch)}
               onBackgroundClear={() => void clearCustomBackground()}
@@ -253,7 +243,6 @@ function OptionsApp() {
             />
             <WatchTimerPanel
               enabled={settings.features.watchTimer}
-              palette={palette}
               settings={settings.watchTimer}
               onChange={patch => void updateWatchTimer(patch)}
               onEnabledChange={enabled => void updateWatchTimerEnabled(enabled)}
@@ -261,7 +250,6 @@ function OptionsApp() {
             <DataPanel
               importInputRef={importInputRef}
               importMessage={importMessage}
-              palette={palette}
               onExport={exportSettings}
               onImport={file => void importSettings(file)}
             />

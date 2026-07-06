@@ -2,15 +2,14 @@ import { Trash2, Upload } from "lucide-react";
 import { useRef } from "react";
 import type { CustomBackgroundSettings } from "../../shared/types";
 
-import type { ThemePalette } from "../theme";
 import { clamp, getRangeProgressStyle } from "../utils";
+import { Button } from "./button";
 import { Switch } from "./switch";
 
 // 背景图面板只负责预览和输入事件，图片压缩、存储和功能启用推导由上层复用统一链路处理。
 export function CustomBackgroundPanel(props: {
   background: CustomBackgroundSettings;
   message: string;
-  palette: ThemePalette;
   onChange: (patch: Partial<CustomBackgroundSettings>) => void;
   onClear: () => void;
   onUpload: (file: File) => void;
@@ -43,9 +42,7 @@ export function CustomBackgroundPanel(props: {
             }}
           />
         ) : (
-          <span
-            className={`flex h-full items-center justify-center text-sm ${props.palette.mutedText}`}
-          >
+          <span className="bm-text-muted flex h-full items-center justify-center text-sm">
             选择背景图
           </span>
         )}
@@ -62,10 +59,8 @@ export function CustomBackgroundPanel(props: {
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <span className={`block text-sm font-medium ${props.palette.label}`}>背景图</span>
-            <span className={`mt-1 block text-xs ${props.palette.mutedText}`}>
-              调整图片位置与遮罩透明度
-            </span>
+            <span className="bm-text-label block text-sm font-medium">背景图</span>
+            <span className="bm-text-muted mt-1 block text-xs">调整图片位置与遮罩透明度</span>
           </div>
           <button
             aria-label={props.background.enabled ? "关闭背景图" : "启用背景图"}
@@ -90,29 +85,20 @@ export function CustomBackgroundPanel(props: {
               if (inputRef.current) inputRef.current.value = "";
             }}
           />
-          <button
-            className={props.palette.secondaryButton}
-            onClick={() => inputRef.current?.click()}
-            type="button"
-          >
-            <Upload className="h-4 w-4" />
+          <Button icon={<Upload className="h-4 w-4" />} onClick={() => inputRef.current?.click()}>
             上传
-          </button>
-          <button
-            className={props.palette.secondaryButton}
+          </Button>
+          <Button
             disabled={!hasImage}
+            icon={<Trash2 className="h-4 w-4" />}
             onClick={props.onClear}
-            type="button"
           >
-            <Trash2 className="h-4 w-4" />
             清除
-          </button>
+          </Button>
         </div>
 
         <label className="block min-w-0">
-          <span
-            className={`mb-2 flex items-center justify-between text-xs font-medium ${props.palette.mutedText}`}
-          >
+          <span className="bm-text-muted mb-2 flex items-center justify-between text-xs font-medium">
             <span>遮罩透明度</span>
             <span>{maskOpacityPercent}%</span>
           </span>
@@ -133,9 +119,7 @@ export function CustomBackgroundPanel(props: {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block min-w-0">
-            <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
-              横向位置
-            </span>
+            <span className="bm-text-muted mb-2 block text-xs font-medium">横向位置</span>
             <input
               className="bm-range w-full"
               disabled={!hasImage}
@@ -149,9 +133,7 @@ export function CustomBackgroundPanel(props: {
             />
           </label>
           <label className="block min-w-0">
-            <span className={`mb-2 block text-xs font-medium ${props.palette.mutedText}`}>
-              纵向位置
-            </span>
+            <span className="bm-text-muted mb-2 block text-xs font-medium">纵向位置</span>
             <input
               className="bm-range w-full"
               disabled={!hasImage}
@@ -166,7 +148,7 @@ export function CustomBackgroundPanel(props: {
           </label>
         </div>
 
-        {props.message && <p className={`${props.palette.notice} text-xs`}>{props.message}</p>}
+        {props.message && <p className="bm-notice text-xs">{props.message}</p>}
       </div>
     </div>
   );

@@ -11,10 +11,7 @@ export function parseImportedSettings(
   if (!trimmed) throw new Error("导入文件为空");
 
   try {
-    const payload = JSON.parse(trimmed) as Partial<ExtensionSettings> & {
-      settings?: Partial<ExtensionSettings>;
-    };
-    const candidate = payload.settings ?? payload;
+    const candidate = JSON.parse(trimmed) as Partial<ExtensionSettings>;
 
     if (hasSettingsShape(candidate)) return normalizeSettings(candidate, currentSettings);
     throw new Error("导入的 JSON 不是完整配置");
