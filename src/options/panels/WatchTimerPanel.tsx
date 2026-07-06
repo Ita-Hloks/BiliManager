@@ -6,7 +6,6 @@ import { clamp, getRangeProgressStyle } from "../utils";
 // 定时器面板把功能启用状态和浮层参数分开回传，避免 features.watchTimer 与 watchTimer 设置互相污染。
 export function WatchTimerPanel(props: {
   enabled: boolean;
-  isDark: boolean;
   palette: ThemePalette;
   settings: WatchTimerSettings;
   onChange: (patch: Partial<WatchTimerSettings>) => void;
@@ -41,19 +40,9 @@ export function WatchTimerPanel(props: {
           <Switch enabled={props.enabled} />
         </button>
 
-        <div
-          className={[
-            "grid gap-4 rounded-md border p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center",
-            props.isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white/55",
-          ].join(" ")}
-        >
+        <div className="grid gap-4 rounded-md border border-slate-200 bg-white/55 p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:border-white/10 dark:bg-white/[0.04]">
           <div
-            className={[
-              "w-full rounded-lg border px-3 py-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)] backdrop-blur",
-              props.isDark
-                ? "border-sky-300/25 bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(15,23,42,0.72))] text-slate-50"
-                : "border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(15,23,42,0.68))] text-slate-50",
-            ].join(" ")}
+            className="w-full rounded-lg border border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(15,23,42,0.68))] px-3 py-2 text-slate-50 shadow-[0_14px_34px_rgba(15,23,42,0.18)] backdrop-blur dark:border-sky-300/25 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(15,23,42,0.72))]"
             style={{ opacity: props.settings.opacity }}
           >
             <strong className="block text-[22px] leading-none tracking-normal">00:00</strong>

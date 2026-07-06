@@ -9,7 +9,6 @@ import { Switch } from "./switch";
 // 背景图面板只负责预览和输入事件，图片压缩、存储和功能启用推导由上层复用统一链路处理。
 export function CustomBackgroundPanel(props: {
   background: CustomBackgroundSettings;
-  isDark: boolean;
   message: string;
   palette: ThemePalette;
   onChange: (patch: Partial<CustomBackgroundSettings>) => void;
@@ -52,10 +51,7 @@ export function CustomBackgroundPanel(props: {
         )}
         {hasImage && (
           <span
-            className={[
-              "pointer-events-none absolute inset-0",
-              props.isDark ? "bg-slate-950" : "bg-white",
-            ].join(" ")}
+            className="pointer-events-none absolute inset-0 bg-white dark:bg-slate-950"
             style={{
               opacity: props.background.maskOpacity,
             }}

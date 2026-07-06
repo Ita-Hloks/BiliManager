@@ -6,7 +6,6 @@ import type { ThemePalette } from "../theme";
 // 个性化面板聚合推荐拦截、广告拦截和背景图 UI，但只通过 patch 回传，不直接保存全局设置。
 export function PersonalizationPanel(props: {
   backgroundMessage: string;
-  isDark: boolean;
   palette: ThemePalette;
   settings: PlayerPersonalizationSettings;
   onBackgroundChange: (patch: Partial<CustomBackgroundSettings>) => void;
@@ -94,7 +93,6 @@ export function PersonalizationPanel(props: {
 
         <CustomBackgroundPanel
           background={props.settings.customBackground}
-          isDark={props.isDark}
           message={props.backgroundMessage}
           palette={props.palette}
           onChange={props.onBackgroundChange}

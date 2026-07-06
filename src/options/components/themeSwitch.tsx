@@ -3,7 +3,6 @@ import type { ExtensionSettings } from "../../shared/types";
 
 export function ThemeSwitch(props: {
   value: ExtensionSettings["theme"];
-  isDark: boolean;
   onChange: (theme: ExtensionSettings["theme"]) => void;
 }) {
   const options = [
@@ -13,12 +12,7 @@ export function ThemeSwitch(props: {
   ] as const;
 
   return (
-    <div
-      className={[
-        "inline-flex rounded-md border p-1 shadow-sm backdrop-blur transition-colors duration-300 ease-out",
-        props.isDark ? "border-white/10 bg-slate-950/35" : "border-white/70 bg-white/55",
-      ].join(" ")}
-    >
+    <div className="inline-flex rounded-md border border-white/70 bg-white/55 p-1 shadow-sm backdrop-blur transition-colors duration-300 ease-out dark:border-white/10 dark:bg-slate-950/35">
       {options.map(option => {
         const Icon = option.icon;
         const selected = props.value === option.value;
@@ -29,12 +23,8 @@ export function ThemeSwitch(props: {
             className={[
               "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm transition-colors duration-300 ease-out",
               selected
-                ? props.isDark
-                  ? "bg-sky-400 text-slate-950"
-                  : "bg-sky-500 text-white"
-                : props.isDark
-                  ? "text-slate-300 hover:bg-white/10"
-                  : "text-slate-600 hover:bg-white/75",
+                ? "bg-sky-500 text-white dark:bg-sky-400 dark:text-slate-950"
+                : "text-slate-600 hover:bg-white/75 dark:text-slate-300 dark:hover:bg-white/10",
             ].join(" ")}
             onClick={() => props.onChange(option.value)}
             type="button"

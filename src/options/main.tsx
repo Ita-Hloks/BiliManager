@@ -39,13 +39,14 @@ function OptionsApp() {
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
-  const palette = getThemePalette(isDark);
+  const palette = getThemePalette();
 
   useEffect(() => {
     void getSettings().then(setSettings);
   }, []);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   }, [isDark]);
 
@@ -212,7 +213,7 @@ function OptionsApp() {
               规则会自动保存，并同步到已经打开的 B 站页面
             </p>
           </div>
-          <ThemeSwitch value={settings.theme} isDark={isDark} onChange={updateTheme} />
+          <ThemeSwitch value={settings.theme} onChange={updateTheme} />
         </header>
 
         <div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
@@ -243,7 +244,6 @@ function OptionsApp() {
             />
             <PersonalizationPanel
               backgroundMessage={backgroundMessage}
-              isDark={isDark}
               palette={palette}
               settings={settings.personalization}
               onBackgroundChange={patch => void updateCustomBackground(patch)}
@@ -253,7 +253,6 @@ function OptionsApp() {
             />
             <WatchTimerPanel
               enabled={settings.features.watchTimer}
-              isDark={isDark}
               palette={palette}
               settings={settings.watchTimer}
               onChange={patch => void updateWatchTimer(patch)}
