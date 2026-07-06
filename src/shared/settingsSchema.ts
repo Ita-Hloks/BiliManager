@@ -1,0 +1,180 @@
+import { clamp } from "./number";
+import type {
+  CustomBackgroundSettings,
+  ExtensionSettings,
+  PlayerPersonalizationSettings,
+  SearchFilterSettings,
+  WatchTimerSettings,
+} from "./types";
+
+export const defaultSettings: ExtensionSettings = {
+  features: {
+    enabled: true,
+    searchFilter: true,
+    personalization: false,
+    watchTimer: false,
+    dailyStats: false,
+  },
+  // searchFilter.enabled 是内容脚本实际开关，features.searchFilter 用于设置页功能分组同步。
+  searchFilter: {
+    enabled: true,
+    titlePattern: "",
+    uploaderPattern: "",
+    minDanmakuViewRate: 0.005,
+    filterMissingTitleHighlight: true,
+  },
+  personalization: {
+    blockRelatedVideos: false,
+    blockPlayerAds: false,
+    disableRecommendationAutoplay: false,
+    customBackground: {
+      enabled: false,
+      imageDataUrl: "",
+      maskOpacity: 0.18,
+      positionX: 50,
+      positionY: 50,
+    },
+  },
+  watchTimer: {
+    opacity: 0.86,
+  },
+  theme: "system",
+  updatedAt: new Date(0).toISOString(),
+};
+
+// 设置结构的唯一归一化入口：合并缺省值、兼容旧字段，并同步 features 与各功能实际开关。
+export function normalizeSettings(
+  value: Partial<ExtensionSettings> | undefined,
+  currentSettings: ExtensionSettings = defaultSettings,
+): ExtensionSettings {
+  const source = value ?? {};
+  const theme = normalizeTheme(source.theme, currentSettings.theme);
+  const searchFilter = normalizeSearchFilter(source.searchFilter, currentSettings.searchFilter);
+  const personalization = normalizePersonalization(
+    source.personalization,
+    currentSettings.personalization,
+  );
+  const searchFilterEnabled = source.features?.searchFilter ?? searchFilter.enabled;
+  const personalizationEnabled =
+    source.features?.personalization ??
+    (personalization.blockRelatedVideos ||
+      personalization.blockPlayerAds ||
+      personalization.disableRecommendationAutoplay);
+
+  return {
+    ...currentSettings,
+    ...source,
+    features: {
+      ...currentSettings.features,
+      ...source.features,
+      enabled: source.features?.enabled ?? currentSettings.features.enabled ?? true,
+      searchFilter: searchFilterEnabled,
+      personalization: personalizationEnabled,
+      watchTimer: source.features?.watchTimer ?? currentSettings.features.watchTimer,
+    },
+    searchFilter: {
+      ...searchFilter,
+      enabled: searchFilterEnabled,
+    },
+    personalization,
+    watchTimer: normalizeWatchTimer(source.watchTimer, currentSettings.watchTimer),
+    theme,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+// 搜索过滤设置需要保留 regex 字符串、限制互动率范围，并保持 enabled 的布尔语义稳定。
+export function normalizeSearchFilter(
+  value: Partial<SearchFilterSettings> | undefined,
+  currentSearchFilter: SearchFilterSettings,
+): SearchFilterSettings {
+  return {
+    ...currentSearchFilter,
+    ...value,
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : currentSearchFilter.enabled,
+    titlePattern: getStringPattern(value?.titlePattern) || currentSearchFilter.titlePattern,
+    uploaderPattern:
+      getStringPattern(value?.uploaderPattern) || currentSearchFilter.uploaderPattern,
+    minDanmakuViewRate:
+      typeof value?.minDanmakuViewRate === "number"
+        ? clamp(value.minDanmakuViewRate, 0, 0.01)
+        : currentSearchFilter.minDanmakuViewRate,
+    filterMissingTitleHighlight:
+      typeof value?.filterMissingTitleHighlight === "boolean"
+        ? value.filterMissingTitleHighlight
+        : currentSearchFilter.filterMissingTitleHighlight,
+  };
+}
+
+// 个性化设置包含播放器拦截和背景图子结构；这里集中补齐嵌套字段，避免浅合并丢失背景参数。
+export function normalizePersonalization(
+  value: Partial<PlayerPersonalizationSettings> | undefined,
+  currentPersonalization: PlayerPersonalizationSettings,
+): PlayerPersonalizationSettings {
+  return {
+    ...currentPersonalization,
+    blockRelatedVideos:
+      typeof value?.blockRelatedVideos === "boolean"
+        ? value.blockRelatedVideos
+        : currentPersonalization.blockRelatedVideos,
+    blockPlayerAds:
+      typeof value?.blockPlayerAds === "boolean"
+        ? value.blockPlayerAds
+        : currentPersonalization.blockPlayerAds,
+    disableRecommendationAutoplay:
+      typeof value?.disableRecommendationAutoplay === "boolean"
+        ? value.disableRecommendationAutoplay
+        : currentPersonalization.disableRecommendationAutoplay,
+    customBackground: normalizeCustomBackground(
+      value?.customBackground,
+      currentPersonalization.customBackground,
+    ),
+  };
+}
+
+// 背景图设置来自导入文件或 UI 输入时都要限制透明度与位置范围，防止渲染状态越界。
+export function normalizeCustomBackground(
+  value: Partial<CustomBackgroundSettings> | undefined,
+  currentBackground: CustomBackgroundSettings,
+): CustomBackgroundSettings {
+  return {
+    ...currentBackground,
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : currentBackground.enabled,
+    imageDataUrl:
+      typeof value?.imageDataUrl === "string" ? value.imageDataUrl : currentBackground.imageDataUrl,
+    maskOpacity:
+      typeof value?.maskOpacity === "number"
+        ? clamp(value.maskOpacity, 0, 0.7)
+        : currentBackground.maskOpacity,
+    positionX:
+      typeof value?.positionX === "number"
+        ? clamp(value.positionX, 0, 100)
+        : currentBackground.positionX,
+    positionY:
+      typeof value?.positionY === "number"
+        ? clamp(value.positionY, 0, 100)
+        : currentBackground.positionY,
+  };
+}
+
+// 定时器透明度同时影响设置页预览和内容脚本浮层，统一限制在可读范围内。
+export function normalizeWatchTimer(
+  value: Partial<WatchTimerSettings> | undefined,
+  currentWatchTimer: WatchTimerSettings,
+): WatchTimerSettings {
+  return {
+    ...currentWatchTimer,
+    opacity:
+      typeof value?.opacity === "number"
+        ? clamp(value.opacity, 0.45, 1)
+        : currentWatchTimer.opacity,
+  };
+}
+
+function normalizeTheme(value: unknown, fallback: ExtensionSettings["theme"]) {
+  return value === "system" || value === "light" || value === "dark" ? value : fallback;
+}
+
+function getStringPattern(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
