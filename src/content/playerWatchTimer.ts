@@ -3,6 +3,9 @@ import type { WatchTimerSettings } from "../shared/types";
 const TIMER_SETTINGS_KEY = "biliManager.playerWatchTimer";
 const TIMER_DAILY_KEY = "biliManager.playerWatchTimerDaily";
 const TIMER_HISTORY_KEY = "biliManager.playerWatchTimerHistory";
+const TIMER_ACTIVE_SESSION_KEY = "biliManager.playerWatchTimerActiveSession";
+const ACTIVE_SESSION_SAVE_INTERVAL_MS = 1000;
+const ACTIVE_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 const TIMER_ROOT_ID = "bili-manager-watch-timer";
 const TIMER_STYLE_ID = "bili-manager-watch-timer-style";
 const FULLSCREEN_ATTR = "data-bili-manager-watch-timer-fullscreen";
@@ -21,6 +24,14 @@ type PlayerWatchTimerDailyStorage = {
   elapsedMs: number;
 };
 
+type PlayerWatchTimerActiveSessionStorage = {
+  pageKey: string;
+  dateKey: string;
+  elapsedMs: number;
+  todayElapsedMs: number;
+  updatedAt: number;
+};
+
 type PlayerWatchTimerHistory = Record<string, number>;
 
 let timerRoot: HTMLElement | undefined;
@@ -33,7 +44,10 @@ let elapsedMs = 0;
 let todayElapsedMs = 0;
 let todayDateKey = getTodayKey();
 let lastDailySaveAt = 0;
+let lastActiveSessionSaveAt = 0;
 let isCounting = false;
+let persistentTimerReady = false;
+let persistentLoadId = 0;
 let latestSettings = DEFAULT_TIMER_SETTINGS;
 let dragging:
   | {
@@ -57,16 +71,22 @@ export function applyPlayerWatchTimer(enabled: boolean, settings: WatchTimerSett
 
 export function destroyPlayerWatchTimer(): void {
   commitActiveSpan();
+  void saveActiveSession(false);
   void saveDailyTimer(false);
   stopTicker();
   timerRoot?.remove();
   timerRoot = undefined;
   timeText = undefined;
   todayText = undefined;
+  currentPageKey = "";
+  elapsedMs = 0;
   todayElapsedMs = 0;
   todayDateKey = getTodayKey();
   lastDailySaveAt = 0;
+  lastActiveSessionSaveAt = 0;
   isCounting = false;
+  persistentTimerReady = false;
+  persistentLoadId += 1;
   dragging = undefined;
   document.documentElement.removeAttribute(FULLSCREEN_ATTR);
   window.removeEventListener("resize", keepTimerInViewport);
@@ -109,15 +129,7 @@ function ensureTimerMounted() {
   document.addEventListener("fullscreenchange", syncFullscreenState);
   document.addEventListener("visibilitychange", syncVisibilityTiming);
 
-  void loadTimerSettings().then(settings => {
-    latestSettings = settings;
-    applyTimerSettings(settings);
-  });
-  void loadDailyTimer().then(daily => {
-    todayDateKey = daily.dateKey;
-    todayElapsedMs = daily.elapsedMs;
-    updateTimeText();
-  });
+  void loadPersistentTimerState();
   syncFullscreenState();
 }
 
@@ -205,6 +217,34 @@ async function loadDailyTimer(): Promise<PlayerWatchTimerDailyStorage> {
   return normalizeDailyTimer(saved[TIMER_DAILY_KEY]);
 }
 
+async function loadActiveSession(): Promise<PlayerWatchTimerActiveSessionStorage | undefined> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) return undefined;
+
+  const saved = await chrome.storage.local.get(TIMER_ACTIVE_SESSION_KEY);
+  return normalizeActiveSession(saved[TIMER_ACTIVE_SESSION_KEY]);
+}
+
+async function loadPersistentTimerState() {
+  const loadId = ++persistentLoadId;
+  const [settings, daily, activeSession] = await Promise.all([
+    loadTimerSettings(),
+    loadDailyTimer(),
+    loadActiveSession(),
+  ]);
+
+  if (loadId !== persistentLoadId || !timerRoot?.isConnected) return;
+
+  latestSettings = settings;
+  applyTimerSettings(settings);
+  todayDateKey = daily.dateKey;
+  todayElapsedMs = daily.elapsedMs;
+  restoreActiveSession(activeSession);
+  persistentTimerReady = true;
+  lastDailySaveAt = 0;
+  lastActiveSessionSaveAt = 0;
+  updateTimeText();
+}
+
 function normalizeTimerSettings(value: unknown): PlayerWatchTimerStorage {
   if (!value || typeof value !== "object") return DEFAULT_TIMER_SETTINGS;
 
@@ -226,6 +266,36 @@ function normalizeDailyTimer(value: unknown): PlayerWatchTimerDailyStorage {
     dateKey: currentDateKey,
     elapsedMs: clampNumber(record.elapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
   };
+}
+
+function normalizeActiveSession(value: unknown): PlayerWatchTimerActiveSessionStorage | undefined {
+  if (!value || typeof value !== "object") return undefined;
+
+  const record = value as Partial<PlayerWatchTimerActiveSessionStorage>;
+  if (typeof record.pageKey !== "string" || record.pageKey.length === 0) return undefined;
+  if (typeof record.dateKey !== "string" || !isDateKey(record.dateKey)) return undefined;
+  if (typeof record.updatedAt !== "number" || !Number.isFinite(record.updatedAt)) return undefined;
+  if (Date.now() - record.updatedAt > ACTIVE_SESSION_MAX_AGE_MS) return undefined;
+
+  return {
+    pageKey: record.pageKey,
+    dateKey: record.dateKey,
+    elapsedMs: clampNumber(record.elapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
+    todayElapsedMs: clampNumber(record.todayElapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
+    updatedAt: Math.max(0, Math.floor(record.updatedAt)),
+  };
+}
+
+function restoreActiveSession(session: PlayerWatchTimerActiveSessionStorage | undefined) {
+  const currentDateKey = getTodayKey();
+  if (!session || session.dateKey !== currentDateKey || session.pageKey !== getCurrentPageKey()) {
+    return;
+  }
+
+  const activeDelta = isCounting ? Math.max(0, Date.now() - startedAt) : 0;
+  elapsedMs = Math.max(elapsedMs, session.elapsedMs) + activeDelta;
+  todayElapsedMs = Math.max(todayElapsedMs, session.todayElapsedMs) + activeDelta;
+  startedAt = Date.now();
 }
 
 function applyTimerSettings(settings: PlayerWatchTimerStorage) {
@@ -259,9 +329,11 @@ function syncPageTimer() {
   if (nextPageKey === currentPageKey) return;
 
   commitActiveSpan();
+  void saveActiveSession(false);
   void saveDailyTimer(false);
   currentPageKey = nextPageKey;
   elapsedMs = 0;
+  lastActiveSessionSaveAt = 0;
   isCounting = isVideoActivelyPlaying();
   startedAt = Date.now();
   updateTimeText();
@@ -280,6 +352,7 @@ function syncPlaybackTiming() {
 
   if (!shouldCount) {
     commitActiveSpan();
+    void saveActiveSession(false);
     void saveDailyTimer(false);
   }
 
@@ -292,6 +365,7 @@ function updateTimeText() {
   syncPlaybackTiming();
   timeText.textContent = formatDuration(getElapsedMs());
   todayText.textContent = formatDuration(getTodayElapsedMs());
+  void saveActiveSession(true);
   void saveDailyTimer(true);
 }
 
@@ -386,7 +460,27 @@ async function saveTimerSettings(settings: PlayerWatchTimerStorage) {
   await chrome.storage.local.set({ [TIMER_SETTINGS_KEY]: settings });
 }
 
+async function saveActiveSession(throttle: boolean) {
+  if (!persistentTimerReady || !currentPageKey) return;
+  if (typeof chrome === "undefined" || !chrome.storage?.local) return;
+
+  const now = Date.now();
+  if (throttle && now - lastActiveSessionSaveAt < ACTIVE_SESSION_SAVE_INTERVAL_MS) return;
+
+  lastActiveSessionSaveAt = now;
+  await chrome.storage.local.set({
+    [TIMER_ACTIVE_SESSION_KEY]: {
+      pageKey: currentPageKey,
+      dateKey: todayDateKey,
+      elapsedMs: Math.max(0, Math.floor(getElapsedMs())),
+      todayElapsedMs: Math.max(0, Math.floor(getTodayElapsedMs())),
+      updatedAt: now,
+    },
+  });
+}
+
 async function saveDailyTimer(throttle: boolean) {
+  if (!persistentTimerReady) return;
   if (typeof chrome === "undefined" || !chrome.storage?.local) return;
   const now = Date.now();
   if (throttle && now - lastDailySaveAt < 5000) return;
