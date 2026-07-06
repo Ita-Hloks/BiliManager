@@ -1,4 +1,5 @@
 import type { CustomBackgroundSettings } from "../shared/types";
+import { detectBilibiliPageTheme } from "./pageTheme";
 
 const ROOT_ID = "bili-manager-custom-background";
 const STYLE_ID = "bili-manager-custom-background-style";
@@ -19,6 +20,7 @@ export function applyCustomBackground(settings: CustomBackgroundSettings): void 
     0,
     100,
   )}%`;
+  applyBackgroundThemeClass(root);
   document.documentElement.dataset.biliManagerCustomBackground = "true";
 }
 
@@ -58,6 +60,12 @@ function ensureRoot() {
   return root;
 }
 
+function applyBackgroundThemeClass(root: HTMLElement) {
+  const theme = detectBilibiliPageTheme();
+  root.classList.toggle("bili-manager-page-dark", theme === "dark");
+  root.classList.toggle("bili-manager-page-light", theme === "light");
+}
+
 function removeBackground() {
   document.getElementById(ROOT_ID)?.remove();
   document.documentElement.removeAttribute(ENABLED_ATTR);
@@ -73,30 +81,29 @@ function ensureStyle() {
     #${ROOT_ID} {
       position: fixed;
       inset: 0;
-      z-index: 0;
+      z-index: -1;
       pointer-events: none;
       background-size: cover;
       background-repeat: no-repeat;
       background-color: #0f172a;
+      isolation: isolate;
+    }
+
+    #${ROOT_ID}::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.18);
+    }
+
+    #${ROOT_ID}.bili-manager-page-light::after {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     html[${ENABLED_ATTR}="true"],
     html[${ENABLED_ATTR}="true"] body {
       background: transparent !important;
-    }
-
-    html[${ENABLED_ATTR}="true"] body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background: rgba(15, 23, 42, 0.18);
-    }
-
-    html[${ENABLED_ATTR}="true"] body > *:not(#${ROOT_ID}) {
-      position: relative;
-      z-index: 1;
     }
 
     html[${ENABLED_ATTR}="true"] #app,
