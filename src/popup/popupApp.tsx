@@ -14,6 +14,7 @@ const unavailableStats: SearchFilterStats = {
   regexErrors: [],
   updatedAt: new Date(0).toISOString(),
 };
+const GITHUB_REPOSITORY_URL = "https://github.com/Ita-Hloks/BiliManager";
 
 export function PopupApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
@@ -38,6 +39,10 @@ export function PopupApp() {
 
     setStats(unavailableStats);
     setContentConnected(false);
+  }
+
+  function openGithubRepository() {
+    void chrome.tabs?.create?.({ url: GITHUB_REPOSITORY_URL });
   }
 
   async function setPluginEnabled(enabled: boolean) {
@@ -76,21 +81,32 @@ export function PopupApp() {
             <span className={runningTone}>{pluginEnabled ? "正在运行" : "已暂停"}</span>
           </h1>
         </div>
-        <button
-          aria-checked={pluginEnabled}
-          aria-label={runningText}
-          className={[
-            "group flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition-all duration-300 ease-out",
-            pluginEnabled
-              ? "border-sky-300/45 bg-sky-400/20 text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_8px_22px_rgba(14,165,233,0.18)] hover:bg-sky-400/25"
-              : "border-white/10 bg-slate-950/25 text-slate-500 opacity-75 hover:border-white/20 hover:bg-white/[0.05] hover:opacity-100",
-          ].join(" ")}
-          onClick={() => void setPluginEnabled(!pluginEnabled)}
-          role="switch"
-          type="button"
-        >
-          <Power className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            aria-label="打开设置"
+            className="group flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-slate-950/25 text-slate-300 opacity-85 transition-all duration-300 ease-out hover:border-sky-300/35 hover:bg-sky-400/15 hover:text-sky-100 hover:opacity-100"
+            onClick={() => chrome.runtime.openOptionsPage()}
+            title="打开设置"
+            type="button"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+          <button
+            aria-checked={pluginEnabled}
+            aria-label={runningText}
+            className={[
+              "group flex h-9 w-9 items-center justify-center rounded-md border transition-all duration-300 ease-out",
+              pluginEnabled
+                ? "border-sky-300/45 bg-sky-400/20 text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_8px_22px_rgba(14,165,233,0.18)] hover:bg-sky-400/25"
+                : "border-white/10 bg-slate-950/25 text-slate-500 opacity-75 hover:border-white/20 hover:bg-white/[0.05] hover:opacity-100",
+            ].join(" ")}
+            onClick={() => void setPluginEnabled(!pluginEnabled)}
+            role="switch"
+            type="button"
+          >
+            <Power className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent">
@@ -120,15 +136,14 @@ export function PopupApp() {
         <RecentVideosCard />
       </div>
 
-      <footer className="flex shrink-0 items-center justify-between border-t border-white/10 px-4 py-3 text-xs text-slate-400">
+      <footer className="flex shrink-0 items-center justify-between border-t border-white/10 px-4 py-2 text-[11px] text-slate-500">
         <span className="text-slate-500">0.0.0 测试版</span>
         <button
-          className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-slate-200 transition-colors hover:bg-white/10"
-          onClick={() => chrome.runtime.openOptionsPage()}
+          className="text-slate-500 transition-colors hover:text-slate-300"
+          onClick={openGithubRepository}
           type="button"
         >
-          <Settings className="h-3.5 w-3.5" />
-          设置
+          GitHub
         </button>
       </footer>
     </main>
@@ -143,7 +158,6 @@ async function sendActiveTabMessage(message: ExtensionMessage): Promise<Extensio
   try {
     return await chrome.tabs.sendMessage(tab.id, message);
   } catch {
-    // 非 B 站页面或内容脚本未注入时会走这里，popup 只展示未连接状态。
     return null;
   }
 }
