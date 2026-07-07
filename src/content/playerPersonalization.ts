@@ -18,7 +18,7 @@ const PLAYER_AD_SELECTOR = [
   ".right-container .ad-floor-exp.right-bottom-banner",
   ".right-container #slide_ad",
   ".right-container .slide-ad-exp",
-  ".activity-m-v1.act-end",
+  ".activity-m-v1",
   '.right-container [class*="_ad_"]',
 ].join(", ");
 let latestSettings: PlayerPersonalizationSettings = {
@@ -84,7 +84,7 @@ export function getPlayerObservationTargets(): HTMLElement[] {
     document.querySelector<HTMLElement>(".video-card-ad-small"),
     document.querySelector<HTMLElement>("#slide_ad"),
     document.querySelector<HTMLElement>(".slide-ad-exp"),
-    document.querySelector<HTMLElement>(".activity-m-v1.act-end"),
+    ...document.querySelectorAll<HTMLElement>(".activity-m-v1"),
   ].filter(Boolean) as HTMLElement[];
 
   return targets.length > 0 ? removeNestedModules(targets) : [document.body];
