@@ -19,7 +19,7 @@ const PLAYER_AD_SELECTOR = [
   ".right-container #slide_ad",
   ".right-container .slide-ad-exp",
   ".activity-m-v1.act-end",
-  '.right-container [class*="_ad"]',
+  '.right-container [class*="_ad_"]',
 ].join(", ");
 let latestSettings: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
