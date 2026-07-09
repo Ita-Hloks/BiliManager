@@ -1,15 +1,10 @@
-export const WATCH_TIMER_DAILY_KEY = "biliManager.playerWatchTimerDaily";
-export const WATCH_TIMER_HISTORY_KEY = "biliManager.playerWatchTimerHistory";
-export const WATCH_TIMER_SESSION_KEY_PREFIX = "biliManager.playerWatchTimerSession:";
-
-export type WatchTimerDailyStorage = {
-  dateKey: string;
-  elapsedMs: number;
-};
+const WATCH_TIMER_HISTORY_KEY = "biliManager.playerWatchTimerHistory";
+const WATCH_TIMER_SESSION_KEY_PREFIX = "biliManager.playerWatchTimerSession:";
+const WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX = "biliManager.playerWatchTimerVideoRecord:";
 
 export type WatchTimerHistory = Record<string, number>;
 
-export type WatchTimerSessionStorage = {
+type WatchTimerSessionStorage = {
   id: string;
   pageKey: string;
   title: string;
@@ -24,80 +19,16 @@ export type WatchTimerVideoHistoryItem = {
   title: string;
   url: string;
   dateKey: string;
-  elapsedMs: number;
   updatedAt: number;
 };
 
+export type WatchTimerHistoryBackup = {
+  history: WatchTimerHistory;
+  videos: WatchTimerVideoHistoryItem[];
+};
+
 const MAX_HISTORY_DAYS = 370;
-const MAX_SESSION_RECORDS = 5000;
-const WATCH_TIMER_SESSION_MIN_MS = 1000;
-
-export async function loadWatchTimerDaily(): Promise<WatchTimerDailyStorage> {
-  if (!hasChromeStorage()) return createEmptyDailyStorage();
-
-  const todayKey = getTodayKey();
-  return {
-    dateKey: todayKey,
-    elapsedMs: await getWatchTimerDailyElapsed(todayKey),
-  };
-}
-
-export async function saveWatchTimerDailyElapsed(
-  dateKey: string,
-  elapsedMs: number,
-): Promise<void> {
-  if (!hasChromeStorage()) return;
-  if (!isDateKey(dateKey)) return;
-
-  const normalized = {
-    dateKey,
-    elapsedMs: Math.max(0, Math.floor(elapsedMs)),
-  };
-  const history = await loadLegacyWatchTimerHistory();
-  const nextHistory = pruneHistory(
-    {
-      ...history,
-      [normalized.dateKey]: normalized.elapsedMs,
-    },
-    normalized.dateKey,
-  );
-
-  await chrome.storage.local.set({
-    [WATCH_TIMER_DAILY_KEY]: normalized,
-    [WATCH_TIMER_HISTORY_KEY]: nextHistory,
-  });
-}
-
-export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
-  if (!hasChromeStorage()) return;
-  const normalized = normalizeSession(session);
-  if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
-
-  await chrome.storage.local.set({
-    [getWatchTimerSessionKey(normalized.id)]: normalized,
-  });
-}
-
-export async function getWatchTimerDailyElapsed(dateKey = getTodayKey()): Promise<number> {
-  if (!hasChromeStorage()) return 0;
-  if (!isDateKey(dateKey)) return 0;
-
-  const history = await getWatchTimerHistory();
-  return history[dateKey] ?? 0;
-}
-
-export async function getWatchTimerVideoDailyElapsed(
-  pageKey: string,
-  dateKey = getTodayKey(),
-): Promise<number> {
-  if (!hasChromeStorage()) return 0;
-  if (!pageKey || !isDateKey(dateKey)) return 0;
-
-  const sessions = await getWatchTimerSessions();
-  return sessions
-    .filter(session => session.pageKey === pageKey && session.dateKey === dateKey)
-    .reduce((sum, session) => sum + session.elapsedMs, 0);
-}
+const MAX_WATCH_TIMER_RECORDS = 5000;
 
 export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
   if (!hasChromeStorage()) return {};
@@ -108,42 +39,70 @@ export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
   return pruneHistory(mergeHistories(legacyHistory, sessionHistory), getTodayKey());
 }
 
-export async function getRecentWatchTimerSessions(limit = 5): Promise<WatchTimerSessionStorage[]> {
-  const sessions = await getWatchTimerSessions();
-  return sessions
+export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVideoHistoryItem[]> {
+  const saved = await chrome.storage.local.get(null);
+  return getWatchTimerVideoRecordsFromStorage(saved)
     .sort((left, right) => right.updatedAt - left.updatedAt)
     .slice(0, Math.max(0, limit));
 }
 
-export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVideoHistoryItem[]> {
-  const sessions = await getWatchTimerSessions();
-  const videos = sessions.reduce<Record<string, WatchTimerVideoHistoryItem>>((grouped, session) => {
-    const key = `${session.dateKey}:${session.pageKey}`;
-    const current = grouped[key];
-    if (!current) {
-      grouped[key] = {
-        pageKey: session.pageKey,
-        title: session.title,
-        url: session.url,
-        dateKey: session.dateKey,
-        elapsedMs: session.elapsedMs,
-        updatedAt: session.updatedAt,
-      };
-      return grouped;
-    }
+export async function getWatchTimerVideoDailyElapsed(
+  pageKey: string,
+  dateKey = getTodayKey(),
+): Promise<number> {
+  if (!hasChromeStorage()) return 0;
+  if (!pageKey || !isDateKey(dateKey)) return 0;
 
-    current.elapsedMs += session.elapsedMs;
-    if (session.updatedAt > current.updatedAt) {
-      current.title = session.title;
-      current.url = session.url;
-      current.updatedAt = session.updatedAt;
-    }
-    return grouped;
-  }, {});
+  const saved = await chrome.storage.local.get(null);
+  return getWatchTimerSessionsFromStorage(saved)
+    .filter(session => session.pageKey === pageKey && session.dateKey === dateKey)
+    .reduce((sum, session) => sum + session.elapsedMs, 0);
+}
 
-  return Object.values(videos)
-    .sort((left, right) => right.updatedAt - left.updatedAt)
-    .slice(0, Math.max(0, limit));
+export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
+  if (!hasChromeStorage()) {
+    return {
+      history: {},
+      videos: [],
+    };
+  }
+
+  const saved = await chrome.storage.local.get(null);
+  return {
+    history: pruneHistory(
+      mergeHistories(normalizeHistory(saved[WATCH_TIMER_HISTORY_KEY]), buildSessionHistory(saved)),
+      getTodayKey(),
+    ),
+    videos: getWatchTimerVideoRecordsFromStorage(saved),
+  };
+}
+
+export async function importWatchTimerHistory(history: WatchTimerHistoryBackup): Promise<void> {
+  if (!hasChromeStorage()) return;
+
+  const saved = await chrome.storage.local.get(null);
+  const oldSessionKeys = Object.keys(saved).filter(key =>
+    key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX),
+  );
+  if (oldSessionKeys.length > 0) await chrome.storage.local.remove(oldSessionKeys);
+  const oldVideoRecordKeys = Object.keys(saved).filter(key =>
+    key.startsWith(WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX),
+  );
+  if (oldVideoRecordKeys.length > 0) await chrome.storage.local.remove(oldVideoRecordKeys);
+
+  const nextHistory = normalizeHistory(history.history);
+  const videos = history.videos
+    .map(normalizeVideoRecord)
+    .filter((record): record is WatchTimerVideoHistoryItem => !!record);
+  const nextStorage: Record<string, unknown> = {
+    [WATCH_TIMER_HISTORY_KEY]: nextHistory,
+  };
+  videos.forEach(record => {
+    nextStorage[getWatchTimerVideoRecordKey(record.dateKey, record.pageKey)] = record;
+  });
+
+  await chrome.storage.local.set(nextStorage);
+  await pruneWatchTimerSessions();
 }
 
 export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise<void> {
@@ -152,34 +111,28 @@ export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise
 
   const saved = await chrome.storage.local.get(null);
   const minDate = addDays(parseLocalDateKey(todayKey), -MAX_HISTORY_DAYS + 1).getTime();
-  const sessionEntries = Object.entries(saved)
-    .map(([key, value]) => ({
-      key,
-      session: key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX) ? normalizeSession(value) : undefined,
-    }))
-    .filter(({ key }) => key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX));
-  const expiredKeys = sessionEntries
-    .filter(({ session }) => {
-      if (!session) return true;
-      return parseLocalDateKey(session.dateKey).getTime() < minDate;
-    })
+  const recordEntries = Object.entries(saved).flatMap(([key, value]) => {
+    if (key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX)) {
+      const record = normalizeSession(value);
+      return [{ key, dateKey: record?.dateKey, updatedAt: record?.updatedAt }];
+    }
+    if (key.startsWith(WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX)) {
+      const record = normalizeVideoRecord(value);
+      return [{ key, dateKey: record?.dateKey, updatedAt: record?.updatedAt }];
+    }
+    return [];
+  });
+  const expiredKeys = recordEntries
+    .filter(({ dateKey }) => !dateKey || parseLocalDateKey(dateKey).getTime() < minDate)
     .map(({ key }) => key);
-  const overflowKeys = sessionEntries
-    .filter(({ session }) => !!session)
-    .sort((left, right) => (right.session?.updatedAt ?? 0) - (left.session?.updatedAt ?? 0))
-    .slice(MAX_SESSION_RECORDS)
+  const overflowKeys = recordEntries
+    .filter(({ updatedAt }) => typeof updatedAt === "number")
+    .sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0))
+    .slice(MAX_WATCH_TIMER_RECORDS)
     .map(({ key }) => key);
   const removableKeys = [...new Set([...expiredKeys, ...overflowKeys])];
 
   if (removableKeys.length > 0) await chrome.storage.local.remove(removableKeys);
-}
-
-function loadLegacyWatchTimerHistory(): Promise<WatchTimerHistory> {
-  if (!hasChromeStorage()) return Promise.resolve({});
-
-  return chrome.storage.local
-    .get(WATCH_TIMER_HISTORY_KEY)
-    .then(saved => normalizeHistory(saved[WATCH_TIMER_HISTORY_KEY]));
 }
 
 function buildSessionHistory(storage: Record<string, unknown>): WatchTimerHistory {
@@ -212,13 +165,6 @@ function normalizeHistory(value: unknown): WatchTimerHistory {
   );
 }
 
-async function getWatchTimerSessions(): Promise<WatchTimerSessionStorage[]> {
-  if (!hasChromeStorage()) return [];
-
-  const saved = await chrome.storage.local.get(null);
-  return getWatchTimerSessionsFromStorage(saved);
-}
-
 function getWatchTimerSessionsFromStorage(
   storage: Record<string, unknown>,
 ): WatchTimerSessionStorage[] {
@@ -226,6 +172,15 @@ function getWatchTimerSessionsFromStorage(
     .filter(([key]) => key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX))
     .map(([, value]) => normalizeSession(value))
     .filter((session): session is WatchTimerSessionStorage => !!session);
+}
+
+function getWatchTimerVideoRecordsFromStorage(
+  storage: Record<string, unknown>,
+): WatchTimerVideoHistoryItem[] {
+  return Object.entries(storage)
+    .filter(([key]) => key.startsWith(WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX))
+    .map(([, value]) => normalizeVideoRecord(value))
+    .filter((record): record is WatchTimerVideoHistoryItem => !!record);
 }
 
 function normalizeSession(value: unknown): WatchTimerSessionStorage | undefined {
@@ -251,14 +206,31 @@ function normalizeSession(value: unknown): WatchTimerSessionStorage | undefined 
   };
 }
 
+function normalizeVideoRecord(value: unknown): WatchTimerVideoHistoryItem | undefined {
+  if (!value || typeof value !== "object") return undefined;
+
+  const record = value as Partial<WatchTimerVideoHistoryItem>;
+  if (typeof record.pageKey !== "string" || record.pageKey.length === 0) return undefined;
+  if (typeof record.dateKey !== "string" || !isDateKey(record.dateKey)) return undefined;
+  if (typeof record.updatedAt !== "number" || !Number.isFinite(record.updatedAt)) return undefined;
+
+  return {
+    pageKey: record.pageKey,
+    title: normalizeTitle(record.title, record.pageKey),
+    url: typeof record.url === "string" ? record.url : "",
+    dateKey: record.dateKey,
+    updatedAt: Math.max(0, Math.floor(record.updatedAt)),
+  };
+}
+
 function normalizeTitle(title: unknown, fallback: string): string {
   if (typeof title !== "string") return fallback;
   const normalized = title.replace(/[_-]?哔哩哔哩.*$/u, "").trim();
   return normalized || fallback;
 }
 
-function getWatchTimerSessionKey(sessionId: string): string {
-  return `${WATCH_TIMER_SESSION_KEY_PREFIX}${encodeURIComponent(sessionId)}`;
+function getWatchTimerVideoRecordKey(dateKey: string, pageKey: string): string {
+  return `${WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX}${encodeURIComponent(`${dateKey}:${pageKey}`)}`;
 }
 
 function pruneHistory(history: WatchTimerHistory, todayKey: string): WatchTimerHistory {
@@ -268,13 +240,6 @@ function pruneHistory(history: WatchTimerHistory, todayKey: string): WatchTimerH
   return Object.fromEntries(
     Object.entries(history).filter(([dateKey]) => parseLocalDateKey(dateKey).getTime() >= minDate),
   );
-}
-
-function createEmptyDailyStorage(): WatchTimerDailyStorage {
-  return {
-    dateKey: getTodayKey(),
-    elapsedMs: 0,
-  };
 }
 
 function getLocalDateKey(date: Date): string {

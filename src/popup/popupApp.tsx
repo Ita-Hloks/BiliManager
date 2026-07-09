@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Power, Settings } from "lucide-react";
+import { AlertCircle, Power, Settings } from "lucide-react";
 import type { ExtensionMessage, ExtensionResponse } from "../shared/messaging";
 import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
 import type { ExtensionSettings, SearchFilterStats } from "../shared/types";
@@ -67,7 +67,6 @@ export function PopupApp() {
     setContentConnected(false);
   }
 
-  const statusText = contentConnected ? "当前页面已连接" : "当前页面未连接内容脚本";
   const pluginEnabled = settings.features.enabled;
   const runningText = pluginEnabled ? "BiliManager 正在运行" : "BiliManager 已暂停";
   const runningTone = pluginEnabled ? "text-emerald-200/80" : "text-rose-200/80";
@@ -110,21 +109,12 @@ export function PopupApp() {
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent">
-        <div
-          className={[
-            "flex items-center gap-2 rounded-md border px-3 py-2 text-xs backdrop-blur-xl",
-            contentConnected
-              ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
-              : "border-white/10 bg-slate-950/30 text-slate-400",
-          ].join(" ")}
-        >
-          {contentConnected ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-          ) : (
+        {!contentConnected && (
+          <div className="flex items-center gap-2 rounded-md border border-white/10 bg-slate-950/30 px-3 py-2 text-xs text-slate-400 backdrop-blur-xl">
             <AlertCircle className="h-4 w-4 shrink-0" />
-          )}
-          <span>{statusText}</span>
-        </div>
+            <span>当前页面不支持</span>
+          </div>
+        )}
 
         {stats.regexErrors.length > 0 && (
           <div className="rounded-md border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-xs leading-5 text-rose-200">

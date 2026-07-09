@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { getRecentWatchTimerVideos } from "../../shared/watchTimerHistory";
+import {
+  getRecentWatchTimerVideos,
+  getWatchTimerVideoDailyElapsed,
+} from "../../shared/watchTimerHistory";
 import type { WatchTimerVideoHistoryItem } from "../../shared/watchTimerHistory";
 
 function handleExpandRecentVideos() {
   // TODO: 后续跳转到完整的播放历史页面
-}
-
-function formatDuration(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours}:${padTime(minutes)}:${padTime(seconds)}`;
-  return `${padTime(minutes)}:${padTime(seconds)}`;
 }
 
 function formatUpdatedAt(timestamp: number) {
@@ -21,7 +15,22 @@ function formatUpdatedAt(timestamp: number) {
   return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
 }
 
-function RecentVideoRow({ video }: { video: WatchTimerVideoHistoryItem }) {
+function formatDuration(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours}h${padTime(minutes)}m${padTime(seconds)}s`;
+  if (minutes > 0) return `${minutes}m${padTime(seconds)}s`;
+  return `${seconds}s`;
+}
+
+type RecentVideoViewItem = WatchTimerVideoHistoryItem & {
+  dailyElapsedMs: number;
+};
+
+function RecentVideoRow({ video }: { video: RecentVideoViewItem }) {
   return (
     <li className="rounded-md border border-white/5 bg-white/[0.02] px-2 py-1.5 text-slate-300 transition-colors duration-300 ease-out hover:bg-white/[0.04]">
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 text-left">
@@ -30,11 +39,10 @@ function RecentVideoRow({ video }: { video: WatchTimerVideoHistoryItem }) {
           {video.title}
         </span>
         <span className="shrink-0 text-[11px] tabular-nums text-sky-200">
-          {formatDuration(video.elapsedMs)}
+          {formatDuration(video.dailyElapsedMs)}
         </span>
-        <span className="min-w-0 truncate text-[10px] text-slate-500">{video.dateKey}</span>
-        <span className="shrink-0 text-[10px] tabular-nums text-slate-500">
-          {formatUpdatedAt(video.updatedAt)}
+        <span className="min-w-0 truncate text-[10px] text-slate-500">
+          {video.dateKey} {formatUpdatedAt(video.updatedAt)}
         </span>
       </div>
     </li>
@@ -42,10 +50,18 @@ function RecentVideoRow({ video }: { video: WatchTimerVideoHistoryItem }) {
 }
 
 export function RecentVideosCard() {
-  const [videos, setVideos] = useState<WatchTimerVideoHistoryItem[]>([]);
+  const [videos, setVideos] = useState<RecentVideoViewItem[]>([]);
 
   useEffect(() => {
-    void getRecentWatchTimerVideos(3).then(setVideos);
+    void getRecentWatchTimerVideos(3).then(async recentVideos => {
+      const videosWithElapsed = await Promise.all(
+        recentVideos.map(async video => ({
+          ...video,
+          dailyElapsedMs: await getWatchTimerVideoDailyElapsed(video.pageKey, video.dateKey),
+        })),
+      );
+      setVideos(videosWithElapsed);
+    });
   }, []);
 
   return (
