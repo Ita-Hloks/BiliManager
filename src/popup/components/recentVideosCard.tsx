@@ -7,15 +7,6 @@ function handleExpandRecentVideos() {
   // TODO: 后续跳转到完整的播放历史页面
 }
 
-function formatDuration(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours}:${padTime(minutes)}:${padTime(seconds)}`;
-  return `${padTime(minutes)}:${padTime(seconds)}`;
-}
-
 function formatUpdatedAt(timestamp: number) {
   const date = new Date(timestamp);
   return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
@@ -28,9 +19,6 @@ function RecentVideoRow({ video }: { video: WatchTimerVideoHistoryItem }) {
         {/* if (video.url) void chrome.tabs?.create?.({ url: video.url }); */}
         <span className="min-w-0 truncate text-[11px] font-medium text-slate-200">
           {video.title}
-        </span>
-        <span className="shrink-0 text-[11px] tabular-nums text-sky-200">
-          {formatDuration(video.elapsedMs)}
         </span>
         <span className="min-w-0 truncate text-[10px] text-slate-500">{video.dateKey}</span>
         <span className="shrink-0 text-[10px] tabular-nums text-slate-500">
