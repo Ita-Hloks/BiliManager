@@ -1,12 +1,13 @@
 import type { WatchTimerSettings } from "../shared/types";
 import {
+  getWatchTimerVideoDailyElapsed,
   loadWatchTimerDaily,
   pruneWatchTimerSessions,
   saveWatchTimerSession,
   WATCH_TIMER_DAILY_KEY,
   WATCH_TIMER_HISTORY_KEY,
   WATCH_TIMER_SESSION_KEY_PREFIX,
-} from "../shared/watchTimerHistory";
+} from "./playerWatchTimerHistory";
 import {
   loadActiveSession,
   saveActiveSession as saveActiveSessionStorage,
@@ -230,11 +231,17 @@ async function loadDailyTimer() {
   return loadWatchTimerDaily();
 }
 
+async function loadVideoTimer(pageKey: string) {
+  return getWatchTimerVideoDailyElapsed(pageKey, todayDateKey);
+}
+
 async function loadPersistentTimerState() {
   const loadId = ++persistentLoadId;
-  const [settings, daily, activeSession] = await Promise.all([
+  const pageKey = getCurrentPageKey();
+  const [settings, daily, videoElapsedMs, activeSession] = await Promise.all([
     loadTimerSettings(),
     loadDailyTimer(),
+    loadVideoTimer(pageKey),
     loadActiveSession(),
     pruneWatchTimerSessions(),
   ]);
@@ -245,6 +252,7 @@ async function loadPersistentTimerState() {
   applyTimerSettings(settings);
   todayDateKey = daily.dateKey;
   todayElapsedMs = daily.elapsedMs;
+  elapsedMs = videoElapsedMs;
   restoreActiveSession(activeSession);
   persistentTimerReady = true;
   lastDailySaveAt = 0;
@@ -309,6 +317,7 @@ function syncPageTimer() {
   currentPageKey = nextPageKey;
   elapsedMs = 0;
   resetWatchSession();
+  void syncStoredTimerTotals();
   lastActiveSessionSaveAt = 0;
   isCounting = isVideoActivelyPlaying();
   startedAt = Date.now();
@@ -317,14 +326,14 @@ function syncPageTimer() {
 
 function syncVisibilityTiming() {
   syncTodayBoundary();
-  if (document.visibilityState === "visible") void syncStoredDailyTimer();
+  if (document.visibilityState === "visible") void syncStoredTimerTotals();
   syncPlaybackTiming();
   updateTimeText();
 }
 
 function syncWindowFocusTiming() {
   syncTodayBoundary();
-  void syncStoredDailyTimer();
+  void syncStoredTimerTotals();
   syncPlaybackTiming();
   updateTimeText();
 }
@@ -558,22 +567,26 @@ function syncTodayBoundary() {
   void saveDailyTimer(false);
 }
 
-async function syncStoredDailyTimer() {
+async function syncStoredTimerTotals() {
   if (!persistentTimerReady) return;
 
   const loadId = ++dailySyncLoadId;
-  const daily = await loadDailyTimer();
+  const [daily, videoElapsedMs] = await Promise.all([
+    loadDailyTimer(),
+    loadVideoTimer(currentPageKey),
+  ]);
   if (loadId !== dailySyncLoadId || !timerRoot?.isConnected) return;
 
   mergeDailyElapsed(daily.dateKey, daily.elapsedMs);
+  mergeVideoElapsed(daily.dateKey, videoElapsedMs);
   updateTimeText();
 }
 
-function scheduleStoredDailyTimerSync() {
+function scheduleStoredTimerSync() {
   window.clearTimeout(dailySyncTimer);
   dailySyncTimer = window.setTimeout(() => {
     dailySyncTimer = undefined;
-    void syncStoredDailyTimer();
+    void syncStoredTimerTotals();
   }, 300);
 }
 
@@ -591,7 +604,7 @@ function syncTimerStorageChange(
   );
   if (!hasWatchTimerChange) return;
 
-  scheduleStoredDailyTimerSync();
+  scheduleStoredTimerSync();
 }
 
 function mergeDailyElapsed(dateKey: string, storedElapsedMs: number) {
@@ -600,6 +613,14 @@ function mergeDailyElapsed(dateKey: string, storedElapsedMs: number) {
   commitActiveSpan();
   const pendingLocalElapsedMs = Math.max(0, sessionElapsedMs - lastSessionSavedElapsedMs);
   todayElapsedMs = Math.max(todayElapsedMs, storedElapsedMs + pendingLocalElapsedMs);
+}
+
+function mergeVideoElapsed(dateKey: string, storedElapsedMs: number) {
+  if (dateKey !== todayDateKey) return;
+
+  commitActiveSpan();
+  const pendingLocalElapsedMs = Math.max(0, sessionElapsedMs - lastSessionSavedElapsedMs);
+  elapsedMs = Math.max(elapsedMs, storedElapsedMs + pendingLocalElapsedMs);
 }
 
 function resetWatchSession() {

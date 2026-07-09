@@ -7,19 +7,10 @@ export type WatchTimerDailyStorage = {
   elapsedMs: number;
 };
 
-export type WatchTimerHistory = Record<string, number>;
+type WatchTimerHistory = Record<string, number>;
 
-export type WatchTimerSessionStorage = {
+type WatchTimerSessionStorage = {
   id: string;
-  pageKey: string;
-  title: string;
-  url: string;
-  dateKey: string;
-  elapsedMs: number;
-  updatedAt: number;
-};
-
-export type WatchTimerVideoHistoryItem = {
   pageKey: string;
   title: string;
   url: string;
@@ -42,50 +33,6 @@ export async function loadWatchTimerDaily(): Promise<WatchTimerDailyStorage> {
   };
 }
 
-export async function saveWatchTimerDailyElapsed(
-  dateKey: string,
-  elapsedMs: number,
-): Promise<void> {
-  if (!hasChromeStorage()) return;
-  if (!isDateKey(dateKey)) return;
-
-  const normalized = {
-    dateKey,
-    elapsedMs: Math.max(0, Math.floor(elapsedMs)),
-  };
-  const history = await loadLegacyWatchTimerHistory();
-  const nextHistory = pruneHistory(
-    {
-      ...history,
-      [normalized.dateKey]: normalized.elapsedMs,
-    },
-    normalized.dateKey,
-  );
-
-  await chrome.storage.local.set({
-    [WATCH_TIMER_DAILY_KEY]: normalized,
-    [WATCH_TIMER_HISTORY_KEY]: nextHistory,
-  });
-}
-
-export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
-  if (!hasChromeStorage()) return;
-  const normalized = normalizeSession(session);
-  if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
-
-  await chrome.storage.local.set({
-    [getWatchTimerSessionKey(normalized.id)]: normalized,
-  });
-}
-
-export async function getWatchTimerDailyElapsed(dateKey = getTodayKey()): Promise<number> {
-  if (!hasChromeStorage()) return 0;
-  if (!isDateKey(dateKey)) return 0;
-
-  const history = await getWatchTimerHistory();
-  return history[dateKey] ?? 0;
-}
-
 export async function getWatchTimerVideoDailyElapsed(
   pageKey: string,
   dateKey = getTodayKey(),
@@ -99,51 +46,14 @@ export async function getWatchTimerVideoDailyElapsed(
     .reduce((sum, session) => sum + session.elapsedMs, 0);
 }
 
-export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
-  if (!hasChromeStorage()) return {};
+export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
+  if (!hasChromeStorage()) return;
+  const normalized = normalizeSession(session);
+  if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
 
-  const saved = await chrome.storage.local.get(null);
-  const legacyHistory = normalizeHistory(saved[WATCH_TIMER_HISTORY_KEY]);
-  const sessionHistory = buildSessionHistory(saved);
-  return pruneHistory(mergeHistories(legacyHistory, sessionHistory), getTodayKey());
-}
-
-export async function getRecentWatchTimerSessions(limit = 5): Promise<WatchTimerSessionStorage[]> {
-  const sessions = await getWatchTimerSessions();
-  return sessions
-    .sort((left, right) => right.updatedAt - left.updatedAt)
-    .slice(0, Math.max(0, limit));
-}
-
-export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVideoHistoryItem[]> {
-  const sessions = await getWatchTimerSessions();
-  const videos = sessions.reduce<Record<string, WatchTimerVideoHistoryItem>>((grouped, session) => {
-    const key = `${session.dateKey}:${session.pageKey}`;
-    const current = grouped[key];
-    if (!current) {
-      grouped[key] = {
-        pageKey: session.pageKey,
-        title: session.title,
-        url: session.url,
-        dateKey: session.dateKey,
-        elapsedMs: session.elapsedMs,
-        updatedAt: session.updatedAt,
-      };
-      return grouped;
-    }
-
-    current.elapsedMs += session.elapsedMs;
-    if (session.updatedAt > current.updatedAt) {
-      current.title = session.title;
-      current.url = session.url;
-      current.updatedAt = session.updatedAt;
-    }
-    return grouped;
-  }, {});
-
-  return Object.values(videos)
-    .sort((left, right) => right.updatedAt - left.updatedAt)
-    .slice(0, Math.max(0, limit));
+  await chrome.storage.local.set({
+    [getWatchTimerSessionKey(normalized.id)]: normalized,
+  });
 }
 
 export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise<void> {
@@ -174,42 +84,20 @@ export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise
   if (removableKeys.length > 0) await chrome.storage.local.remove(removableKeys);
 }
 
-function loadLegacyWatchTimerHistory(): Promise<WatchTimerHistory> {
-  if (!hasChromeStorage()) return Promise.resolve({});
+async function getWatchTimerDailyElapsed(dateKey = getTodayKey()): Promise<number> {
+  if (!hasChromeStorage()) return 0;
+  if (!isDateKey(dateKey)) return 0;
 
-  return chrome.storage.local
-    .get(WATCH_TIMER_HISTORY_KEY)
-    .then(saved => normalizeHistory(saved[WATCH_TIMER_HISTORY_KEY]));
-}
-
-function buildSessionHistory(storage: Record<string, unknown>): WatchTimerHistory {
-  return getWatchTimerSessionsFromStorage(storage).reduce<WatchTimerHistory>((history, session) => {
-    history[session.dateKey] = (history[session.dateKey] ?? 0) + session.elapsedMs;
-    return history;
-  }, {});
-}
-
-export function getTodayKey(): string {
-  return getLocalDateKey(new Date());
-}
-
-function mergeHistories(...histories: WatchTimerHistory[]): WatchTimerHistory {
-  return histories.reduce<WatchTimerHistory>((merged, history) => {
-    Object.entries(history).forEach(([dateKey, elapsedMs]) => {
-      merged[dateKey] = (merged[dateKey] ?? 0) + elapsedMs;
-    });
-    return merged;
-  }, {});
-}
-
-function normalizeHistory(value: unknown): WatchTimerHistory {
-  if (!value || typeof value !== "object") return {};
-
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .filter(([dateKey, elapsedMs]) => isDateKey(dateKey) && typeof elapsedMs === "number")
-      .map(([dateKey, elapsedMs]) => [dateKey, Math.max(0, Math.floor(elapsedMs as number))]),
+  const saved = await chrome.storage.local.get(null);
+  const legacyHistory = normalizeHistory(saved[WATCH_TIMER_HISTORY_KEY]);
+  const sessionHistory = getWatchTimerSessionsFromStorage(saved).reduce<WatchTimerHistory>(
+    (history, session) => {
+      history[session.dateKey] = (history[session.dateKey] ?? 0) + session.elapsedMs;
+      return history;
+    },
+    {},
   );
+  return (legacyHistory[dateKey] ?? 0) + (sessionHistory[dateKey] ?? 0);
 }
 
 async function getWatchTimerSessions(): Promise<WatchTimerSessionStorage[]> {
@@ -226,6 +114,16 @@ function getWatchTimerSessionsFromStorage(
     .filter(([key]) => key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX))
     .map(([, value]) => normalizeSession(value))
     .filter((session): session is WatchTimerSessionStorage => !!session);
+}
+
+function normalizeHistory(value: unknown): WatchTimerHistory {
+  if (!value || typeof value !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([dateKey, elapsedMs]) => isDateKey(dateKey) && typeof elapsedMs === "number")
+      .map(([dateKey, elapsedMs]) => [dateKey, Math.max(0, Math.floor(elapsedMs as number))]),
+  );
 }
 
 function normalizeSession(value: unknown): WatchTimerSessionStorage | undefined {
@@ -261,15 +159,6 @@ function getWatchTimerSessionKey(sessionId: string): string {
   return `${WATCH_TIMER_SESSION_KEY_PREFIX}${encodeURIComponent(sessionId)}`;
 }
 
-function pruneHistory(history: WatchTimerHistory, todayKey: string): WatchTimerHistory {
-  const today = parseLocalDateKey(todayKey).getTime();
-  const minDate = addDays(new Date(today), -MAX_HISTORY_DAYS + 1).getTime();
-
-  return Object.fromEntries(
-    Object.entries(history).filter(([dateKey]) => parseLocalDateKey(dateKey).getTime() >= minDate),
-  );
-}
-
 function createEmptyDailyStorage(): WatchTimerDailyStorage {
   return {
     dateKey: getTodayKey(),
@@ -277,7 +166,8 @@ function createEmptyDailyStorage(): WatchTimerDailyStorage {
   };
 }
 
-function getLocalDateKey(date: Date): string {
+function getTodayKey() {
+  const date = new Date();
   return `${date.getFullYear()}-${padDate(date.getMonth() + 1)}-${padDate(date.getDate())}`;
 }
 
@@ -294,7 +184,7 @@ function isDateKey(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-function padDate(value: number): string {
+function padDate(value: number) {
   return value.toString().padStart(2, "0");
 }
 
