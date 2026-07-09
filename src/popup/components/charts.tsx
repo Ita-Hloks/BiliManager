@@ -25,7 +25,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
           const pct = elapsed > 0 ? Math.max((elapsed / maxElapsed) * 90, 3) : 0;
           return (
             <div
-              className="group relative flex min-w-0 flex-1 flex-col items-center gap-1.5"
+              className="group relative flex min-w-0 flex-1 flex-col items-center gap-1.5 first:[&>*:first-child]:left-0 first:[&>*:first-child]:translate-x-0 last:[&>*:first-child]:left-auto last:[&>*:first-child]:right-0 last:[&>*:first-child]:translate-x-0"
               key={point.label}
             >
               <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[calc(100%+0.35rem)] whitespace-nowrap rounded border border-sky-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-medium text-sky-100 opacity-0 shadow-lg shadow-slate-950/30 transition-opacity duration-150 group-hover:opacity-100">
