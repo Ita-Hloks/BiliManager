@@ -9,17 +9,26 @@ const BLOCK_ADS_ATTR = "data-bili-manager-block-ads";
 const PLAYER_PERSONALIZATION_ATTR = "data-bili-manager-player-personalization";
 
 const RELATED_VIDEO_SELECTOR = [
+  // 播放器右侧新版推荐列表
   ".right-container .recommend-list-v1",
+  // 播放器右侧旧版推荐列表
   ".right-container .rec-list",
+  // 播放结束后的相关推荐浮层
   ".bpx-player-ending-related",
 ].join(", ");
 const PLAYER_AD_SELECTOR = [
+  // 播放器右侧小广告卡片
   ".right-container .video-card-ad-small",
+  // 播放器右侧广告楼层横幅
   ".right-container .ad-floor-exp.right-bottom-banner",
+  // 播放器右侧旧版滑动广告位
   ".right-container #slide_ad",
+  // 播放器右侧新版滑动广告位
   ".right-container .slide-ad-exp",
-  ".activity-m-v1.act-end",
-  '.right-container [class*="_ad"]',
+  // 视频页下方活动推广模块
+  ".activity-m-v1",
+  // 占位：播放器右侧容器内带 _ad_ 片段
+  '.right-container [class*="_ad_"]',
 ].join(", ");
 let latestSettings: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
@@ -84,7 +93,7 @@ export function getPlayerObservationTargets(): HTMLElement[] {
     document.querySelector<HTMLElement>(".video-card-ad-small"),
     document.querySelector<HTMLElement>("#slide_ad"),
     document.querySelector<HTMLElement>(".slide-ad-exp"),
-    document.querySelector<HTMLElement>(".activity-m-v1.act-end"),
+    ...document.querySelectorAll<HTMLElement>(".activity-m-v1"),
   ].filter(Boolean) as HTMLElement[];
 
   return targets.length > 0 ? removeNestedModules(targets) : [document.body];

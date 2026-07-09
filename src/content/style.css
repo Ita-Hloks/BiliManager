@@ -134,9 +134,9 @@ html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ad
   .right-container
   .slide-ad-exp,
 html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
-  .activity-m-v1.act-end,
+  .activity-m-v1,
 html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
   .right-container
-  [class*="_ad"] {
+  [class*="_ad_"] {
   display: none !important;
 }
