@@ -46,6 +46,19 @@ export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVi
     .slice(0, Math.max(0, limit));
 }
 
+export async function getWatchTimerVideoDailyElapsed(
+  pageKey: string,
+  dateKey = getTodayKey(),
+): Promise<number> {
+  if (!hasChromeStorage()) return 0;
+  if (!pageKey || !isDateKey(dateKey)) return 0;
+
+  const saved = await chrome.storage.local.get(null);
+  return getWatchTimerSessionsFromStorage(saved)
+    .filter(session => session.pageKey === pageKey && session.dateKey === dateKey)
+    .reduce((sum, session) => sum + session.elapsedMs, 0);
+}
+
 export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
   if (!hasChromeStorage()) {
     return {
