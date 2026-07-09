@@ -28,6 +28,12 @@ export type WatchTimerVideoHistoryItem = {
   updatedAt: number;
 };
 
+export type WatchTimerHistoryBackup = {
+  daily?: WatchTimerDailyStorage;
+  history: WatchTimerHistory;
+  sessions: WatchTimerSessionStorage[];
+};
+
 const MAX_HISTORY_DAYS = 370;
 const MAX_SESSION_RECORDS = 5000;
 const WATCH_TIMER_SESSION_MIN_MS = 1000;
@@ -146,6 +152,50 @@ export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVi
     .slice(0, Math.max(0, limit));
 }
 
+export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
+  if (!hasChromeStorage()) {
+    return {
+      history: {},
+      sessions: [],
+    };
+  }
+
+  const saved = await chrome.storage.local.get(null);
+  return {
+    daily: normalizeDailyStorage(saved[WATCH_TIMER_DAILY_KEY]),
+    history: normalizeHistory(saved[WATCH_TIMER_HISTORY_KEY]),
+    sessions: getWatchTimerSessionsFromStorage(saved),
+  };
+}
+
+export async function importWatchTimerHistory(history: WatchTimerHistoryBackup): Promise<void> {
+  if (!hasChromeStorage()) return;
+
+  const saved = await chrome.storage.local.get(null);
+  const oldSessionKeys = Object.keys(saved).filter(key =>
+    key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX),
+  );
+  if (oldSessionKeys.length > 0) await chrome.storage.local.remove(oldSessionKeys);
+
+  const nextHistory = normalizeHistory(history.history);
+  const sessions = Array.isArray(history.sessions)
+    ? history.sessions
+        .map(normalizeSession)
+        .filter((session): session is WatchTimerSessionStorage => !!session)
+    : [];
+  const nextStorage: Record<string, unknown> = {
+    [WATCH_TIMER_HISTORY_KEY]: nextHistory,
+  };
+  const daily = normalizeDailyStorage(history.daily);
+  if (daily) nextStorage[WATCH_TIMER_DAILY_KEY] = daily;
+  sessions.forEach(session => {
+    nextStorage[getWatchTimerSessionKey(session.id)] = session;
+  });
+
+  await chrome.storage.local.set(nextStorage);
+  await pruneWatchTimerSessions();
+}
+
 export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise<void> {
   if (!hasChromeStorage()) return;
   if (!isDateKey(todayKey)) return;
@@ -210,6 +260,21 @@ function normalizeHistory(value: unknown): WatchTimerHistory {
       .filter(([dateKey, elapsedMs]) => isDateKey(dateKey) && typeof elapsedMs === "number")
       .map(([dateKey, elapsedMs]) => [dateKey, Math.max(0, Math.floor(elapsedMs as number))]),
   );
+}
+
+function normalizeDailyStorage(value: unknown): WatchTimerDailyStorage | undefined {
+  if (!value || typeof value !== "object") return undefined;
+
+  const record = value as Partial<WatchTimerDailyStorage>;
+  if (typeof record.dateKey !== "string" || !isDateKey(record.dateKey)) return undefined;
+
+  return {
+    dateKey: record.dateKey,
+    elapsedMs:
+      typeof record.elapsedMs === "number" && Number.isFinite(record.elapsedMs)
+        ? Math.max(0, Math.floor(record.elapsedMs))
+        : 0,
+  };
 }
 
 async function getWatchTimerSessions(): Promise<WatchTimerSessionStorage[]> {

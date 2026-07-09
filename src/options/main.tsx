@@ -15,7 +15,13 @@ import { DataPanel } from "./panels/dataPanel";
 import { PersonalizationPanel } from "./panels/personalizationPanel";
 import { SearchFilterPanel } from "./panels/searchFilterPanel";
 import { WatchTimerPanel } from "./panels/watchTimerPanel";
-import { parseImportedSettings } from "./settingsImport";
+import type { DataExportKind } from "./dataTransfer";
+import {
+  createDataExportPayload,
+  getExportFileName,
+  getExportMessage,
+  importDataBackup,
+} from "./dataTransfer";
 import { useEffectiveDarkTheme } from "./theme";
 import { createBackgroundDataUrl, formatDateForFile } from "./utils";
 
@@ -168,9 +174,9 @@ function OptionsApp() {
   // 导入入口只负责文件读取和提示文案；格式解析与字段归一化交给 settingsImport 统一处理。
   async function importSettings(file: File) {
     try {
-      const next = parseImportedSettings(await file.text(), settings);
-      await updateSettings(next);
-      setImportMessage("已导入完整配置");
+      const result = await importDataBackup(await file.text(), settings);
+      if (result.settings) await updateSettings(result.settings);
+      setImportMessage(result.message);
     } catch (error) {
       setImportMessage(error instanceof Error ? error.message : "导入失败");
     } finally {
@@ -178,16 +184,17 @@ function OptionsApp() {
     }
   }
 
-  function exportSettings() {
-    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: "application/json" });
+  async function exportSettings(kind: DataExportKind) {
+    const payload = await createDataExportPayload(kind, settings);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = `bili-manager-settings-${formatDateForFile(new Date())}.json`;
+    link.download = getExportFileName(kind, formatDateForFile(new Date()));
     link.click();
     URL.revokeObjectURL(url);
-    setImportMessage("已导出完整配置");
+    setImportMessage(getExportMessage(kind));
   }
 
   return (
@@ -255,9 +262,10 @@ function OptionsApp() {
             <DataPanel
               importInputRef={importInputRef}
               importMessage={importMessage}
-              onExport={exportSettings}
+              onExport={kind => void exportSettings(kind)}
               onImport={file => void importSettings(file)}
             />
+            <footer className="h-28" aria-hidden="true" />
           </div>
         </div>
       </div>
