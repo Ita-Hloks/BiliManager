@@ -3,6 +3,7 @@ import { getWatchTimerHistory } from "./watchTimerHistory";
 import type { WatchTimerHistory } from "./watchTimerHistory";
 
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function getWatchDurationData(period: StatsPeriod): Promise<DurationPoint[]> {
   const history = await getWatchTimerHistory();
@@ -37,17 +38,22 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): D
   const today = parseLocalDateKey(todayKey);
   const year = today.getFullYear();
   const month = today.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const weekCount = Math.ceil(daysInMonth / 7);
-  const currentWeekIndex = Math.floor((today.getDate() - 1) / 7);
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
+  const firstWeekStart = getWeekStart(monthStart);
+  const currentWeekStart = getWeekStart(today).getTime();
+  const weekCount = Math.floor((monthEnd.getTime() - firstWeekStart.getTime()) / WEEK_MS) + 1;
+  const currentWeekIndex = Math.floor((currentWeekStart - firstWeekStart.getTime()) / WEEK_MS);
 
   const points = Array.from({ length: weekCount }, (_, index) => {
-    const startDay = index * 7 + 1;
-    const endDay = Math.min(startDay + 6, daysInMonth);
+    const weekStart = addDays(firstWeekStart, index * 7);
+    const weekEnd = addDays(weekStart, 6);
+    const startDate = maxDate(weekStart, monthStart);
+    const endDate = minDate(weekEnd, monthEnd);
     let totalMs = 0;
 
-    for (let day = startDay; day <= endDay; day += 1) {
-      totalMs += history[getLocalDateKey(new Date(year, month, day))] ?? 0;
+    for (let date = startDate; date.getTime() <= endDate.getTime(); date = addDays(date, 1)) {
+      totalMs += history[getLocalDateKey(date)] ?? 0;
     }
 
     return {
@@ -97,6 +103,19 @@ function parseLocalDateKey(dateKey: string): Date {
 
 function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+function getWeekStart(date: Date): Date {
+  const mondayOffset = (date.getDay() + 6) % 7;
+  return addDays(date, -mondayOffset);
+}
+
+function minDate(first: Date, second: Date): Date {
+  return first.getTime() <= second.getTime() ? first : second;
+}
+
+function maxDate(first: Date, second: Date): Date {
+  return first.getTime() >= second.getTime() ? first : second;
 }
 
 function msToMinutes(ms: number): number {
