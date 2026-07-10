@@ -13,10 +13,25 @@ function useMountedAnimation() {
   return mounted;
 }
 
+function getDurationElapsedMs(point: DurationPoint): number {
+  return Math.max(0, point.elapsedMs ?? point.minutes * 60000);
+}
+
+function formatDurationDetail(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours}h${padTime(minutes)}m${padTime(seconds)}s`;
+  if (minutes > 0) return `${minutes}m${padTime(seconds)}s`;
+  return `${seconds}s`;
+}
+
 export function DurationBarChart({ data }: { data: DurationPoint[] }) {
   const mounted = useMountedAnimation();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const elapsedValues = data.map(point => Math.max(0, point.elapsedMs ?? point.minutes * 60000));
+  const elapsedValues = data.map(getDurationElapsedMs);
   const maxElapsed = Math.max(...elapsedValues, 1);
   const activePoint = activeIndex === null ? null : data[activeIndex];
   const activeElapsed = activeIndex === null ? 0 : elapsedValues[activeIndex];
@@ -38,10 +53,13 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
           left: "clamp(2.75rem, var(--tooltip-x), calc(100% - 2.75rem))",
         }}
       >
-        {activePoint ? `${activePoint.label} ${formatDurationDetail(activeElapsed)}` : "0s"}
+        {activePoint ? `${activePoint.label} ${formatDurationDetail(activeElapsed)}` : ""}
       </div>
 
-      <div className="flex h-28 min-w-0 items-end justify-between gap-1.5 overflow-hidden">
+      <div
+        className="flex h-28 min-w-0 items-end justify-between gap-1.5 overflow-hidden"
+        onPointerLeave={() => setActiveIndex(null)}
+      >
         {data.map((point, index) => {
           const elapsed = elapsedValues[index];
           const pct = elapsed > 0 ? Math.max((elapsed / maxElapsed) * 90, 3) : 0;
@@ -50,19 +68,33 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
               key={point.label}
               className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
               onPointerEnter={() => setActiveIndex(index)}
-              onPointerLeave={() => setActiveIndex(null)}
               title={`${point.label} ${formatDurationDetail(elapsed)}`}
             >
-              <div className="flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-white/[0.03]">
+              <div
+                className={[
+                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-white/[0.03] transition-colors duration-200",
+                  activeIndex === index ? "bg-sky-400/12" : "",
+                ].join(" ")}
+              >
                 <div
-                  className="w-full rounded-t-sm bg-gradient-to-t from-sky-500/60 to-sky-300/95 transition-[height] duration-700 ease-out"
+                  className={[
+                    "w-full rounded-t-sm bg-gradient-to-t transition-[height,filter,opacity] duration-700 ease-out",
+                    activeIndex === index
+                      ? "from-sky-400/85 to-cyan-200/95 opacity-100 saturate-125"
+                      : "from-sky-500/60 to-sky-300/95 opacity-90",
+                  ].join(" ")}
                   style={{
                     height: mounted ? `${pct}%` : "0%",
                     transitionDelay: `${index * 45}ms`,
                   }}
                 />
               </div>
-              <span className="max-w-full truncate text-[9px] leading-none text-slate-500">
+              <span
+                className={[
+                  "max-w-full truncate text-[9px] leading-none transition-colors duration-200",
+                  activeIndex === index ? "text-sky-300" : "text-slate-500",
+                ].join(" ")}
+              >
                 {point.label}
               </span>
             </div>
@@ -71,17 +103,6 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
       </div>
     </div>
   );
-}
-
-function formatDurationDetail(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) return `${hours}h${padTime(minutes)}m${padTime(seconds)}s`;
-  if (minutes > 0) return `${minutes}m${padTime(seconds)}s`;
-  return `${seconds}s`;
 }
 
 export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
