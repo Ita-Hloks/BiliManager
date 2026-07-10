@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import type { DurationPoint, HitRatePoint } from "../types";
 
@@ -12,43 +13,8 @@ function useMountedAnimation() {
   return mounted;
 }
 
-export function DurationBarChart({ data }: { data: DurationPoint[] }) {
-  const mounted = useMountedAnimation();
-  const elapsedValues = data.map(point => Math.max(0, point.elapsedMs ?? point.minutes * 60000));
-  const maxElapsed = Math.max(...elapsedValues, 1);
-
-  return (
-    <div className="overflow-visible pb-1 pt-7">
-      <div className="flex h-28 min-w-0 items-end justify-between gap-1.5 overflow-visible">
-        {data.map((point, index) => {
-          const elapsed = elapsedValues[index];
-          const pct = elapsed > 0 ? Math.max((elapsed / maxElapsed) * 90, 3) : 0;
-          return (
-            <div
-              className="group relative flex min-w-0 flex-1 flex-col items-center gap-1.5 first:[&>*:first-child]:left-0 first:[&>*:first-child]:translate-x-0 last:[&>*:first-child]:left-auto last:[&>*:first-child]:right-0 last:[&>*:first-child]:translate-x-0"
-              key={point.label}
-            >
-              <div className="pointer-events-none hidden absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[calc(100%+0.35rem)] whitespace-nowrap rounded border border-sky-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-medium text-sky-100 shadow-lg shadow-slate-950/30 group-hover:block">
-                {formatDurationDetail(point.elapsedMs ?? point.minutes * 60000)}
-              </div>
-              <div className="flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-white/[0.03]">
-                <div
-                  className="w-full rounded-t-sm bg-gradient-to-t from-sky-500/60 to-sky-300/95 transition-[height] duration-700 ease-out"
-                  style={{
-                    height: mounted ? `${pct}%` : "0%",
-                    transitionDelay: `${index * 45}ms`,
-                  }}
-                />
-              </div>
-              <span className="max-w-full truncate text-[9px] leading-none text-slate-500">
-                {point.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+function getDurationElapsedMs(point: DurationPoint): number {
+  return Math.max(0, point.elapsedMs ?? point.minutes * 60000);
 }
 
 function formatDurationDetail(ms: number) {
@@ -57,9 +23,86 @@ function formatDurationDetail(ms: number) {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  if (hours > 0) return `${hours} 小时 ${minutes} 分 ${seconds} 秒`;
-  if (minutes > 0) return `${minutes} 分 ${seconds} 秒`;
-  return `${seconds} 秒`;
+  if (hours > 0) return `${hours}h${padTime(minutes)}m${padTime(seconds)}s`;
+  if (minutes > 0) return `${minutes}m${padTime(seconds)}s`;
+  return `${seconds}s`;
+}
+
+export function DurationBarChart({ data }: { data: DurationPoint[] }) {
+  const mounted = useMountedAnimation();
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const elapsedValues = data.map(getDurationElapsedMs);
+  const maxElapsed = Math.max(...elapsedValues, 1);
+  const activePoint = activeIndex === null ? null : data[activeIndex];
+  const activeElapsed = activeIndex === null ? 0 : elapsedValues[activeIndex];
+  const tooltipStyle = {
+    "--tooltip-x":
+      activeIndex === null || data.length === 0
+        ? "50%"
+        : `${((activeIndex + 0.5) / data.length) * 100}%`,
+  } as CSSProperties;
+
+  return (
+    <div className="relative min-w-0 overflow-hidden pb-1 pt-7" style={tooltipStyle}>
+      <div
+        className={[
+          "pointer-events-none absolute top-0 z-10 max-w-[calc(100%-0.75rem)] -translate-x-1/2 truncate whitespace-nowrap rounded border border-sky-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-medium leading-none text-sky-100 shadow-lg shadow-slate-950/30 transition-[left,opacity]",
+          activePoint ? "opacity-100" : "opacity-0",
+        ].join(" ")}
+        style={{
+          left: "clamp(2.75rem, var(--tooltip-x), calc(100% - 2.75rem))",
+        }}
+      >
+        {activePoint ? `${activePoint.label} ${formatDurationDetail(activeElapsed)}` : ""}
+      </div>
+
+      <div
+        className="flex h-28 min-w-0 items-end justify-between gap-1.5 overflow-hidden"
+        onPointerLeave={() => setActiveIndex(null)}
+      >
+        {data.map((point, index) => {
+          const elapsed = elapsedValues[index];
+          const pct = elapsed > 0 ? Math.max((elapsed / maxElapsed) * 90, 3) : 0;
+          return (
+            <div
+              key={point.label}
+              className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+              onPointerEnter={() => setActiveIndex(index)}
+              title={`${point.label} ${formatDurationDetail(elapsed)}`}
+            >
+              <div
+                className={[
+                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-white/[0.03] transition-colors duration-200",
+                  activeIndex === index ? "bg-sky-400/12" : "",
+                ].join(" ")}
+              >
+                <div
+                  className={[
+                    "w-full rounded-t-sm bg-gradient-to-t transition-[height,filter,opacity] duration-700 ease-out",
+                    activeIndex === index
+                      ? "from-sky-400/85 to-cyan-200/95 opacity-100 saturate-125"
+                      : "from-sky-500/60 to-sky-300/95 opacity-90",
+                  ].join(" ")}
+                  style={{
+                    height: mounted ? `${pct}%` : "0%",
+                    transitionDelay: `${index * 45}ms`,
+                  }}
+                />
+              </div>
+              <span
+                className={[
+                  "max-w-full truncate text-[9px] leading-none transition-colors duration-200",
+                  activeIndex === index ? "text-sky-300" : "text-slate-500",
+                ].join(" ")}
+              >
+                {point.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
@@ -142,4 +185,8 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
       </div>
     </div>
   );
+}
+
+function padTime(value: number) {
+  return value.toString().padStart(2, "0");
 }
