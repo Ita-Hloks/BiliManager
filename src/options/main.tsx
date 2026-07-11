@@ -61,24 +61,16 @@ function OptionsApp() {
     await saveSettings(next);
   }
 
-  // 搜索过滤同时服务设置页分组状态和内容脚本实际开关，更新时必须保持同步。
   async function updateSearchFilter(patch: Partial<SearchFilterSettings>) {
-    const enabled = patch.enabled ?? settings.searchFilter.enabled;
     await updateSettings({
       ...settings,
-      features: {
-        ...settings.features,
-        searchFilter: enabled,
-      },
       searchFilter: {
         ...settings.searchFilter,
         ...patch,
-        enabled,
       },
     });
   }
 
-  // 个性化功能是多个子开关的聚合状态；这里统一推导 features.personalization，避免面板各自重复计算。
   async function updatePersonalization(patch: Partial<PlayerPersonalizationSettings>) {
     const personalization = {
       ...settings.personalization,
@@ -87,18 +79,9 @@ function OptionsApp() {
     if (personalization.blockRelatedVideos) {
       personalization.disableRecommendationAutoplay = true;
     }
-    const enabled =
-      personalization.blockRelatedVideos ||
-      personalization.blockPlayerAds ||
-      personalization.disableRecommendationAutoplay ||
-      personalization.customBackground.enabled;
 
     await updateSettings({
       ...settings,
-      features: {
-        ...settings.features,
-        personalization: enabled,
-      },
       personalization,
     });
   }
