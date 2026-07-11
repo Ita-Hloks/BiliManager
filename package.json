@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "node scripts/prepareHtml.mjs \u0026\u0026 vite build \u0026\u0026 node scripts/copyManifest.mjs",
+    "build": "node scripts/prepareHtml.mjs \u0026\u0026 vite build \u0026\u0026 vite build --config vite.content.config.ts \u0026\u0026 node scripts/validateContentBuild.mjs \u0026\u0026 node scripts/copyManifest.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",

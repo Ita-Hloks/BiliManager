@@ -1,6 +1,6 @@
 import type { ExtensionMessage } from "../shared/messaging";
+import { getSettings, SETTINGS_KEY } from "../shared/storage";
 import type {
-  ExtensionSettings,
   PlayerPersonalizationSettings,
   RuntimeSnapshot,
   SearchFilterSettings,
@@ -17,33 +17,6 @@ import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
 
-const SETTINGS_KEY = "biliFilter.settings";
-const defaultSearchFilter: SearchFilterSettings = {
-  enabled: false,
-  titlePattern: "",
-  uploaderPattern: "",
-  minDanmakuViewRate: 0.005,
-  filterMissingTitleHighlight: true,
-};
-const defaultPersonalization: PlayerPersonalizationSettings = {
-  blockRelatedVideos: false,
-  blockPlayerAds: false,
-  disableRecommendationAutoplay: false,
-  customBackground: {
-    enabled: false,
-    imageDataUrl: "",
-    maskOpacity: 0.18,
-    positionX: 50,
-    positionY: 50,
-  },
-};
-const defaultWatchTimer: WatchTimerSettings = {
-  opacity: 0.86,
-};
-const disabledSearchFilter: SearchFilterSettings = {
-  ...defaultSearchFilter,
-  enabled: false,
-};
 const disabledPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
@@ -103,44 +76,16 @@ async function getContentSettings(): Promise<{
   watchTimer: WatchTimerSettings;
   watchTimerEnabled: boolean;
 }> {
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
-    return {
-      searchFilter: defaultSearchFilter,
-      personalization: defaultPersonalization,
-      watchTimer: defaultWatchTimer,
-      watchTimerEnabled: false,
-    };
-  }
-
-  const result = await chrome.storage.local.get(SETTINGS_KEY);
-  const saved = result[SETTINGS_KEY] as Partial<ExtensionSettings> | undefined;
-  const pluginEnabled = saved?.features?.enabled ?? true;
-  const searchFilter = {
-    ...defaultSearchFilter,
-    ...saved?.searchFilter,
-    enabled: saved?.features?.searchFilter ?? saved?.searchFilter?.enabled ?? false,
-  };
-  const personalization = {
-    ...defaultPersonalization,
-    ...saved?.personalization,
-    customBackground: {
-      ...defaultPersonalization.customBackground,
-      ...saved?.personalization?.customBackground,
-    },
-  };
-  const watchTimer = {
-    ...defaultWatchTimer,
-    ...saved?.watchTimer,
-  };
+  const settings = await getSettings();
+  const pluginEnabled = settings.features.enabled;
 
   return {
-    searchFilter: pluginEnabled ? searchFilter : disabledSearchFilter,
-    personalization:
-      pluginEnabled && (saved?.features?.personalization ?? true)
-        ? personalization
-        : disabledPersonalization,
-    watchTimer,
-    watchTimerEnabled: pluginEnabled && (saved?.features?.watchTimer ?? false),
+    searchFilter: pluginEnabled
+      ? settings.searchFilter
+      : { ...settings.searchFilter, enabled: false },
+    personalization: pluginEnabled ? settings.personalization : disabledPersonalization,
+    watchTimer: settings.watchTimer,
+    watchTimerEnabled: pluginEnabled && settings.features.watchTimer,
   };
 }
 

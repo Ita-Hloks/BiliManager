@@ -10,12 +10,9 @@ import type {
 export const defaultSettings: ExtensionSettings = {
   features: {
     enabled: true,
-    searchFilter: true,
-    personalization: false,
     watchTimer: false,
     dailyStats: false,
   },
-  // searchFilter.enabled 是内容脚本实际开关，features.searchFilter 用于设置页功能分组同步。
   searchFilter: {
     enabled: true,
     titlePattern: "",
@@ -54,23 +51,24 @@ export function normalizeSettings(
     source.personalization,
     currentSettings.personalization,
   );
-  const searchFilterEnabled = source.features?.searchFilter ?? searchFilter.enabled;
-  const personalizationEnabled =
-    source.features?.personalization ??
-    (personalization.blockRelatedVideos ||
-      personalization.blockPlayerAds ||
-      personalization.disableRecommendationAutoplay);
+  const legacyFeatures = source.features as
+    | (Partial<ExtensionSettings["features"]> & {
+        searchFilter?: boolean;
+        personalization?: boolean;
+      })
+    | undefined;
+  const searchFilterEnabled =
+    typeof source.searchFilter?.enabled === "boolean"
+      ? source.searchFilter.enabled
+      : (legacyFeatures?.searchFilter ?? searchFilter.enabled);
 
   return {
     ...currentSettings,
     ...source,
     features: {
-      ...currentSettings.features,
-      ...source.features,
       enabled: source.features?.enabled ?? currentSettings.features.enabled ?? true,
-      searchFilter: searchFilterEnabled,
-      personalization: personalizationEnabled,
       watchTimer: source.features?.watchTimer ?? currentSettings.features.watchTimer,
+      dailyStats: source.features?.dailyStats ?? currentSettings.features.dailyStats,
     },
     searchFilter: {
       ...searchFilter,

@@ -1,7 +1,7 @@
 import { defaultSettings, normalizeSettings } from "./settingsSchema";
 import type { ExtensionSettings } from "./types";
 
-const SETTINGS_KEY = "biliFilter.settings";
+export const SETTINGS_KEY = "biliFilter.settings";
 
 export { defaultSettings } from "./settingsSchema";
 

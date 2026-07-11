@@ -1,0 +1,32 @@
+.bili-manager-personalization-hidden {
+  display: none !important;
+}
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
+  .right-container
+  .recommend-list-v1,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
+  .right-container
+  .rec-list,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-related="true"]
+  .bpx-player-ending-related {
+  display: none !important;
+}
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  .video-card-ad-small,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  .ad-floor-exp.right-bottom-banner,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  #slide_ad,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  .slide-ad-exp,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .activity-m-v1,
+html[data-bili-manager-player-personalization="true"][data-bili-manager-block-ads="true"]
+  .right-container
+  [class*="_ad_"] {
+  display: none !important;
+}

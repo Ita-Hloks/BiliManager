@@ -1,5 +1,15 @@
+import { isDateKey } from "../../shared/date";
+
 const TIMER_ACTIVE_SESSION_KEY = "biliManager.playerWatchTimerActiveSession";
+const TIMER_POSITION_KEY = "biliManager.playerWatchTimer";
 const ACTIVE_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+export type PlayerWatchTimerPositionStorage = {
+  left: number;
+  top: number;
+};
+
+const DEFAULT_POSITION: PlayerWatchTimerPositionStorage = { left: 24, top: 96 };
 
 export type PlayerWatchTimerActiveSessionStorage = {
   pageKey: string;
@@ -34,6 +44,22 @@ export async function saveActiveSession(
   });
 }
 
+export async function loadTimerPosition(): Promise<PlayerWatchTimerPositionStorage> {
+  if (!hasChromeStorage()) return DEFAULT_POSITION;
+  const saved = await chrome.storage.local.get(TIMER_POSITION_KEY);
+  return normalizePosition(saved[TIMER_POSITION_KEY]);
+}
+
+export async function saveTimerPosition(position: PlayerWatchTimerPositionStorage): Promise<void> {
+  if (!hasChromeStorage()) return;
+  await chrome.storage.local.set({
+    [TIMER_POSITION_KEY]: {
+      left: Math.floor(position.left),
+      top: Math.floor(position.top),
+    },
+  });
+}
+
 function normalizeActiveSession(value: unknown): PlayerWatchTimerActiveSessionStorage | undefined {
   if (!value || typeof value !== "object") return undefined;
 
@@ -52,8 +78,13 @@ function normalizeActiveSession(value: unknown): PlayerWatchTimerActiveSessionSt
   };
 }
 
-function isDateKey(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+function normalizePosition(value: unknown): PlayerWatchTimerPositionStorage {
+  if (!value || typeof value !== "object") return DEFAULT_POSITION;
+  const record = value as Partial<PlayerWatchTimerPositionStorage>;
+  return {
+    left: clampNumber(record.left, 8, Number.MAX_SAFE_INTEGER, DEFAULT_POSITION.left),
+    top: clampNumber(record.top, 8, Number.MAX_SAFE_INTEGER, DEFAULT_POSITION.top),
+  };
 }
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {

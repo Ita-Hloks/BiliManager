@@ -1,0 +1,85 @@
+.bili-manager-filtered {
+  @apply relative;
+}
+.bili-manager-filtered-cover-wrap {
+  @apply overflow-hidden;
+}
+.bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.45) opacity(0.72);
+  transform: none;
+  transition:
+    filter 220ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+.bili-manager-page-light .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.72) opacity(0.82);
+}
+.bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.58) opacity(0.86);
+}
+.bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(6px) brightness(0.82) opacity(0.9);
+}
+.bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-cover {
+  filter: grayscale(1) blur(0) brightness(0.82) opacity(0.96);
+  transform: scale(1);
+}
+.bili-manager-filtered-title {
+  filter: blur(3px) grayscale(1) brightness(0.55) !important;
+  opacity: 0.55 !important;
+  text-decoration: none !important;
+}
+.bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-title,
+.bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-meta,
+.bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-title,
+.bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-meta {
+  filter: none !important;
+  opacity: 1 !important;
+}
+.bili-manager-filtered-meta {
+  filter: blur(2.5px) grayscale(1) brightness(0.5) !important;
+  opacity: 0.5 !important;
+}
+.bili-manager-preview-disabled {
+  display: none !important;
+  pointer-events: none !important;
+}
+.bili-manager-filter-reasons {
+  @apply absolute inset-0 z-20 flex items-center justify-center text-center whitespace-pre-line;
+  box-sizing: border-box;
+  padding: 14px;
+  border-radius: inherit;
+  background: rgba(8, 8, 10, 0.42);
+  color: rgba(255, 255, 255, 0.72);
+  font:
+    700 15px/1.45 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  text-shadow: none;
+  backdrop-filter: none;
+  opacity: 1;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    background 180ms ease;
+}
+.bili-manager-page-light .bili-manager-filter-reasons {
+  background: rgba(241, 245, 249, 0.72);
+  color: rgba(51, 65, 85, 0.58);
+  text-shadow: none;
+  backdrop-filter: none;
+}
+.bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
+  background: rgba(8, 8, 10, 0.28);
+  color: rgba(255, 255, 255, 0.86);
+}
+.bili-manager-page-light[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
+  background: rgba(241, 245, 249, 0.48);
+  color: rgba(51, 65, 85, 0.72);
+}
+.bili-manager-filter-reasons--hidden {
+  @apply opacity-0;
+}
