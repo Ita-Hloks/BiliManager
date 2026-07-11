@@ -1,6 +1,6 @@
-import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../shared/types";
-import type { BilibiliPageThemeDetection } from "./pageTheme";
-import { detectBilibiliPageTheme } from "./pageTheme";
+import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../../shared/types";
+import type { BilibiliPageThemeDetection } from "../pageTheme";
+import { detectBilibiliPageTheme } from "../pageTheme";
 
 type SearchCard = {
   cardEl: HTMLElement;

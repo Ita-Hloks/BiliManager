@@ -1,4 +1,4 @@
-import type { PlayerPersonalizationSettings } from "../shared/types";
+import type { PlayerPersonalizationSettings } from "../../shared/types";
 
 const HIDDEN_CLASS = "bili-manager-personalization-hidden";
 const HIDDEN_ATTR = "data-bili-manager-personalization-hidden";

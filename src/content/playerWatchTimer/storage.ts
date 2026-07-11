@@ -1,4 +1,4 @@
-import { isDateKey } from "../shared/date";
+import { isDateKey } from "../../shared/date";
 
 const TIMER_ACTIVE_SESSION_KEY = "biliManager.playerWatchTimerActiveSession";
 const ACTIVE_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;

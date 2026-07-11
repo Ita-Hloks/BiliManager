@@ -1,5 +1,5 @@
-import type { WatchTimerSettings } from "../shared/types";
-import { getTodayKey } from "../shared/date";
+import type { WatchTimerSettings } from "../../shared/types";
+import { getTodayKey } from "../../shared/date";
 import {
   getWatchTimerVideoDailyElapsed,
   loadWatchTimerDaily,
@@ -8,12 +8,9 @@ import {
   WATCH_TIMER_DAILY_KEY,
   WATCH_TIMER_HISTORY_KEY,
   WATCH_TIMER_SESSION_KEY_PREFIX,
-} from "../shared/watchTimerHistory";
-import {
-  loadActiveSession,
-  saveActiveSession as saveActiveSessionStorage,
-} from "./playerWatchTimerStorage";
-import type { PlayerWatchTimerActiveSessionStorage } from "./playerWatchTimerStorage";
+} from "../../shared/watchTimerHistory";
+import { loadActiveSession, saveActiveSession as saveActiveSessionStorage } from "./storage";
+import type { PlayerWatchTimerActiveSessionStorage } from "./storage";
 
 const TIMER_SETTINGS_KEY = "biliManager.playerWatchTimer";
 const ACTIVE_SESSION_SAVE_INTERVAL_MS = 1000;

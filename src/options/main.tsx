@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Clock, Download, Filter, Sparkles } from "lucide-react";
 import "../styles/globals.css";
+import "../styles/options-controls.css";
 import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
 import type {
   CustomBackgroundSettings,
