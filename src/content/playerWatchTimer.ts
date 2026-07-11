@@ -1,4 +1,5 @@
 import type { WatchTimerSettings } from "../shared/types";
+import { getTodayKey } from "../shared/date";
 import {
   getWatchTimerVideoDailyElapsed,
   loadWatchTimerDaily,
@@ -7,7 +8,7 @@ import {
   WATCH_TIMER_DAILY_KEY,
   WATCH_TIMER_HISTORY_KEY,
   WATCH_TIMER_SESSION_KEY_PREFIX,
-} from "./playerWatchTimerHistory";
+} from "../shared/watchTimerHistory";
 import {
   loadActiveSession,
   saveActiveSession as saveActiveSessionStorage,
@@ -19,7 +20,6 @@ const ACTIVE_SESSION_SAVE_INTERVAL_MS = 1000;
 const SESSION_SAVE_INTERVAL_MS = 1000;
 const SESSION_RECORD_MIN_MS = 1000;
 const TIMER_ROOT_ID = "bili-manager-watch-timer";
-const TIMER_STYLE_ID = "bili-manager-watch-timer-style";
 const FULLSCREEN_ATTR = "data-bili-manager-watch-timer-fullscreen";
 const DEFAULT_TIMER_SETTINGS: PlayerWatchTimerStorage = {
   left: 24,
@@ -111,7 +111,6 @@ export function destroyPlayerWatchTimer(): void {
 function ensureTimerMounted() {
   if (timerRoot?.isConnected) return;
 
-  injectTimerStyle();
   const root = document.createElement("aside");
   root.id = TIMER_ROOT_ID;
   root.setAttribute("aria-label", "播放器浏览计时器");
@@ -150,74 +149,6 @@ function ensureTimerMounted() {
 
   void loadPersistentTimerState();
   syncFullscreenState();
-}
-
-function injectTimerStyle() {
-  if (document.getElementById(TIMER_STYLE_ID)) return;
-
-  const style = document.createElement("style");
-  style.id = TIMER_STYLE_ID;
-  style.textContent = `
-    #${TIMER_ROOT_ID} {
-      position: fixed;
-      z-index: 2147483646;
-      box-sizing: border-box;
-      width: 148px;
-      border: 1px solid rgba(125, 211, 252, 0.28);
-      border-radius: 10px;
-      background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(15, 23, 42, 0.72));
-      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.22);
-      color: rgba(248, 250, 252, 0.96);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      overflow: hidden;
-      user-select: none;
-      backdrop-filter: blur(14px);
-    }
-
-    html[${FULLSCREEN_ATTR}="true"] #${TIMER_ROOT_ID} {
-      display: none !important;
-    }
-
-    #${TIMER_ROOT_ID} * {
-      box-sizing: border-box;
-    }
-
-    .bili-manager-watch-timer__handle {
-      display: block;
-      width: 100%;
-      padding: 9px 10px 7px;
-      border: 0;
-      background: transparent;
-      color: inherit;
-      cursor: grab;
-      text-align: left;
-    }
-
-    .bili-manager-watch-timer__handle:active {
-      cursor: grabbing;
-    }
-
-    .bili-manager-watch-timer__time {
-      display: block;
-      color: #f8fafc;
-      font-size: 22px;
-      font-weight: 700;
-      line-height: 1.12;
-      letter-spacing: 0;
-    }
-
-    .bili-manager-watch-timer__today {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 7px;
-      color: rgba(226, 232, 240, 0.78);
-      font-size: 12px;
-      font-weight: 500;
-      line-height: 1.2;
-    }
-  `;
-  document.head.append(style);
 }
 
 async function loadTimerSettings(): Promise<PlayerWatchTimerStorage> {
@@ -629,11 +560,6 @@ function resetWatchSession() {
   lastSessionSavedElapsedMs = 0;
 }
 
-function getTodayKey() {
-  const date = new Date();
-  return `${date.getFullYear()}-${padDate(date.getMonth() + 1)}-${padDate(date.getDate())}`;
-}
-
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(Math.max(value, min), Math.max(min, max))
@@ -641,10 +567,6 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
 }
 
 function padTime(value: number) {
-  return value.toString().padStart(2, "0");
-}
-
-function padDate(value: number) {
   return value.toString().padStart(2, "0");
 }
 

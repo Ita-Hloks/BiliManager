@@ -1,4 +1,5 @@
 import type { DurationPoint, StatsPeriod } from "../popup/types";
+import { addDays, getLocalDateKey, parseLocalDateKey } from "./date";
 import { getWatchTimerHistory } from "./watchTimerHistory";
 import type { WatchTimerHistory } from "./watchTimerHistory";
 
@@ -92,19 +93,6 @@ function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): D
   return Array.from({ length: 12 }, (_, index) => points[(currentMonth + index + 1) % 12]);
 }
 
-function getLocalDateKey(date: Date): string {
-  return `${date.getFullYear()}-${padDate(date.getMonth() + 1)}-${padDate(date.getDate())}`;
-}
-
-function parseLocalDateKey(dateKey: string): Date {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
-}
-
 function getWeekStart(date: Date): Date {
   const mondayOffset = (date.getDay() + 6) % 7;
   return addDays(date, -mondayOffset);
@@ -120,8 +108,4 @@ function maxDate(first: Date, second: Date): Date {
 
 function msToMinutes(ms: number): number {
   return Math.floor(ms / 60000);
-}
-
-function padDate(value: number): string {
-  return value.toString().padStart(2, "0");
 }

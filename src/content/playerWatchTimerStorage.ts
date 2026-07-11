@@ -1,3 +1,5 @@
+import { isDateKey } from "../shared/date";
+
 const TIMER_ACTIVE_SESSION_KEY = "biliManager.playerWatchTimerActiveSession";
 const ACTIVE_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
@@ -50,10 +52,6 @@ function normalizeActiveSession(value: unknown): PlayerWatchTimerActiveSessionSt
     todayElapsedMs: clampNumber(record.todayElapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
     updatedAt: Math.max(0, Math.floor(record.updatedAt)),
   };
-}
-
-function isDateKey(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {

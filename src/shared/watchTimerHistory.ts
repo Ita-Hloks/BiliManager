@@ -1,10 +1,18 @@
-const WATCH_TIMER_HISTORY_KEY = "biliManager.playerWatchTimerHistory";
-const WATCH_TIMER_SESSION_KEY_PREFIX = "biliManager.playerWatchTimerSession:";
-const WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX = "biliManager.playerWatchTimerVideoRecord:";
+import { addDays, getTodayKey, isDateKey, parseLocalDateKey } from "./date";
+
+export const WATCH_TIMER_DAILY_KEY = "biliManager.playerWatchTimerDaily";
+export const WATCH_TIMER_HISTORY_KEY = "biliManager.playerWatchTimerHistory";
+export const WATCH_TIMER_SESSION_KEY_PREFIX = "biliManager.playerWatchTimerSession:";
+export const WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX = "biliManager.playerWatchTimerVideoRecord:";
 
 export type WatchTimerHistory = Record<string, number>;
 
-type WatchTimerSessionStorage = {
+export type WatchTimerDailyStorage = {
+  dateKey: string;
+  elapsedMs: number;
+};
+
+export type WatchTimerSessionStorage = {
   id: string;
   pageKey: string;
   title: string;
@@ -29,6 +37,15 @@ export type WatchTimerHistoryBackup = {
 
 const MAX_HISTORY_DAYS = 370;
 const MAX_WATCH_TIMER_RECORDS = 5000;
+const WATCH_TIMER_SESSION_MIN_MS = 1000;
+
+export async function loadWatchTimerDaily(): Promise<WatchTimerDailyStorage> {
+  const todayKey = getTodayKey();
+  return {
+    dateKey: todayKey,
+    elapsedMs: await getWatchTimerDailyElapsed(todayKey),
+  };
+}
 
 export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
   if (!hasChromeStorage()) return {};
@@ -40,10 +57,30 @@ export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
 }
 
 export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVideoHistoryItem[]> {
+  if (!hasChromeStorage()) return [];
+
   const saved = await chrome.storage.local.get(null);
   return getWatchTimerVideoRecordsFromStorage(saved)
     .sort((left, right) => right.updatedAt - left.updatedAt)
     .slice(0, Math.max(0, limit));
+}
+
+export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
+  if (!hasChromeStorage()) return;
+
+  const normalized = normalizeSession(session);
+  if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
+
+  await chrome.storage.local.set({
+    [getWatchTimerSessionKey(normalized.id)]: normalized,
+    [getWatchTimerVideoRecordKey(normalized.dateKey, normalized.pageKey)]: {
+      pageKey: normalized.pageKey,
+      title: normalized.title,
+      url: normalized.url,
+      dateKey: normalized.dateKey,
+      updatedAt: normalized.updatedAt,
+    } satisfies WatchTimerVideoHistoryItem,
+  });
 }
 
 export async function getWatchTimerVideoDailyElapsed(
@@ -142,8 +179,14 @@ function buildSessionHistory(storage: Record<string, unknown>): WatchTimerHistor
   }, {});
 }
 
-export function getTodayKey(): string {
-  return getLocalDateKey(new Date());
+async function getWatchTimerDailyElapsed(dateKey = getTodayKey()): Promise<number> {
+  if (!hasChromeStorage()) return 0;
+  if (!isDateKey(dateKey)) return 0;
+
+  const saved = await chrome.storage.local.get(null);
+  const legacyHistory = normalizeHistory(saved[WATCH_TIMER_HISTORY_KEY]);
+  const sessionHistory = buildSessionHistory(saved);
+  return (legacyHistory[dateKey] ?? 0) + (sessionHistory[dateKey] ?? 0);
 }
 
 function mergeHistories(...histories: WatchTimerHistory[]): WatchTimerHistory {
@@ -233,6 +276,10 @@ function getWatchTimerVideoRecordKey(dateKey: string, pageKey: string): string {
   return `${WATCH_TIMER_VIDEO_RECORD_KEY_PREFIX}${encodeURIComponent(`${dateKey}:${pageKey}`)}`;
 }
 
+function getWatchTimerSessionKey(sessionId: string): string {
+  return `${WATCH_TIMER_SESSION_KEY_PREFIX}${encodeURIComponent(sessionId)}`;
+}
+
 function pruneHistory(history: WatchTimerHistory, todayKey: string): WatchTimerHistory {
   const today = parseLocalDateKey(todayKey).getTime();
   const minDate = addDays(new Date(today), -MAX_HISTORY_DAYS + 1).getTime();
@@ -240,27 +287,6 @@ function pruneHistory(history: WatchTimerHistory, todayKey: string): WatchTimerH
   return Object.fromEntries(
     Object.entries(history).filter(([dateKey]) => parseLocalDateKey(dateKey).getTime() >= minDate),
   );
-}
-
-function getLocalDateKey(date: Date): string {
-  return `${date.getFullYear()}-${padDate(date.getMonth() + 1)}-${padDate(date.getDate())}`;
-}
-
-function parseLocalDateKey(dateKey: string): Date {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
-}
-
-function isDateKey(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-function padDate(value: number): string {
-  return value.toString().padStart(2, "0");
 }
 
 function hasChromeStorage(): boolean {
