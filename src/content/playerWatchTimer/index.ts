@@ -5,8 +5,8 @@ import {
   loadWatchTimerDaily,
   pruneWatchTimerSessions,
   saveWatchTimerSession,
-  WATCH_TIMER_DAILY_KEY,
-  WATCH_TIMER_HISTORY_KEY,
+  WATCH_TIMER_DAILY_TOTAL_KEY_PREFIX,
+  WATCH_TIMER_DATE_INDEX_KEY,
   WATCH_TIMER_SESSION_KEY_PREFIX,
 } from "../../shared/watchTimerHistory";
 import {
@@ -259,8 +259,8 @@ function syncTimerStorageChange(
   const hasWatchTimerChange = Object.keys(changes).some(
     key =>
       key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX) ||
-      key === WATCH_TIMER_DAILY_KEY ||
-      key === WATCH_TIMER_HISTORY_KEY,
+      key.startsWith(WATCH_TIMER_DAILY_TOTAL_KEY_PREFIX) ||
+      key === WATCH_TIMER_DATE_INDEX_KEY,
   );
   if (hasWatchTimerChange) scheduleStoredTimerSync();
 }

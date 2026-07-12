@@ -1,10 +1,14 @@
 import type { RuntimeSnapshot, SearchFilterStats } from "./types";
+import type { WatchTimerHistoryBackup, WatchTimerSessionStorage } from "./watchTimerHistory";
 
 export type ExtensionMessage =
   | { type: "BILI_FILTER_HELLO"; payload: RuntimeSnapshot }
   | { type: "BILI_FILTER_GET_STATUS" }
   | { type: "BILI_FILTER_GET_PAGE_STATUS" }
-  | { type: "BILI_FILTER_SETTINGS_UPDATED" };
+  | { type: "BILI_FILTER_SETTINGS_UPDATED" }
+  | { type: "BILI_FILTER_SAVE_WATCH_SESSION"; payload: WatchTimerSessionStorage }
+  | { type: "BILI_FILTER_REPLACE_WATCH_HISTORY"; payload: WatchTimerHistoryBackup }
+  | { type: "BILI_FILTER_PRUNE_WATCH_HISTORY"; payload: { todayKey: string } };
 
 export type ExtensionResponse =
   | { ok: true; source: "background"; receivedAt: string }
