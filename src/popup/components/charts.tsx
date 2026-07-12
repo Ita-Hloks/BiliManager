@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import type { DurationPoint, HitRatePoint } from "../types";
 
@@ -31,30 +30,31 @@ function formatDurationDetail(ms: number) {
 export function DurationBarChart({ data }: { data: DurationPoint[] }) {
   const mounted = useMountedAnimation();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [tooltipX, setTooltipX] = useState(0);
   const elapsedValues = data.map(getDurationElapsedMs);
   const maxElapsed = Math.max(...elapsedValues, 1);
   const activePoint = activeIndex === null ? null : data[activeIndex];
   const activeElapsed = activeIndex === null ? 0 : elapsedValues[activeIndex];
-  const tooltipStyle = {
-    "--tooltip-x":
-      activeIndex === null || data.length === 0
-        ? "50%"
-        : `${((activeIndex + 0.5) / data.length) * 100}%`,
-  } as CSSProperties;
 
   return (
-    <div className="relative min-w-0 overflow-hidden pb-1 pt-7" style={tooltipStyle}>
-      <div
-        className={[
-          "pointer-events-none absolute top-0 z-10 max-w-[calc(100%-0.75rem)] -translate-x-1/2 truncate whitespace-nowrap rounded border border-sky-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-medium leading-none text-sky-100 shadow-lg shadow-slate-950/30 transition-[left,opacity]",
-          activePoint ? "opacity-100" : "opacity-0",
-        ].join(" ")}
-        style={{
-          left: "clamp(2.75rem, var(--tooltip-x), calc(100% - 2.75rem))",
-        }}
-      >
-        {activePoint ? `${activePoint.label} ${formatDurationDetail(activeElapsed)}` : ""}
-      </div>
+    <div className="relative min-w-0 overflow-hidden pb-1 pt-6">
+      {activePoint && activeIndex !== null && (
+        <div
+          className={[
+            "pointer-events-none absolute top-0 z-30 max-w-[10rem] truncate whitespace-nowrap rounded border border-sky-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-medium leading-none text-sky-100 shadow-lg shadow-slate-950/30",
+            activeIndex === 0
+              ? "left-0"
+              : activeIndex === data.length - 1
+                ? "right-0"
+                : "-translate-x-1/2",
+          ].join(" ")}
+          style={
+            activeIndex > 0 && activeIndex < data.length - 1 ? { left: `${tooltipX}px` } : undefined
+          }
+        >
+          {`${activePoint.label} ${formatDurationDetail(activeElapsed)}`}
+        </div>
+      )}
 
       <div
         className="flex h-28 min-w-0 items-end justify-between gap-1.5 overflow-hidden"
@@ -67,7 +67,10 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
             <div
               key={point.label}
               className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
-              onPointerEnter={() => setActiveIndex(index)}
+              onPointerEnter={event => {
+                setActiveIndex(index);
+                setTooltipX(event.currentTarget.offsetLeft + event.currentTarget.offsetWidth / 2);
+              }}
               title={`${point.label} ${formatDurationDetail(elapsed)}`}
             >
               <div
