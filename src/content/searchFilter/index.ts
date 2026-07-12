@@ -17,6 +17,7 @@ type SearchCard = {
 type FilterResult = {
   reasons: string[];
   regexErrors: string[];
+  lowInteractionRate: number | null;
 };
 
 const STATE_ATTR = "data-bili-manager-filter-state";
@@ -25,6 +26,8 @@ const ORIGINAL_TITLE_ATTR = "data-bili-manager-original-title";
 const REASON_TEXT_ATTR = "data-bili-manager-filter-reason-text";
 const REASON_CLASS = "bili-manager-filter-reasons";
 const TITLE_CLASS = "bili-manager-filtered-title";
+const UNHIGHLIGHTED_TITLE_CLASS = "bili-manager-unhighlighted-title";
+const GRAYSCALE_COVER_CLASS = "bili-manager-grayscale-cover";
 const META_CLASS = "bili-manager-filtered-meta";
 const COVER_WRAP_CLASS = "bili-manager-filtered-cover-wrap";
 const COVER_CLASS = "bili-manager-filtered-cover";
@@ -134,7 +137,8 @@ export function applySearchFilter(settings: SearchFilterSettings): SearchFilterS
   let filtered = 0;
 
   for (const card of cards) {
-    const result = evaluateCard(card, settings);
+    const titleHighlighted = hasTitleHighlight(card.titleEl);
+    const result = evaluateCard(card, settings, titleHighlighted);
     for (const error of result.regexErrors) regexErrors.add(error);
 
     if (settings.enabled && result.reasons.length > 0) {
@@ -142,6 +146,16 @@ export function applySearchFilter(settings: SearchFilterSettings): SearchFilterS
       markFiltered(card, result.reasons, pageTheme);
     } else {
       clearFilterState(card.cardEl);
+      applyGrayscaleState(
+        card,
+        settings.enabled &&
+          ((settings.grayscaleMissingTitleHighlight &&
+            !settings.filterMissingTitleHighlight &&
+            !titleHighlighted) ||
+            (settings.grayscaleLowDanmakuViewRate &&
+              !settings.filterLowDanmakuViewRate &&
+              result.lowInteractionRate !== null)),
+      );
     }
   }
 
@@ -194,9 +208,7 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
 function toSearchCard(cardEl: HTMLElement): SearchCard {
   const titleEl = queryFirst(cardEl, selectors.title);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
-  const metricsText = selectors.metrics
-    .map(selector => cardEl.querySelector<HTMLElement>(selector)?.textContent ?? "")
-    .join(" ");
+  const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
 
   return {
@@ -233,7 +245,11 @@ function collectMetadataElements(cardEl: HTMLElement, titleEl: HTMLElement | nul
   return [...elements];
 }
 
-function evaluateCard(card: SearchCard, settings: SearchFilterSettings): FilterResult {
+function evaluateCard(
+  card: SearchCard,
+  settings: SearchFilterSettings,
+  titleHighlighted: boolean,
+): FilterResult {
   const reasons: string[] = [];
   const regexErrors: string[] = [];
 
@@ -247,23 +263,27 @@ function evaluateCard(card: SearchCard, settings: SearchFilterSettings): FilterR
   if (uploaderPattern.regex?.test(card.uploader))
     reasons.push(`${TEXT.uploaderMatched}：${settings.uploaderPattern}`);
 
-  if (settings.filterMissingTitleHighlight && !hasTitleHighlight(card.titleEl)) {
+  if (settings.filterMissingTitleHighlight && !titleHighlighted) {
     reasons.push(TEXT.missingSearchTerm);
   }
 
+  let lowInteractionRate: number | null = null;
   if (
     typeof card.viewCount === "number" &&
     typeof card.danmakuCount === "number" &&
     card.viewCount > 0 &&
-    card.danmakuCount > 0
+    card.danmakuCount >= 0
   ) {
     const rate = card.danmakuCount / card.viewCount;
     if (rate < settings.minDanmakuViewRate) {
-      reasons.push(`${TEXT.lowInteraction}：${formatRate(rate)}`);
+      lowInteractionRate = rate;
+      if (settings.filterLowDanmakuViewRate) {
+        reasons.push(`${TEXT.lowInteraction}：${formatRate(rate)}`);
+      }
     }
   }
 
-  return { reasons, regexErrors };
+  return { reasons, regexErrors, lowInteractionRate };
 }
 
 function markFiltered(card: SearchCard, reasons: string[], pageTheme: BilibiliPageThemeDetection) {
@@ -274,8 +294,11 @@ function markFiltered(card: SearchCard, reasons: string[], pageTheme: BilibiliPa
   applyPageThemeClass(card.cardEl, pageTheme);
   card.cardEl.classList.add("bili-manager-filtered");
   card.titleEl?.classList.add(TITLE_CLASS);
+  card.titleEl?.classList.remove(UNHIGHLIGHTED_TITLE_CLASS);
+  card.thumbnailEl?.classList.remove(GRAYSCALE_COVER_CLASS);
   card.metadataEls.forEach(element => element.classList.add(META_CLASS));
-  card.thumbnailEl?.parentElement?.classList.add(COVER_WRAP_CLASS);
+  const coverHost = getCoverOverlayHost(card);
+  coverHost.classList.add(COVER_WRAP_CLASS);
   card.thumbnailEl?.classList.add(COVER_CLASS);
   card.previewEls.forEach(element => {
     element.classList.add("bili-manager-preview-disabled");
@@ -286,8 +309,7 @@ function markFiltered(card: SearchCard, reasons: string[], pageTheme: BilibiliPa
   if (!reasonEl) {
     reasonEl = document.createElement("div");
     reasonEl.className = REASON_CLASS;
-    const target = card.thumbnailEl?.parentElement ?? card.cardEl;
-    target.append(reasonEl);
+    coverHost.append(reasonEl);
   }
 
   const visibleReason = reasons.join(" / ");
@@ -300,6 +322,12 @@ function clearAllFilterStates() {
   document
     .querySelectorAll<HTMLElement>(`[${STATE_ATTR}], .bili-manager-filtered`)
     .forEach(clearFilterState);
+  document
+    .querySelectorAll<HTMLElement>(`.${UNHIGHLIGHTED_TITLE_CLASS}`)
+    .forEach(element => element.classList.remove(UNHIGHLIGHTED_TITLE_CLASS));
+  document
+    .querySelectorAll<HTMLElement>(`.${GRAYSCALE_COVER_CLASS}`)
+    .forEach(element => element.classList.remove(GRAYSCALE_COVER_CLASS));
 }
 
 function clearFilterState(cardEl: HTMLElement) {
@@ -319,11 +347,30 @@ function clearFilterState(cardEl: HTMLElement) {
     .querySelectorAll<HTMLElement>(`.${TITLE_CLASS}`)
     .forEach(element => element.classList.remove(TITLE_CLASS));
   cardEl
+    .querySelectorAll<HTMLElement>(`.${UNHIGHLIGHTED_TITLE_CLASS}`)
+    .forEach(element => element.classList.remove(UNHIGHLIGHTED_TITLE_CLASS));
+  cardEl
+    .querySelectorAll<HTMLElement>(`.${GRAYSCALE_COVER_CLASS}`)
+    .forEach(element => element.classList.remove(GRAYSCALE_COVER_CLASS));
+  cardEl
     .querySelectorAll<HTMLElement>(`.${META_CLASS}`)
     .forEach(element => element.classList.remove(META_CLASS));
   cardEl
     .querySelectorAll<HTMLElement>(".bili-manager-preview-disabled")
     .forEach(element => element.classList.remove("bili-manager-preview-disabled"));
+}
+
+function applyGrayscaleState(card: SearchCard, enabled: boolean): void {
+  card.titleEl?.classList.toggle(UNHIGHLIGHTED_TITLE_CLASS, enabled);
+  card.thumbnailEl?.classList.toggle(GRAYSCALE_COVER_CLASS, enabled);
+}
+
+function getCoverOverlayHost(card: SearchCard): HTMLElement {
+  return (
+    card.thumbnailEl?.closest<HTMLElement>(".bili-video-card__image") ??
+    card.thumbnailEl?.parentElement ??
+    card.cardEl
+  );
 }
 
 let filterGateEventsBound = false;
@@ -485,6 +532,24 @@ function queryFirst(root: ParentNode, candidates: string[]): HTMLElement | null 
   return null;
 }
 
+function collectMetricText(cardEl: HTMLElement): string {
+  const values = new Set<string>();
+  for (const selector of selectors.metrics) {
+    cardEl.querySelectorAll<HTMLElement>(selector).forEach(element => {
+      [
+        element.textContent,
+        element.getAttribute("aria-label"),
+        element.getAttribute("title"),
+        element.getAttribute("data-title"),
+      ].forEach(value => {
+        const normalized = normalizeText(value ?? "");
+        if (normalized) values.add(normalized);
+      });
+    });
+  }
+  return [...values].join(" ");
+}
+
 function compilePattern(
   pattern: string,
   label: string,
@@ -504,21 +569,30 @@ function parseMetric(text: string, labels: string[]): number | null {
   const normalized = normalizeText(text);
 
   for (const label of labels) {
-    const match = normalized.match(
+    const suffixMatch = normalized.match(
       new RegExp(`([\\d.]+\\s*(?:${TEXT.tenThousand}|${TEXT.hundredMillion})?)\\s*${label}`),
     );
-    if (match?.[1]) return parseChineseNumber(match[1]);
+    if (suffixMatch?.[1]) return parseChineseNumber(suffixMatch[1]);
+
+    const prefixMatch = normalized.match(
+      new RegExp(
+        `${label}\\s*[:：]?\\s*([\\d.]+\\s*(?:${TEXT.tenThousand}|${TEXT.hundredMillion})?)`,
+      ),
+    );
+    if (prefixMatch?.[1]) return parseChineseNumber(prefixMatch[1]);
   }
 
   return null;
 }
 
 function parseOrderedStatCounts(cardEl: HTMLElement): number[] {
-  const statItems = [
-    ...cardEl.querySelectorAll<HTMLElement>(
-      ".bili-video-card__stats--item, .bili-video-card__stats span, .so-icon",
-    ),
+  const currentStatItems = [
+    ...cardEl.querySelectorAll<HTMLElement>(".bili-video-card__stats--item"),
   ];
+  const statItems =
+    currentStatItems.length >= 2
+      ? currentStatItems
+      : [...cardEl.querySelectorAll<HTMLElement>(".bili-video-card__stats span, .so-icon")];
 
   return statItems
     .map(element => parseChineseNumber(normalizeText(element.textContent ?? "")))

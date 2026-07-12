@@ -62,12 +62,19 @@ function OptionsApp() {
   }
 
   async function updateSearchFilter(patch: Partial<SearchFilterSettings>) {
+    const searchFilter = {
+      ...settings.searchFilter,
+      ...patch,
+    };
+    if (searchFilter.filterMissingTitleHighlight) {
+      searchFilter.grayscaleMissingTitleHighlight = true;
+    }
+    if (searchFilter.filterLowDanmakuViewRate) {
+      searchFilter.grayscaleLowDanmakuViewRate = true;
+    }
     await updateSettings({
       ...settings,
-      searchFilter: {
-        ...settings.searchFilter,
-        ...patch,
-      },
+      searchFilter,
     });
   }
 

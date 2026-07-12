@@ -5,7 +5,10 @@ export type SearchFilterSettings = {
   titlePattern: string;
   uploaderPattern: string;
   minDanmakuViewRate: number;
+  filterLowDanmakuViewRate: boolean;
+  grayscaleLowDanmakuViewRate: boolean;
   filterMissingTitleHighlight: boolean;
+  grayscaleMissingTitleHighlight: boolean;
 };
 
 export type CustomBackgroundSettings = {

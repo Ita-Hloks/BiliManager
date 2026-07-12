@@ -1,4 +1,5 @@
 import type { WatchTimerSettings } from "../../shared/types";
+import { Clock } from "lucide-react";
 import { Button } from "../components/button";
 import { Switch } from "../components/switch";
 import { clamp, getRangeProgressStyle } from "../utils";
@@ -17,9 +18,12 @@ export function WatchTimerPanel(props: {
     <section id="watch-timer" className="bm-panel scroll-mt-6">
       <div className="bm-section-header">
         <div className="bm-content-wrap">
-          <div>
-            <h2 className="bm-text-heading text-base font-medium">定时器</h2>
-            <p className="bm-text-muted mt-1 text-sm">统计当前播放器实际播放时间</p>
+          <div className="flex items-start gap-3">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+            <div>
+              <h2 className="bm-text-heading text-base font-medium">定时器</h2>
+              <p className="bm-text-muted mt-1 text-sm">统计当前播放器实际播放时间</p>
+            </div>
           </div>
         </div>
       </div>
