@@ -18,7 +18,10 @@ export const defaultSettings: ExtensionSettings = {
     titlePattern: "",
     uploaderPattern: "",
     minDanmakuViewRate: 0.005,
+    filterLowDanmakuViewRate: true,
+    grayscaleLowDanmakuViewRate: true,
     filterMissingTitleHighlight: true,
+    grayscaleMissingTitleHighlight: true,
   },
   personalization: {
     blockRelatedVideos: false,
@@ -97,10 +100,26 @@ export function normalizeSearchFilter(
       typeof value?.minDanmakuViewRate === "number"
         ? clamp(value.minDanmakuViewRate, 0, 0.01)
         : currentSearchFilter.minDanmakuViewRate,
+    filterLowDanmakuViewRate:
+      typeof value?.filterLowDanmakuViewRate === "boolean"
+        ? value.filterLowDanmakuViewRate
+        : currentSearchFilter.filterLowDanmakuViewRate,
+    grayscaleLowDanmakuViewRate:
+      (value?.filterLowDanmakuViewRate ?? currentSearchFilter.filterLowDanmakuViewRate)
+        ? true
+        : typeof value?.grayscaleLowDanmakuViewRate === "boolean"
+          ? value.grayscaleLowDanmakuViewRate
+          : currentSearchFilter.grayscaleLowDanmakuViewRate,
     filterMissingTitleHighlight:
       typeof value?.filterMissingTitleHighlight === "boolean"
         ? value.filterMissingTitleHighlight
         : currentSearchFilter.filterMissingTitleHighlight,
+    grayscaleMissingTitleHighlight:
+      (value?.filterMissingTitleHighlight ?? currentSearchFilter.filterMissingTitleHighlight)
+        ? true
+        : typeof value?.grayscaleMissingTitleHighlight === "boolean"
+          ? value.grayscaleMissingTitleHighlight
+          : currentSearchFilter.grayscaleMissingTitleHighlight,
   };
 }
 

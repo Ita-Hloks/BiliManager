@@ -1,4 +1,5 @@
 import type { CustomBackgroundSettings, PlayerPersonalizationSettings } from "../../shared/types";
+import { Sparkles } from "lucide-react";
 import { Button } from "../components/button";
 import { CustomBackgroundPanel } from "../components/customBackgroundPanel";
 import { Switch } from "../components/switch";
@@ -16,9 +17,12 @@ export function PersonalizationPanel(props: {
     <section id="personalization" className="bm-panel scroll-mt-6">
       <div className="bm-section-header">
         <div className="bm-content-wrap">
-          <div>
-            <h2 className="bm-text-heading text-base font-medium">个性化</h2>
-            <p className="bm-text-muted mt-1 text-sm">控制播放器页视频推荐、广告和推荐连播</p>
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+            <div>
+              <h2 className="bm-text-heading text-base font-medium">个性化</h2>
+              <p className="bm-text-muted mt-1 text-sm">控制播放器页视频推荐、广告和推荐连播</p>
+            </div>
           </div>
         </div>
       </div>

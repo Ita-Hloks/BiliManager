@@ -2,7 +2,8 @@
   @apply relative;
 }
 .bili-manager-filtered-cover-wrap {
-  @apply overflow-hidden;
+  @apply relative overflow-hidden;
+  isolation: isolate;
 }
 .bili-manager-filtered-cover {
   filter: grayscale(1) blur(6px) brightness(0.45) opacity(0.72);
@@ -30,6 +31,21 @@
   opacity: 0.55 !important;
   text-decoration: none !important;
 }
+.bili-manager-unhighlighted-title {
+  filter: grayscale(1) !important;
+  color: #64748b !important;
+  opacity: 0.72 !important;
+  transition:
+    color 180ms ease,
+    opacity 180ms ease;
+}
+.bili-manager-grayscale-cover {
+  filter: grayscale(1) brightness(0.78) !important;
+  opacity: 0.82 !important;
+  transition:
+    filter 180ms ease,
+    opacity 180ms ease;
+}
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-title,
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filtered-meta,
 .bili-manager-filtered[data-bili-manager-filter-gate="unlocked"] .bili-manager-filtered-title,
@@ -46,8 +62,9 @@
   pointer-events: none !important;
 }
 .bili-manager-filter-reasons {
-  @apply absolute inset-0 z-20 flex items-center justify-center text-center whitespace-pre-line;
+  @apply absolute inset-0 flex items-center justify-center text-center whitespace-pre-line;
   box-sizing: border-box;
+  z-index: 2147483646;
   padding: 14px;
   border-radius: inherit;
   background: rgba(8, 8, 10, 0.42);

@@ -27,9 +27,12 @@ export function DataPanel(props: {
     <section id="data" className="bm-panel scroll-mt-6">
       <div className="bm-section-header">
         <div className="bm-content-wrap">
-          <div>
-            <h2 className="bm-text-heading text-base font-medium">数据管理</h2>
-            <p className="bm-text-muted mt-1 text-sm">导入备份，或按类型导出数据</p>
+          <div className="flex items-start gap-3">
+            <Download className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+            <div>
+              <h2 className="bm-text-heading text-base font-medium">数据管理</h2>
+              <p className="bm-text-muted mt-1 text-sm">导入备份，或按类型导出数据</p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">

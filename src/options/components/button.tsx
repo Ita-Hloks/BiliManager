@@ -36,6 +36,8 @@ const sizeClassMap: Record<ButtonSize, string> = {
 };
 
 const activeClassMap: Partial<Record<ButtonVariant, string>> = {
+  toggleRow:
+    "bg-slate-100/55 text-slate-500 hover:bg-slate-100/55 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
   toggleGroupRow:
     "bg-slate-100/55 text-slate-500 hover:bg-slate-100/55 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
 };

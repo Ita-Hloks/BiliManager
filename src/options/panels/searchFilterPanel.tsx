@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter } from "lucide-react";
 import type { SearchFilterSettings } from "../../shared/types";
 import { Button } from "../components/button";
 import { RuleListEditor } from "../components/ruleListEditor";
@@ -31,9 +31,12 @@ export function SearchFilterPanel(props: {
         >
           <Switch enabled={props.settings.enabled} />
         </button>
-        <div>
-          <h2 className="bm-text-heading text-base font-medium">过滤搜索</h2>
-          <p className="bm-text-muted mt-1 text-sm">减少低相关搜索结果</p>
+        <div className="flex items-start gap-3">
+          <Filter className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+          <div>
+            <h2 className="bm-text-heading text-base font-medium">过滤搜索</h2>
+            <p className="bm-text-muted mt-1 text-sm">减少低相关搜索结果</p>
+          </div>
         </div>
       </div>
 
@@ -106,22 +109,87 @@ export function SearchFilterPanel(props: {
             取值范围 0-1%；弹幕为 0 时不会触发互动率过低
           </span>
         </label>
-        <Button
-          onClick={() =>
-            props.onChange({
-              filterMissingTitleHighlight: !props.settings.filterMissingTitleHighlight,
-            })
-          }
-          variant="toggleRow"
-        >
-          <span>
-            <span className="block font-medium">过滤无粉色命中标题</span>
-            <span className="bm-text-muted mt-1 block text-xs">
-              搜索词没有出现在标题高亮里时，标记为低相关结果
+        <div className="overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out dark:border-white/10 dark:bg-white/10">
+          <Button
+            onClick={() =>
+              props.onChange({
+                filterLowDanmakuViewRate: !props.settings.filterLowDanmakuViewRate,
+              })
+            }
+            variant="toggleGroupRow"
+          >
+            <span>
+              <span className="block font-medium">过滤互动率过低的视频</span>
+              <span className="bm-text-muted mt-1 block text-xs">
+                弹幕与播放比例低于阈值时，标记为低相关结果
+              </span>
             </span>
-          </span>
-          <Switch enabled={props.settings.filterMissingTitleHighlight} />
-        </Button>
+            <Switch enabled={props.settings.filterLowDanmakuViewRate} />
+          </Button>
+          <Button
+            active={props.settings.filterLowDanmakuViewRate}
+            className="border-t border-slate-200 dark:border-white/10"
+            disabled={props.settings.filterLowDanmakuViewRate}
+            onClick={() =>
+              props.onChange({
+                grayscaleLowDanmakuViewRate: !props.settings.grayscaleLowDanmakuViewRate,
+              })
+            }
+            variant="toggleGroupRow"
+          >
+            <span>
+              <span className="block font-medium">黑白处理互动率过低的视频</span>
+              <span className="bm-text-muted mt-1 block text-xs">
+                不过滤卡片，仅将视频封面和标题降为黑白
+              </span>
+            </span>
+            <Switch
+              disabled={props.settings.filterLowDanmakuViewRate}
+              enabled={props.settings.grayscaleLowDanmakuViewRate}
+            />
+          </Button>
+        </div>
+
+        <div className="overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out dark:border-white/10 dark:bg-white/10">
+          <Button
+            onClick={() =>
+              props.onChange({
+                filterMissingTitleHighlight: !props.settings.filterMissingTitleHighlight,
+              })
+            }
+            variant="toggleGroupRow"
+          >
+            <span>
+              <span className="block font-medium">过滤无粉色命中标题</span>
+              <span className="bm-text-muted mt-1 block text-xs">
+                搜索词没有出现在标题高亮里时，标记为低相关结果
+              </span>
+            </span>
+            <Switch enabled={props.settings.filterMissingTitleHighlight} />
+          </Button>
+          <Button
+            active={props.settings.filterMissingTitleHighlight}
+            className="border-t border-slate-200 dark:border-white/10"
+            disabled={props.settings.filterMissingTitleHighlight}
+            onClick={() =>
+              props.onChange({
+                grayscaleMissingTitleHighlight: !props.settings.grayscaleMissingTitleHighlight,
+              })
+            }
+            variant="toggleGroupRow"
+          >
+            <span>
+              <span className="block font-medium">黑白处理无粉色命中的视频</span>
+              <span className="bm-text-muted mt-1 block text-xs">
+                不过滤卡片，仅将视频封面和标题降为黑白
+              </span>
+            </span>
+            <Switch
+              disabled={props.settings.filterMissingTitleHighlight}
+              enabled={props.settings.grayscaleMissingTitleHighlight}
+            />
+          </Button>
+        </div>
       </div>
     </section>
   );
