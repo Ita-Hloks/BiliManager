@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { AlertCircle, Power, Settings } from "lucide-react";
 import type { ExtensionMessage, ExtensionResponse } from "../shared/messaging";
-import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
+import { getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
 import type { ExtensionSettings, SearchFilterStats } from "../shared/types";
 import { useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
 import { RecentVideosCard } from "./components/recentVideosCard";
@@ -17,20 +17,17 @@ const unavailableStats: SearchFilterStats = {
 };
 const GITHUB_REPOSITORY_URL = "https://github.com/Ita-Hloks/BiliManager";
 
-export function PopupApp() {
-  const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
+export function PopupApp(props: { initialSettings: ExtensionSettings }) {
+  const [settings, setSettings] = useState<ExtensionSettings>(props.initialSettings);
   const [stats, setStats] = useState<SearchFilterStats>(unavailableStats);
   const [contentConnected, setContentConnected] = useState(false);
   const isDark = useEffectiveDarkTheme(settings.theme);
 
   useEffect(() => {
-    void getSettings().then(nextSettings => {
-      setSettings(nextSettings);
-      void refreshPageStatus();
-    });
+    void refreshPageStatus();
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   }, [isDark]);

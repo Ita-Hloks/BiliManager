@@ -27,7 +27,7 @@ export function PersonalizationPanel(props: {
         </div>
       </div>
 
-      <div className="space-y-3 px-4 pb-5 sm:px-5">
+      <div className="space-y-3 px-4 py-5 sm:px-5">
         <div className="divide-y divide-slate-100 overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:divide-[#30343c] dark:bg-[#15181e]">
           <Button
             onClick={() =>
