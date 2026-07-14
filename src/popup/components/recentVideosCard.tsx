@@ -28,16 +28,16 @@ type RecentVideoViewItem = WatchTimerVideoHistoryItem & {
 
 function RecentVideoRow({ video }: { video: RecentVideoViewItem }) {
   return (
-    <li className="rounded-md border border-white/5 bg-white/[0.02] px-2 py-1.5 text-slate-300 transition-colors duration-300 ease-out hover:bg-white/[0.04]">
+    <li className="border-b border-slate-100 py-2 last:border-b-0">
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 text-left">
         {/* if (video.url) void chrome.tabs?.create?.({ url: video.url }); */}
-        <span className="min-w-0 truncate text-[11px] font-medium text-slate-200">
+        <span className="min-w-0 truncate text-[11px] font-medium text-slate-700">
           {video.title}
         </span>
-        <span className="shrink-0 text-[11px] tabular-nums text-sky-200">
+        <span className="shrink-0 text-[11px] font-medium tabular-nums text-bili-blue">
           {formatDuration(video.dailyElapsedMs)}
         </span>
-        <span className="min-w-0 truncate text-[10px] text-slate-500">
+        <span className="min-w-0 truncate text-[10px] text-slate-400">
           {video.dateKey} {formatUpdatedAt(video.updatedAt)}
         </span>
       </div>
@@ -62,13 +62,13 @@ export function RecentVideosCard() {
   }, []);
 
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold text-slate-200">最近播放</h2>
+        <h2 className="text-xs font-semibold text-slate-700">最近播放</h2>
         <button
           aria-expanded={expanded}
           aria-label={expanded ? "折叠最近播放" : "展开最近播放"}
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-slate-400 transition-colors duration-200 hover:text-sky-300"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-slate-500 transition-colors duration-200 hover:bg-sky-50 hover:text-bili-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
           onClick={() => setExpanded(current => !current)}
           type="button"
         >
@@ -93,13 +93,11 @@ export function RecentVideosCard() {
           </ul>
 
           {videos.length === 0 && (
-            <div className="mt-2.5 rounded-md border border-white/5 bg-white/[0.02] px-2.5 py-3 text-center text-[11px] text-slate-500">
-              暂无播放记录
-            </div>
+            <div className="py-4 text-center text-[11px] text-slate-400">暂无播放记录</div>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
