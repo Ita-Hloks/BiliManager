@@ -40,18 +40,22 @@ export function WatchTimerPanel(props: {
         </Button>
 
         <div className="grid gap-4 rounded-lg bg-bili-canvas p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:bg-[#15181e]">
-          <div
-            className="group relative w-full overflow-hidden rounded-[14px] border border-slate-400/20 bg-gradient-to-br from-[#081824] to-[#112f41] px-3 pb-2.5 pt-3 text-slate-50 shadow-[0_12px_26px_rgba(2,8,23,0.24),inset_0_1px_0_rgba(255,255,255,0.08)]"
-            style={{ opacity: props.settings.opacity }}
-          >
+          <div className="group relative w-full overflow-hidden rounded-[14px] px-3 pb-2.5 pt-3 text-slate-50 shadow-[0_12px_26px_rgba(2,8,23,0.24)]">
             <span
               aria-hidden="true"
-              className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-slate-950/30 text-slate-300/60 opacity-0 transition-[opacity,color,background-color] duration-150 ease-out group-hover:opacity-100"
+              className="pointer-events-none absolute inset-0 rounded-[inherit] border border-slate-400/20 bg-gradient-to-br from-[#081824] to-[#112f41] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-opacity duration-200 ease-out"
+              style={{ opacity: props.settings.opacity }}
+            />
+            <span
+              aria-hidden="true"
+              className="absolute right-2 top-2 z-20 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-slate-950/30 text-slate-300/60 opacity-0 transition-[opacity,color,background-color] duration-150 ease-out group-hover:opacity-100"
             >
               <X aria-hidden="true" className="h-3.5 w-3.5" />
             </span>
-            <strong className="block text-2xl leading-none tracking-normal">00:00</strong>
-            <span className="mt-2.5 flex justify-between text-xs font-medium text-sky-100/80">
+            <strong className="relative z-10 block text-2xl leading-none tracking-normal">
+              00:00
+            </strong>
+            <span className="relative z-10 mt-2.5 flex justify-between text-xs font-medium text-sky-100/80">
               <span>今日：</span>
               <span>00:00</span>
             </span>
