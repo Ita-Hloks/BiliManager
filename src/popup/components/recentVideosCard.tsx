@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   getRecentWatchTimerVideos,
   getWatchTimerVideoDailyElapsed,
 } from "../../shared/watchTimerHistory";
 import type { WatchTimerVideoHistoryItem } from "../../shared/watchTimerHistory";
-
-function handleExpandRecentVideos() {
-  // TODO: 后续跳转到完整的播放历史页面
-}
 
 function formatUpdatedAt(timestamp: number) {
   const date = new Date(timestamp);
@@ -51,6 +47,7 @@ function RecentVideoRow({ video }: { video: RecentVideoViewItem }) {
 
 export function RecentVideosCard() {
   const [videos, setVideos] = useState<RecentVideoViewItem[]>([]);
+  const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
     void getRecentWatchTimerVideos(3).then(async recentVideos => {
@@ -69,26 +66,39 @@ export function RecentVideosCard() {
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-semibold text-slate-200">最近播放</h2>
         <button
+          aria-expanded={expanded}
+          aria-label={expanded ? "折叠最近播放" : "展开最近播放"}
           className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-slate-400 transition-colors duration-200 hover:text-sky-300"
-          onClick={handleExpandRecentVideos}
+          onClick={() => setExpanded(current => !current)}
           type="button"
         >
-          查看更多
-          <ChevronRight className="h-3 w-3" />
+          {expanded ? "收起" : "展开"}
+          <ChevronDown
+            className={`h-3 w-3 transition-transform duration-200 ${expanded ? "" : "-rotate-90"}`}
+          />
         </button>
       </div>
 
-      <ul className="mt-2 space-y-1">
-        {videos.map(video => (
-          <RecentVideoRow key={`${video.dateKey}:${video.pageKey}`} video={video} />
-        ))}
-      </ul>
+      <div
+        className={[
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+          expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        ].join(" ")}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <ul className="mt-2 space-y-1">
+            {videos.map(video => (
+              <RecentVideoRow key={`${video.dateKey}:${video.pageKey}`} video={video} />
+            ))}
+          </ul>
 
-      {videos.length === 0 && (
-        <div className="mt-2.5 rounded-md border border-white/5 bg-white/[0.02] px-2.5 py-3 text-center text-[11px] text-slate-500">
-          暂无播放记录
+          {videos.length === 0 && (
+            <div className="mt-2.5 rounded-md border border-white/5 bg-white/[0.02] px-2.5 py-3 text-center text-[11px] text-slate-500">
+              暂无播放记录
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

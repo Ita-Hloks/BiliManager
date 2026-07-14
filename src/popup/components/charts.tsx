@@ -52,7 +52,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
             activeIndex > 0 && activeIndex < data.length - 1 ? { left: `${tooltipX}px` } : undefined
           }
         >
-          {`${activePoint.label} ${formatDurationDetail(activeElapsed)}`}
+          {formatDurationDetail(activeElapsed)}
         </div>
       )}
 
@@ -71,7 +71,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
                 setActiveIndex(index);
                 setTooltipX(event.currentTarget.offsetLeft + event.currentTarget.offsetWidth / 2);
               }}
-              title={`${point.label} ${formatDurationDetail(elapsed)}`}
+              title={formatDurationDetail(elapsed)}
             >
               <div
                 className={[

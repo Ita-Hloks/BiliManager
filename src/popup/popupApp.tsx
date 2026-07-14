@@ -108,7 +108,7 @@ export function PopupApp() {
         </div>
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent">
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent">
         {!contentConnected && (
           <div className="flex items-center gap-2 rounded-md border border-white/10 bg-slate-950/30 px-3 py-2 text-xs text-slate-400 backdrop-blur-xl">
             <AlertCircle className="h-4 w-4 shrink-0" />
