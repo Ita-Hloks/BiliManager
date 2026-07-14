@@ -41,7 +41,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
       {activePoint && activeIndex !== null && (
         <div
           className={[
-            "pointer-events-none absolute top-0 z-30 max-w-[10rem] truncate whitespace-nowrap rounded-md border border-sky-100 bg-white px-2 py-1 text-[10px] font-medium leading-none text-bili-blue shadow-sm",
+            "pointer-events-none absolute top-0 z-30 max-w-[10rem] truncate whitespace-nowrap rounded-md border border-sky-100 bg-white px-2 py-1 text-[10px] font-medium leading-none text-bili-blue shadow-sm dark:border-bili-blue/30 dark:bg-[#242830] dark:text-sky-200 dark:shadow-none",
             activeIndex === 0
               ? "left-0"
               : activeIndex === data.length - 1
@@ -75,8 +75,8 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
             >
               <div
                 className={[
-                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-sky-50 transition-colors duration-200",
-                  activeIndex === index ? "bg-sky-100" : "",
+                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-sky-50 transition-colors duration-200 dark:bg-bili-blue/[0.06]",
+                  activeIndex === index ? "bg-sky-100 dark:bg-bili-blue/15" : "",
                 ].join(" ")}
               >
                 <div
@@ -93,7 +93,9 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
               <span
                 className={[
                   "max-w-full truncate text-[9px] leading-none transition-colors duration-200",
-                  activeIndex === index ? "text-bili-blue" : "text-slate-400",
+                  activeIndex === index
+                    ? "text-bili-blue dark:text-sky-200"
+                    : "text-slate-400 dark:text-slate-500",
                 ].join(" ")}
               >
                 {point.label}
@@ -156,7 +158,7 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
           <circle
             cx={point.x}
             cy={point.y}
-            fill="#ffffff"
+            className="fill-white dark:fill-[#1c1f26]"
             key={data[index].label}
             opacity={mounted ? 1 : 0}
             r={2.5}
@@ -177,7 +179,7 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
           {data[data.length - 1].rate}%
         </text>
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+      <div className="mt-1 flex justify-between text-[10px] text-slate-400 dark:text-slate-500">
         {data.map(point => (
           <span className="min-w-0 truncate" key={point.label}>
             {point.label}

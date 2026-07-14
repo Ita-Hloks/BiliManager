@@ -28,7 +28,7 @@ export function DataPanel(props: {
       <div className="bm-section-header">
         <div className="bm-content-wrap">
           <div className="flex items-start gap-3">
-            <Download className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+            <Download className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
               <h2 className="bm-text-heading text-base font-medium">数据管理</h2>
               <p className="bm-text-muted mt-1 text-sm">导入备份，或按类型导出数据</p>
@@ -69,11 +69,11 @@ export function DataPanel(props: {
               </Button>
 
               {exportMenuOpen && (
-                <div className="absolute right-0 z-20 mt-2 w-36 overflow-hidden rounded-md border border-white/70 bg-white/95 p-1 shadow-xl shadow-slate-200/60 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:shadow-slate-950/40">
+                <div className="absolute right-0 z-20 mt-2 w-36 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-[#30343c] dark:bg-[#242830]">
                   {exportOptions.map(option => (
                     <button
                       key={option.kind}
-                      className="block w-full whitespace-nowrap rounded px-3 py-2 text-left text-sm font-medium text-slate-800 transition-colors duration-200 hover:bg-sky-50 dark:text-slate-100 dark:hover:bg-white/[0.08]"
+                      className="block w-full whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium text-slate-800 transition-colors duration-200 hover:bg-sky-50 hover:text-bili-blue dark:text-slate-100 dark:hover:bg-bili-blue/10 dark:hover:text-sky-200"
                       onClick={() => exportData(option.kind)}
                       type="button"
                     >

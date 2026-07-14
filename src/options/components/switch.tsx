@@ -6,7 +6,7 @@ export function Switch(props: { disabled?: boolean; enabled: boolean }) {
         props.disabled
           ? "bg-slate-300/70 dark:bg-slate-600/70"
           : props.enabled
-            ? "bg-sky-500"
+            ? "bg-bili-blue"
             : "bg-slate-300",
       ].join(" ")}
     >

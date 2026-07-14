@@ -19,7 +19,7 @@ export function WatchTimerPanel(props: {
       <div className="bm-section-header">
         <div className="bm-content-wrap">
           <div className="flex items-start gap-3">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
               <h2 className="bm-text-heading text-base font-medium">定时器</h2>
               <p className="bm-text-muted mt-1 text-sm">统计当前播放器实际播放时间</p>
@@ -39,9 +39,9 @@ export function WatchTimerPanel(props: {
           <Switch enabled={props.enabled} />
         </Button>
 
-        <div className="grid gap-4 rounded-md border border-slate-200 bg-white/55 p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:border-white/10 dark:bg-white/[0.04]">
+        <div className="grid gap-4 rounded-lg bg-bili-canvas p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:bg-[#15181e]">
           <div
-            className="w-full rounded-lg border border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(15,23,42,0.68))] px-3 py-2 text-slate-50 shadow-[0_14px_34px_rgba(15,23,42,0.18)] backdrop-blur dark:border-sky-300/25 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(15,23,42,0.72))]"
+            className="w-full rounded-lg bg-[#263746] px-3 py-2 text-slate-50"
             style={{ opacity: props.settings.opacity }}
           >
             <strong className="block text-[22px] leading-none tracking-normal">00:00</strong>

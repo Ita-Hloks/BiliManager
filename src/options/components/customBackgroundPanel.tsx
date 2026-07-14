@@ -22,7 +22,7 @@ export function CustomBackgroundPanel(props: {
   const rangeYStyle = getRangeProgressStyle(props.background.positionY);
 
   return (
-    <div className="grid gap-4 rounded-md border border-sky-300/20 bg-sky-300/[0.06] p-3 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
+    <div className="grid gap-4 rounded-lg bg-bili-canvas p-3 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] dark:bg-[#15181e]">
       <div
         className={[
           "relative aspect-video w-full overflow-hidden rounded-md border text-left shadow-sm",

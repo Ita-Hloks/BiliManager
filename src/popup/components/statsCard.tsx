@@ -41,7 +41,7 @@ export function StatsCard() {
   }, [period]);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
       <SegmentedControl onChange={setMetric} options={METRIC_OPTIONS} value={metric} />
 
       <div className="mt-2.5">
@@ -52,17 +52,19 @@ export function StatsCard() {
         {metric === "duration" ? (
           <React.Fragment key="duration">
             <DurationBarChart data={durationPoints} key={period} />
-            <p className="mt-2.5 text-center text-[11px] text-slate-500">
+            <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
               {PERIOD_LABEL[period]}观看时长共{" "}
-              <span className="font-semibold text-slate-700">{formatMinutes(totalMinutes)}</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {formatMinutes(totalMinutes)}
+              </span>
             </p>
           </React.Fragment>
         ) : (
           <React.Fragment key="hitRate">
             <HitRateLineChart data={hitRatePoints} key={period} />
-            <p className="mt-2.5 text-center text-[11px] text-slate-500">
+            <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
               {PERIOD_LABEL[period]}平均命中率{" "}
-              <span className="font-semibold text-bili-blue">{avgHitRate}%</span>
+              <span className="font-semibold text-bili-blue dark:text-sky-200">{avgHitRate}%</span>
             </p>
           </React.Fragment>
         )}
