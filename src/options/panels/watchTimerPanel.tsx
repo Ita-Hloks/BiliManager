@@ -1,5 +1,5 @@
 import type { WatchTimerSettings } from "../../shared/types";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { Button } from "../components/button";
 import { Switch } from "../components/switch";
 import { clamp, getRangeProgressStyle } from "../utils";
@@ -41,11 +41,17 @@ export function WatchTimerPanel(props: {
 
         <div className="grid gap-4 rounded-lg bg-bili-canvas p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:bg-[#15181e]">
           <div
-            className="w-full rounded-lg bg-[#263746] px-3 py-2 text-slate-50"
+            className="group relative w-full overflow-hidden rounded-[14px] border border-slate-400/20 bg-gradient-to-br from-[#081824] to-[#112f41] px-3 pb-2.5 pt-3 text-slate-50 shadow-[0_12px_26px_rgba(2,8,23,0.24),inset_0_1px_0_rgba(255,255,255,0.08)]"
             style={{ opacity: props.settings.opacity }}
           >
-            <strong className="block text-[22px] leading-none tracking-normal">00:00</strong>
-            <span className="mt-2 flex justify-between text-xs font-medium text-slate-300">
+            <span
+              aria-hidden="true"
+              className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-slate-950/30 text-slate-300/60 opacity-0 transition-[opacity,color,background-color] duration-150 ease-out group-hover:opacity-100"
+            >
+              <X aria-hidden="true" className="h-3.5 w-3.5" />
+            </span>
+            <strong className="block text-2xl leading-none tracking-normal">00:00</strong>
+            <span className="mt-2.5 flex justify-between text-xs font-medium text-sky-100/80">
               <span>今日：</span>
               <span>00:00</span>
             </span>

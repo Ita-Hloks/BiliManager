@@ -15,7 +15,10 @@ export class WatchTimerView {
   private position: WatchTimerPosition = { left: 24, top: 96 };
   private dragging: { pointerId: number; offsetX: number; offsetY: number } | undefined;
 
-  constructor(private readonly savePosition: (position: WatchTimerPosition) => void) {}
+  constructor(
+    private readonly savePosition: (position: WatchTimerPosition) => void,
+    private readonly disableTimer: () => void,
+  ) {}
 
   get mounted(): boolean {
     return !!this.root?.isConnected;
@@ -34,6 +37,16 @@ export class WatchTimerView {
     handle.title = "拖动调整位置";
     handle.addEventListener("pointerdown", this.startDrag);
 
+    const closeButton = document.createElement("button");
+    closeButton.className = "bili-manager-watch-timer__close";
+    closeButton.type = "button";
+    closeButton.ariaLabel = "关闭定时器";
+    closeButton.title = "关闭定时器";
+    closeButton.addEventListener("click", event => {
+      event.stopPropagation();
+      this.disableTimer();
+    });
+
     this.timeText = document.createElement("strong");
     this.timeText.className = "bili-manager-watch-timer__time";
 
@@ -44,7 +57,8 @@ export class WatchTimerView {
     this.todayText = document.createElement("span");
     todayRow.append(todayLabel, this.todayText);
     handle.append(this.timeText, todayRow);
-    root.append(handle);
+    closeButton.textContent = "×";
+    root.append(handle, closeButton);
     document.body.append(root);
     this.root = root;
 

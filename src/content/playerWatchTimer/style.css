@@ -1,10 +1,12 @@
 #bili-manager-watch-timer {
   @apply fixed box-border overflow-hidden border select-none;
   z-index: 2147483646;
-  width: 148px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgb(14 165 233 / 0.2), rgb(15 23 42 / 0.72));
-  box-shadow: 0 14px 34px rgb(15 23 42 / 0.22);
+  width: 158px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgb(8 24 36 / 0.94), rgb(17 47 65 / 0.9));
+  box-shadow:
+    0 16px 38px rgb(2 8 23 / 0.38),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
   color: rgb(248 250 252 / 0.96);
   font-family:
     system-ui,
@@ -12,8 +14,8 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  border-color: rgb(125 211 252 / 0.28);
-  backdrop-filter: blur(14px);
+  border-color: rgb(148 163 184 / 0.24);
+  backdrop-filter: blur(18px) saturate(145%);
 }
 html[data-bili-manager-watch-timer-fullscreen="true"] #bili-manager-watch-timer {
   display: none !important;
@@ -23,9 +25,23 @@ html[data-bili-manager-watch-timer-fullscreen="true"] #bili-manager-watch-timer 
 }
 .bili-manager-watch-timer__handle {
   @apply block w-full border-0 bg-transparent text-left;
-  padding: 9px 10px 7px;
+  padding: 13px 12px 10px;
+  padding-right: 50px;
   color: inherit;
   cursor: grab;
+}
+.bili-manager-watch-timer__close {
+  @apply absolute right-2 top-2 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-white/10 bg-slate-950/30 p-0 text-sm font-medium leading-none text-slate-300/60 opacity-0 transition-[opacity,color,background-color] duration-150 ease-out;
+}
+#bili-manager-watch-timer:hover .bili-manager-watch-timer__close,
+.bili-manager-watch-timer__close:focus-visible {
+  @apply opacity-100;
+}
+.bili-manager-watch-timer__close:hover {
+  @apply bg-slate-800/60 text-slate-100/90;
+}
+.bili-manager-watch-timer__close:focus-visible {
+  @apply outline-none ring-2 ring-slate-400/40;
 }
 .bili-manager-watch-timer__handle:active {
   cursor: grabbing;
@@ -33,14 +49,14 @@ html[data-bili-manager-watch-timer-fullscreen="true"] #bili-manager-watch-timer 
 .bili-manager-watch-timer__time {
   @apply block font-bold;
   color: #f8fafc;
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1.12;
-  letter-spacing: 0;
+  letter-spacing: 0.01em;
 }
 .bili-manager-watch-timer__today {
   @apply flex justify-between text-xs font-medium;
   gap: 10px;
-  margin-top: 7px;
-  color: rgb(226 232 240 / 0.78);
+  margin-top: 9px;
+  color: rgb(224 242 254 / 0.82);
   line-height: 1.2;
 }

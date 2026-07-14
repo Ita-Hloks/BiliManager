@@ -75,8 +75,8 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
             >
               <div
                 className={[
-                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-sky-50 transition-colors duration-200 dark:bg-bili-blue/[0.06]",
-                  activeIndex === index ? "bg-sky-100 dark:bg-bili-blue/15" : "",
+                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-sky-50 transition-colors duration-200 dark:bg-slate-700/60",
+                  activeIndex === index ? "bg-sky-100 dark:bg-sky-900/60" : "",
                 ].join(" ")}
               >
                 <div
@@ -95,7 +95,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
                   "max-w-full truncate text-[9px] leading-none transition-colors duration-200",
                   activeIndex === index
                     ? "text-bili-blue dark:text-sky-200"
-                    : "text-slate-400 dark:text-slate-500",
+                    : "text-slate-500 dark:text-slate-300",
                 ].join(" ")}
               >
                 {point.label}
@@ -179,7 +179,7 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
           {data[data.length - 1].rate}%
         </text>
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-slate-400 dark:text-slate-500">
+      <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-300">
         {data.map(point => (
           <span className="min-w-0 truncate" key={point.label}>
             {point.label}

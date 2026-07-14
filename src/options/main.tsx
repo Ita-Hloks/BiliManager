@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Clock, Download, Filter, Sparkles } from "lucide-react";
 import "../styles/globals.css";
 import "../styles/options-controls.css";
-import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
+import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
 import type {
   CustomBackgroundSettings,
   ExtensionSettings,
@@ -49,6 +49,21 @@ function OptionsApp() {
 
   useEffect(() => {
     void getSettings().then(setSettings);
+  }, []);
+
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage?.onChanged) return;
+
+    const syncStoredSettings = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName !== "local" || !changes[SETTINGS_KEY]) return;
+      void getSettings().then(setSettings);
+    };
+
+    chrome.storage.onChanged.addListener(syncStoredSettings);
+    return () => chrome.storage.onChanged.removeListener(syncStoredSettings);
   }, []);
 
   useEffect(() => {
