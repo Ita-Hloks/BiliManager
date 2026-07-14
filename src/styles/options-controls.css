@@ -9,7 +9,7 @@
 .bm-range {
   --bm-range-progress: 50%;
   --bm-range-track: rgb(226 232 240 / 0.95);
-  --bm-range-fill: #0ea5e9;
+  --bm-range-fill: #00aeec;
   --bm-range-thumb: #ffffff;
   height: 22px;
   cursor: pointer;
@@ -34,7 +34,7 @@
   border-radius: 999px;
   background: var(--bm-range-thumb);
   box-shadow:
-    0 6px 14px rgb(14 165 233 / 0.24),
+    0 4px 10px rgb(0 174 236 / 0.2),
     0 1px 2px rgb(15 23 42 / 0.2);
 }
 .bm-range::-moz-range-track {
@@ -55,11 +55,11 @@
   border-radius: 999px;
   background: var(--bm-range-thumb);
   box-shadow:
-    0 6px 14px rgb(14 165 233 / 0.24),
+    0 4px 10px rgb(0 174 236 / 0.2),
     0 1px 2px rgb(15 23 42 / 0.2);
 }
 .bm-range:focus-visible {
-  outline: 2px solid rgb(14 165 233 / 0.42);
+  outline: 2px solid rgb(0 174 236 / 0.42);
   outline-offset: 4px;
   border-radius: 999px;
 }

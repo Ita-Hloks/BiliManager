@@ -1,4 +1,5 @@
 import { getTodayKey } from "../../shared/date";
+import { getSettings, saveSettings } from "../../shared/storage";
 import type { WatchTimerSettings } from "../../shared/types";
 import {
   getWatchTimerVideoDailyElapsed,
@@ -25,7 +26,10 @@ const STORED_TOTALS_SYNC_DELAY_MS = 300;
 const SESSION_PRUNE_INTERVAL_MS = 60_000;
 
 const state = new WatchTimerState();
-const view = new WatchTimerView(position => void saveTimerPosition(position));
+const view = new WatchTimerView(
+  position => void saveTimerPosition(position),
+  () => void disableWatchTimer(),
+);
 
 let tickTimer: number | undefined;
 let storedTotalsSyncTimer: number | undefined;
@@ -35,6 +39,18 @@ let storedTotalsLoadId = 0;
 let lastDailySaveAt = 0;
 let lastActiveSessionSaveAt = 0;
 let lastSessionPruneAt = 0;
+
+async function disableWatchTimer(): Promise<void> {
+  const settings = await getSettings();
+  if (!settings.features.watchTimer) return;
+  await saveSettings({
+    ...settings,
+    features: {
+      ...settings.features,
+      watchTimer: false,
+    },
+  });
+}
 
 export function applyPlayerWatchTimer(enabled: boolean, settings: WatchTimerSettings): void {
   if (!enabled || !isWatchTimerPlayerPage()) {

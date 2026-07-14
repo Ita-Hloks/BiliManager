@@ -22,7 +22,7 @@ export function SearchFilterPanel(props: {
 
   return (
     <section id="search-filter" className="bm-panel scroll-mt-6">
-      <div className="flex items-center justify-between gap-4 border-b border-white/70 px-4 py-4 transition-colors duration-300 ease-out sm:px-5 dark:border-white/10">
+      <div className="bm-section-header">
         <button
           aria-label={props.settings.enabled ? "关闭过滤" : "开启过滤"}
           className="order-2 flex shrink-0 items-center justify-center"
@@ -32,7 +32,7 @@ export function SearchFilterPanel(props: {
           <Switch enabled={props.settings.enabled} />
         </button>
         <div className="flex items-start gap-3">
-          <Filter className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+          <Filter className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
           <div>
             <h2 className="bm-text-heading text-base font-medium">过滤搜索</h2>
             <p className="bm-text-muted mt-1 text-sm">减少低相关搜索结果</p>
@@ -109,7 +109,7 @@ export function SearchFilterPanel(props: {
             取值范围 0-1%；弹幕为 0 时不会触发互动率过低
           </span>
         </label>
-        <div className="overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out dark:border-white/10 dark:bg-white/10">
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:divide-[#30343c] dark:bg-[#15181e]">
           <Button
             onClick={() =>
               props.onChange({
@@ -128,7 +128,6 @@ export function SearchFilterPanel(props: {
           </Button>
           <Button
             active={props.settings.filterLowDanmakuViewRate}
-            className="border-t border-slate-200 dark:border-white/10"
             disabled={props.settings.filterLowDanmakuViewRate}
             onClick={() =>
               props.onChange({
@@ -150,7 +149,7 @@ export function SearchFilterPanel(props: {
           </Button>
         </div>
 
-        <div className="overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out dark:border-white/10 dark:bg-white/10">
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:divide-[#30343c] dark:bg-[#15181e]">
           <Button
             onClick={() =>
               props.onChange({
@@ -169,7 +168,6 @@ export function SearchFilterPanel(props: {
           </Button>
           <Button
             active={props.settings.filterMissingTitleHighlight}
-            className="border-t border-slate-200 dark:border-white/10"
             disabled={props.settings.filterMissingTitleHighlight}
             onClick={() =>
               props.onChange({

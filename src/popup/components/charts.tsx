@@ -41,7 +41,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
       {activePoint && activeIndex !== null && (
         <div
           className={[
-            "pointer-events-none absolute top-0 z-30 max-w-[10rem] truncate whitespace-nowrap rounded border border-sky-300/25 bg-slate-950/95 px-2 py-1 text-[10px] font-medium leading-none text-sky-100 shadow-lg shadow-slate-950/30",
+            "pointer-events-none absolute top-0 z-30 max-w-[10rem] truncate whitespace-nowrap rounded-md border border-sky-100 bg-white px-2 py-1 text-[10px] font-medium leading-none text-bili-blue shadow-sm dark:border-bili-blue/30 dark:bg-[#242830] dark:text-sky-200 dark:shadow-none",
             activeIndex === 0
               ? "left-0"
               : activeIndex === data.length - 1
@@ -52,7 +52,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
             activeIndex > 0 && activeIndex < data.length - 1 ? { left: `${tooltipX}px` } : undefined
           }
         >
-          {`${activePoint.label} ${formatDurationDetail(activeElapsed)}`}
+          {formatDurationDetail(activeElapsed)}
         </div>
       )}
 
@@ -71,20 +71,18 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
                 setActiveIndex(index);
                 setTooltipX(event.currentTarget.offsetLeft + event.currentTarget.offsetWidth / 2);
               }}
-              title={`${point.label} ${formatDurationDetail(elapsed)}`}
+              title={formatDurationDetail(elapsed)}
             >
               <div
                 className={[
-                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-white/[0.03] transition-colors duration-200",
-                  activeIndex === index ? "bg-sky-400/12" : "",
+                  "flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-sky-50 transition-colors duration-200 dark:bg-slate-700/60",
+                  activeIndex === index ? "bg-sky-100 dark:bg-sky-900/60" : "",
                 ].join(" ")}
               >
                 <div
                   className={[
-                    "w-full rounded-t-sm bg-gradient-to-t transition-[height,filter,opacity] duration-700 ease-out",
-                    activeIndex === index
-                      ? "from-sky-400/85 to-cyan-200/95 opacity-100 saturate-125"
-                      : "from-sky-500/60 to-sky-300/95 opacity-90",
+                    "w-full rounded-t-sm bg-bili-blue transition-[height,filter,opacity] duration-700 ease-out",
+                    activeIndex === index ? "opacity-100" : "opacity-75",
                   ].join(" ")}
                   style={{
                     height: mounted ? `${pct}%` : "0%",
@@ -95,7 +93,9 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
               <span
                 className={[
                   "max-w-full truncate text-[9px] leading-none transition-colors duration-200",
-                  activeIndex === index ? "text-sky-300" : "text-slate-500",
+                  activeIndex === index
+                    ? "text-bili-blue dark:text-sky-200"
+                    : "text-slate-500 dark:text-slate-300",
                 ].join(" ")}
               >
                 {point.label}
@@ -130,8 +130,8 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
       <svg className="h-24 w-full overflow-visible" viewBox={`0 0 ${width} ${height}`}>
         <defs>
           <linearGradient id="hitRateFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(56,189,248,0.35)" />
-            <stop offset="100%" stopColor="rgba(56,189,248,0)" />
+            <stop offset="0%" stopColor="rgba(0,174,236,0.22)" />
+            <stop offset="100%" stopColor="rgba(0,174,236,0)" />
           </linearGradient>
         </defs>
         <path
@@ -144,7 +144,7 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
           d={linePath}
           fill="none"
           pathLength={1}
-          stroke="rgb(56,189,248)"
+          stroke="rgb(0,174,236)"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
@@ -158,17 +158,17 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
           <circle
             cx={point.x}
             cy={point.y}
-            fill="#0b1120"
+            className="fill-white dark:fill-[#1c1f26]"
             key={data[index].label}
             opacity={mounted ? 1 : 0}
             r={2.5}
-            stroke="rgb(56,189,248)"
+            stroke="rgb(0,174,236)"
             strokeWidth={1.5}
             style={{ transition: `opacity 400ms ease-out ${300 + index * 60}ms` }}
           />
         ))}
         <text
-          fill="rgb(125,211,252)"
+          fill="rgb(0,174,236)"
           fontSize="9"
           opacity={mounted ? 1 : 0}
           style={{ transition: "opacity 400ms ease-out 700ms" }}
@@ -179,7 +179,7 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
           {data[data.length - 1].rate}%
         </text>
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-slate-500">
+      <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-300">
         {data.map(point => (
           <span className="min-w-0 truncate" key={point.label}>
             {point.label}

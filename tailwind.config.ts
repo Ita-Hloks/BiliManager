@@ -7,9 +7,10 @@ export default {
     extend: {
       colors: {
         bili: {
-          blue: "#00a1d6",
+          blue: "#00aeec",
           pink: "#fb7299",
           ink: "#15161a",
+          canvas: "#f7f9fc",
         },
       },
     },

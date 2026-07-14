@@ -18,7 +18,7 @@ export function PersonalizationPanel(props: {
       <div className="bm-section-header">
         <div className="bm-content-wrap">
           <div className="flex items-start gap-3">
-            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
               <h2 className="bm-text-heading text-base font-medium">个性化</h2>
               <p className="bm-text-muted mt-1 text-sm">控制播放器页视频推荐、广告和推荐连播</p>
@@ -28,7 +28,7 @@ export function PersonalizationPanel(props: {
       </div>
 
       <div className="space-y-3 px-4 pb-5 sm:px-5">
-        <div className="overflow-hidden rounded-md border border-slate-200 bg-white/65 shadow-sm transition-colors duration-300 ease-out dark:border-white/10 dark:bg-white/10">
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:divide-[#30343c] dark:bg-[#15181e]">
           <Button
             onClick={() =>
               props.onChange({
@@ -48,7 +48,6 @@ export function PersonalizationPanel(props: {
 
           <Button
             active={props.settings.blockRelatedVideos}
-            className="border-t border-slate-200 dark:border-white/10"
             disabled={props.settings.blockRelatedVideos}
             onClick={() =>
               props.onChange({

@@ -12,7 +12,7 @@ export function ThemeSwitch(props: {
   ] as const;
 
   return (
-    <div className="inline-flex rounded-md border border-white/70 bg-white/55 p-1 shadow-sm backdrop-blur transition-colors duration-300 ease-out dark:border-white/10 dark:bg-slate-950/35">
+    <div className="inline-flex rounded-lg bg-slate-100 p-1 transition-colors duration-300 ease-out dark:bg-[#15181e]">
       {options.map(option => {
         const Icon = option.icon;
         const selected = props.value === option.value;
@@ -21,10 +21,10 @@ export function ThemeSwitch(props: {
           <button
             key={option.value}
             className={[
-              "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm transition-colors duration-300 ease-out",
+              "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40",
               selected
-                ? "bg-sky-500 text-white dark:bg-sky-400 dark:text-slate-950"
-                : "text-slate-600 hover:bg-white/75 dark:text-slate-300 dark:hover:bg-white/10",
+                ? "bg-white text-bili-blue shadow-sm dark:bg-[#2a2e36] dark:text-sky-200"
+                : "text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/[0.06]",
             ].join(" ")}
             onClick={() => props.onChange(option.value)}
             type="button"

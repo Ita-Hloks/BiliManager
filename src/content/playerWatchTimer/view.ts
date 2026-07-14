@@ -10,12 +10,21 @@ export type WatchTimerPosition = {
 
 export class WatchTimerView {
   private root: HTMLElement | undefined;
+  private backdrop: HTMLElement | undefined;
   private timeText: HTMLElement | undefined;
   private todayText: HTMLElement | undefined;
+  private closeButton: HTMLButtonElement | undefined;
+  private closePrompt: HTMLElement | undefined;
+  private cancelCloseButton: HTMLButtonElement | undefined;
+  private confirmCloseButton: HTMLButtonElement | undefined;
+  private closeDelayTimer: number | undefined;
   private position: WatchTimerPosition = { left: 24, top: 96 };
   private dragging: { pointerId: number; offsetX: number; offsetY: number } | undefined;
 
-  constructor(private readonly savePosition: (position: WatchTimerPosition) => void) {}
+  constructor(
+    private readonly savePosition: (position: WatchTimerPosition) => void,
+    private readonly disableTimer: () => void,
+  ) {}
 
   get mounted(): boolean {
     return !!this.root?.isConnected;
@@ -28,11 +37,26 @@ export class WatchTimerView {
     root.id = TIMER_ROOT_ID;
     root.setAttribute("aria-label", "播放器浏览计时器");
 
+    this.backdrop = document.createElement("span");
+    this.backdrop.className = "bili-manager-watch-timer__backdrop";
+    this.backdrop.setAttribute("aria-hidden", "true");
+
     const handle = document.createElement("button");
     handle.className = "bili-manager-watch-timer__handle";
     handle.type = "button";
     handle.title = "拖动调整位置";
     handle.addEventListener("pointerdown", this.startDrag);
+
+    this.closeButton = document.createElement("button");
+    this.closeButton.className = "bili-manager-watch-timer__close";
+    this.closeButton.type = "button";
+    this.closeButton.ariaLabel = "关闭定时器";
+    this.closeButton.title = "关闭定时器";
+    this.closeButton.textContent = "×";
+    this.closeButton.addEventListener("click", event => {
+      event.stopPropagation();
+      this.showClosePrompt();
+    });
 
     this.timeText = document.createElement("strong");
     this.timeText.className = "bili-manager-watch-timer__time";
@@ -44,7 +68,42 @@ export class WatchTimerView {
     this.todayText = document.createElement("span");
     todayRow.append(todayLabel, this.todayText);
     handle.append(this.timeText, todayRow);
-    root.append(handle);
+
+    this.closePrompt = document.createElement("div");
+    this.closePrompt.className = "bili-manager-watch-timer__prompt";
+    this.closePrompt.setAttribute("aria-hidden", "true");
+    this.closePrompt.setAttribute("aria-label", "关闭定时器确认");
+    this.closePrompt.setAttribute("role", "alertdialog");
+    this.closePrompt.inert = true;
+
+    const promptText = document.createElement("div");
+    promptText.className = "bili-manager-watch-timer__prompt-text";
+    const promptTitle = document.createElement("strong");
+    promptTitle.className = "bili-manager-watch-timer__prompt-title";
+    promptTitle.textContent = "是否要关闭定时器？";
+    const promptHint = document.createElement("span");
+    promptHint.className = "bili-manager-watch-timer__prompt-hint";
+    promptHint.textContent = "如需重新打开，请前往设置 → 定时器并重新启用。";
+    promptText.append(promptTitle, promptHint);
+
+    const promptActions = document.createElement("div");
+    promptActions.className = "bili-manager-watch-timer__prompt-actions";
+    this.cancelCloseButton = document.createElement("button");
+    this.cancelCloseButton.className = "bili-manager-watch-timer__prompt-button";
+    this.cancelCloseButton.type = "button";
+    this.cancelCloseButton.textContent = "取消";
+    this.cancelCloseButton.addEventListener("click", this.hideClosePrompt);
+    this.confirmCloseButton = document.createElement("button");
+    this.confirmCloseButton.className =
+      "bili-manager-watch-timer__prompt-button bili-manager-watch-timer__prompt-button--confirm";
+    this.confirmCloseButton.type = "button";
+    this.confirmCloseButton.textContent = "关闭";
+    this.confirmCloseButton.addEventListener("click", this.confirmClose);
+    promptActions.append(this.cancelCloseButton, this.confirmCloseButton);
+    this.closePrompt.append(promptText, promptActions);
+
+    root.addEventListener("keydown", this.handlePromptKeydown);
+    root.append(this.backdrop, handle, this.closeButton, this.closePrompt);
     document.body.append(root);
     this.root = root;
 
@@ -60,9 +119,16 @@ export class WatchTimerView {
     window.removeEventListener("resize", this.keepInViewport);
     document.removeEventListener("fullscreenchange", this.syncFullscreen);
     this.root?.remove();
+    window.clearTimeout(this.closeDelayTimer);
+    this.closeDelayTimer = undefined;
     this.root = undefined;
+    this.backdrop = undefined;
     this.timeText = undefined;
     this.todayText = undefined;
+    this.closeButton = undefined;
+    this.closePrompt = undefined;
+    this.cancelCloseButton = undefined;
+    this.confirmCloseButton = undefined;
     this.dragging = undefined;
     document.documentElement.removeAttribute(FULLSCREEN_ATTR);
   }
@@ -73,7 +139,7 @@ export class WatchTimerView {
   }
 
   setOpacity(opacity: number): void {
-    if (this.root) this.root.style.opacity = clamp(opacity, 0.45, 1).toString();
+    if (this.backdrop) this.backdrop.style.opacity = clamp(opacity, 0.45, 1).toString();
   }
 
   applyPosition(position: WatchTimerPosition): void {
@@ -87,6 +153,45 @@ export class WatchTimerView {
 
   private readonly syncFullscreen = () => {
     document.documentElement.toggleAttribute(FULLSCREEN_ATTR, !!document.fullscreenElement);
+  };
+
+  private showClosePrompt(): void {
+    if (!this.root || !this.closePrompt) return;
+    this.root.classList.add("bili-manager-watch-timer--confirming");
+    this.closePrompt.setAttribute("aria-hidden", "false");
+    this.closePrompt.inert = false;
+    this.applyPosition(this.position);
+    this.cancelCloseButton?.focus();
+  }
+
+  private readonly hideClosePrompt = (): void => {
+    if (!this.root || !this.closePrompt || this.closeDelayTimer) return;
+    this.root.classList.remove("bili-manager-watch-timer--confirming");
+    this.closePrompt.setAttribute("aria-hidden", "true");
+    this.closePrompt.inert = true;
+    this.applyPosition(this.position);
+    this.closeButton?.focus();
+  };
+
+  private readonly confirmClose = (): void => {
+    if (!this.root || this.closeDelayTimer) return;
+    this.root.classList.add("bili-manager-watch-timer--closing");
+    if (this.cancelCloseButton) this.cancelCloseButton.disabled = true;
+    if (this.confirmCloseButton) this.confirmCloseButton.disabled = true;
+    this.closeDelayTimer = window.setTimeout(() => {
+      this.closeDelayTimer = undefined;
+      this.disableTimer();
+    }, 180);
+  };
+
+  private readonly handlePromptKeydown = (event: KeyboardEvent): void => {
+    if (
+      event.key !== "Escape" ||
+      !this.root?.classList.contains("bili-manager-watch-timer--confirming")
+    )
+      return;
+    event.preventDefault();
+    this.hideClosePrompt();
   };
 
   private readonly startDrag = (event: PointerEvent) => {

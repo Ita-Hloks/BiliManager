@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Clock, Download, Filter, Sparkles } from "lucide-react";
 import "../styles/globals.css";
 import "../styles/options-controls.css";
-import { defaultSettings, getSettings, saveSettings } from "../shared/storage";
+import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
 import type {
   CustomBackgroundSettings,
   ExtensionSettings,
@@ -23,7 +23,7 @@ import {
   getExportMessage,
   importDataBackup,
 } from "./dataTransfer";
-import { useEffectiveDarkTheme } from "./theme";
+import { useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
 import { createBackgroundDataUrl, formatDateForFile } from "./utils";
 
 type SectionId = "search-filter" | "personalization" | "watch-timer" | "data";
@@ -49,6 +49,21 @@ function OptionsApp() {
 
   useEffect(() => {
     void getSettings().then(setSettings);
+  }, []);
+
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage?.onChanged) return;
+
+    const syncStoredSettings = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName !== "local" || !changes[SETTINGS_KEY]) return;
+      void getSettings().then(setSettings);
+    };
+
+    chrome.storage.onChanged.addListener(syncStoredSettings);
+    return () => chrome.storage.onChanged.removeListener(syncStoredSettings);
   }, []);
 
   useEffect(() => {
@@ -189,9 +204,9 @@ function OptionsApp() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_15%_12%,rgba(251,207,232,0.55),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(191,219,254,0.62),transparent_32%),linear-gradient(135deg,#f8fbff_0%,#eef7ff_48%,#fff1f8_100%)] px-3 py-4 text-slate-900 transition-colors duration-300 ease-out sm:px-4 lg:px-6 dark:bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.22),transparent_34%),radial-gradient(circle_at_82%_6%,rgba(244,114,182,0.16),transparent_32%),linear-gradient(135deg,#07111f_0%,#111827_52%,#1e1b2e_100%)] dark:text-slate-100">
+    <main className="min-h-screen bg-bili-canvas px-3 py-4 text-slate-900 transition-colors duration-300 ease-out sm:px-4 lg:px-6 dark:bg-[#111318] dark:text-slate-100">
       <div className="mx-auto w-full max-w-[80rem]">
-        <header className="mb-4 flex flex-wrap items-start justify-between gap-4 rounded-md border border-white/70 bg-white/55 px-4 py-4 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out sm:px-5 lg:mb-6 dark:border-white/10 dark:bg-slate-950/45 dark:shadow-[0_18px_80px_rgba(15,23,42,0.3)]">
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition-colors duration-300 ease-out sm:px-5 lg:mb-6 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold tracking-normal">
@@ -209,7 +224,7 @@ function OptionsApp() {
         <div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
           <nav
             aria-label="偏好分类"
-            className="flex h-fit gap-2 overflow-x-auto rounded-md border border-white/70 bg-white/45 p-2 shadow-sm backdrop-blur-xl transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible dark:border-white/10 dark:bg-slate-950/35"
+            className="flex h-fit gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none"
           >
             {sectionNavItems.map(item => {
               const Icon = item.icon;
@@ -218,8 +233,8 @@ function OptionsApp() {
                   key={item.id}
                   className={
                     activeSection === item.id
-                      ? "flex min-w-28 items-center gap-2 rounded bg-sky-100 px-3 py-2 text-left text-sm font-medium text-sky-700 shadow-sm shadow-sky-100/80 transition-colors duration-300 ease-out xl:w-full xl:min-w-0 dark:bg-sky-400/15 dark:text-sky-200 dark:shadow-sky-950/20"
-                      : "flex min-w-28 items-center gap-2 rounded px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-300 ease-out hover:bg-white/60 hover:text-slate-900 xl:w-full xl:min-w-0 dark:text-slate-400 dark:hover:bg-white/[0.08] dark:hover:text-slate-100"
+                      ? "flex min-w-28 items-center gap-2 rounded-lg bg-sky-50 px-3 py-2 text-left text-sm font-medium text-bili-blue transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 xl:w-full xl:min-w-0 dark:bg-bili-blue/15 dark:text-sky-200"
+                      : "flex min-w-28 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-600 transition-colors duration-200 ease-out hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 xl:w-full xl:min-w-0 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-100"
                   }
                   onClick={() => scrollToSection(item.id)}
                   type="button"

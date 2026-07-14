@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import type { ExtensionSettings } from "../shared/types";
+import type { ExtensionSettings } from "./types";
 
-// 解析用户主题选择；system 模式会订阅系统色彩变化，让设置页即时跟随。
 export function useEffectiveDarkTheme(theme: ExtensionSettings["theme"]) {
   const [systemDark, setSystemDark] = useState(() => getSystemDarkTheme());
 

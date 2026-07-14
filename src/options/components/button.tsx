@@ -13,20 +13,20 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const baseButtonClass =
-  "inline-flex items-center justify-center transition-colors duration-300 ease-out disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 disabled:cursor-not-allowed";
 
 const variantClassMap: Record<ButtonVariant, string> = {
   primary:
-    "gap-1.5 rounded-md border border-sky-200 bg-sky-500 text-sm font-medium text-white shadow-sm hover:bg-sky-600 disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 dark:border-sky-300/30 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300 dark:disabled:border-white/10 dark:disabled:bg-slate-700 dark:disabled:text-slate-400",
+    "gap-1.5 rounded-lg bg-bili-blue text-sm font-medium text-white hover:bg-[#009bd3] disabled:bg-slate-200 disabled:text-slate-500 dark:disabled:bg-slate-700 dark:disabled:text-slate-400",
   secondary:
-    "gap-1.5 rounded-md border border-slate-200 bg-white/70 text-sm text-slate-700 shadow-sm hover:bg-sky-50 disabled:opacity-50 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-sky-300/10",
+    "gap-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-bili-blue disabled:opacity-50 dark:border-[#3a3e47] dark:bg-[#242830] dark:text-slate-100 dark:hover:border-bili-blue/40 dark:hover:bg-bili-blue/10",
   icon: "rounded text-slate-400 hover:text-rose-500 dark:text-slate-500 dark:hover:text-rose-300",
   numberStep:
-    "flex-1 text-slate-500 hover:bg-sky-50 hover:text-sky-600 dark:text-slate-400 dark:hover:bg-sky-300/10 dark:hover:text-sky-200",
+    "flex-1 text-slate-500 hover:bg-sky-50 hover:text-bili-blue dark:text-slate-400 dark:hover:bg-bili-blue/10 dark:hover:text-sky-200",
   toggleRow:
-    "w-full justify-between gap-4 rounded-md border border-slate-200 bg-white/65 px-3 py-3 text-left text-sm text-slate-800 shadow-sm hover:bg-white/85 dark:border-white/10 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15",
+    "w-full justify-between gap-4 rounded-lg bg-bili-canvas px-3 py-3 text-left text-sm text-slate-800 hover:bg-sky-50 dark:bg-[#15181e] dark:text-slate-100 dark:hover:bg-bili-blue/10",
   toggleGroupRow:
-    "w-full justify-between gap-4 px-3 py-3 text-left text-sm text-slate-800 hover:bg-white/85 dark:text-slate-100 dark:hover:bg-white/[0.05]",
+    "w-full justify-between gap-4 px-3 py-3 text-left text-sm text-slate-800 hover:bg-sky-50 dark:text-slate-100 dark:hover:bg-bili-blue/10",
 };
 
 const sizeClassMap: Record<ButtonSize, string> = {
@@ -37,9 +37,9 @@ const sizeClassMap: Record<ButtonSize, string> = {
 
 const activeClassMap: Partial<Record<ButtonVariant, string>> = {
   toggleRow:
-    "bg-slate-100/55 text-slate-500 hover:bg-slate-100/55 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
+    "bg-slate-100 text-slate-500 hover:bg-slate-100 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
   toggleGroupRow:
-    "bg-slate-100/55 text-slate-500 hover:bg-slate-100/55 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
+    "bg-slate-100 text-slate-500 hover:bg-slate-100 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
 };
 
 // 设置页按钮的唯一样式入口：业务组件只传 variant/size/active，避免到处散落不可读 className。

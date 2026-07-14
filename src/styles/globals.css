@@ -13,16 +13,16 @@ body {
 
 @layer components {
   .bm-panel {
-    @apply rounded-md border border-white/70 bg-white/55 shadow-[0_18px_80px_rgba(59,130,246,0.14)] backdrop-blur-xl transition-colors duration-300 ease-out dark:border-white/10 dark:bg-slate-950/45 dark:shadow-[0_18px_80px_rgba(15,23,42,0.28)];
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm transition-colors duration-300 ease-out dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none;
   }
   .bm-section-header {
-    @apply flex flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors duration-300 ease-out sm:px-5;
+    @apply flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-4 py-4 transition-colors duration-300 ease-out sm:px-5 dark:border-[#30343c];
   }
   .bm-content-wrap {
     @apply flex w-full flex-wrap items-center justify-between gap-4;
   }
   .bm-text-heading {
-    @apply text-slate-950 transition-colors duration-300 ease-out dark:text-white;
+    @apply text-slate-900 transition-colors duration-300 ease-out dark:text-slate-100;
   }
   .bm-text-label {
     @apply text-slate-800 transition-colors duration-300 ease-out dark:text-slate-100;
@@ -31,13 +31,13 @@ body {
     @apply text-slate-600 transition-colors duration-300 ease-out dark:text-slate-400;
   }
   .bm-notice {
-    @apply rounded-md border border-sky-100 bg-sky-50/75 px-3 py-2 text-sm text-sky-800 transition-colors duration-300 ease-out dark:border-sky-300/20 dark:bg-sky-300/10 dark:text-sky-100;
+    @apply rounded-lg border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-800 transition-colors duration-300 ease-out dark:border-bili-blue/30 dark:bg-bili-blue/10 dark:text-sky-100;
   }
   .bm-text-input {
-    @apply min-w-0 flex-1 rounded-md border border-slate-200 bg-white/75 px-3 py-2 text-sm text-slate-900 outline-none transition-colors duration-300 ease-out placeholder:text-slate-400 focus:border-sky-400 dark:border-white/10 dark:bg-slate-950/45 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-300;
+    @apply min-w-0 flex-1 rounded-lg border border-slate-200 bg-bili-canvas px-3 py-2 text-sm text-slate-900 outline-none transition-colors duration-300 ease-out placeholder:text-slate-400 focus:border-bili-blue focus:ring-2 focus:ring-bili-blue/15 dark:border-[#30343c] dark:bg-[#15181e] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-bili-blue;
   }
   .bm-number-input-group {
-    @apply flex w-28 overflow-hidden rounded-md border border-slate-200 bg-white/75 shadow-sm transition-colors duration-300 ease-out focus-within:border-sky-400 dark:border-white/10 dark:bg-slate-950/45 dark:focus-within:border-sky-300;
+    @apply flex w-28 overflow-hidden rounded-lg border border-slate-200 bg-bili-canvas transition-colors duration-300 ease-out focus-within:border-bili-blue focus-within:ring-2 focus-within:ring-bili-blue/15 dark:border-[#30343c] dark:bg-[#15181e] dark:focus-within:border-bili-blue;
   }
   .bm-number-input-field {
     @apply min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-right text-sm text-slate-900 outline-none dark:text-slate-100;

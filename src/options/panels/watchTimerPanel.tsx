@@ -1,5 +1,5 @@
 import type { WatchTimerSettings } from "../../shared/types";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { Button } from "../components/button";
 import { Switch } from "../components/switch";
 import { clamp, getRangeProgressStyle } from "../utils";
@@ -19,7 +19,7 @@ export function WatchTimerPanel(props: {
       <div className="bm-section-header">
         <div className="bm-content-wrap">
           <div className="flex items-start gap-3">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-sky-500" />
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
               <h2 className="bm-text-heading text-base font-medium">定时器</h2>
               <p className="bm-text-muted mt-1 text-sm">统计当前播放器实际播放时间</p>
@@ -39,13 +39,23 @@ export function WatchTimerPanel(props: {
           <Switch enabled={props.enabled} />
         </Button>
 
-        <div className="grid gap-4 rounded-md border border-slate-200 bg-white/55 p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:border-white/10 dark:bg-white/[0.04]">
-          <div
-            className="w-full rounded-lg border border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(15,23,42,0.68))] px-3 py-2 text-slate-50 shadow-[0_14px_34px_rgba(15,23,42,0.18)] backdrop-blur dark:border-sky-300/25 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(15,23,42,0.72))]"
-            style={{ opacity: props.settings.opacity }}
-          >
-            <strong className="block text-[22px] leading-none tracking-normal">00:00</strong>
-            <span className="mt-2 flex justify-between text-xs font-medium text-slate-300">
+        <div className="grid gap-4 rounded-lg bg-bili-canvas p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:bg-[#15181e]">
+          <div className="group relative w-full overflow-hidden rounded-[14px] px-3 pb-2.5 pt-3 text-slate-50 shadow-[0_12px_26px_rgba(2,8,23,0.24)]">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-[inherit] border border-slate-400/20 bg-gradient-to-br from-[#081824] to-[#112f41] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-opacity duration-200 ease-out"
+              style={{ opacity: props.settings.opacity }}
+            />
+            <span
+              aria-hidden="true"
+              className="absolute right-2 top-2 z-20 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-slate-950/30 text-slate-300/60 opacity-0 transition-[opacity,color,background-color] duration-150 ease-out group-hover:opacity-100"
+            >
+              <X aria-hidden="true" className="h-3.5 w-3.5" />
+            </span>
+            <strong className="relative z-10 block text-2xl leading-none tracking-normal">
+              00:00
+            </strong>
+            <span className="relative z-10 mt-2.5 flex justify-between text-xs font-medium text-sky-100/80">
               <span>今日：</span>
               <span>00:00</span>
             </span>
