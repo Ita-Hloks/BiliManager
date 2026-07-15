@@ -14,6 +14,13 @@ export function useEffectiveDarkTheme(theme: ExtensionSettings["theme"]) {
     return () => media.removeEventListener("change", syncSystemTheme);
   }, []);
 
+  return isEffectiveDarkTheme(theme, systemDark);
+}
+
+export function isEffectiveDarkTheme(
+  theme: ExtensionSettings["theme"],
+  systemDark = getSystemDarkTheme(),
+) {
   return theme === "dark" || (theme === "system" && systemDark);
 }
 

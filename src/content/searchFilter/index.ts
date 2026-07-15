@@ -272,7 +272,7 @@ function evaluateCard(
     typeof card.viewCount === "number" &&
     typeof card.danmakuCount === "number" &&
     card.viewCount > 0 &&
-    card.danmakuCount >= 0
+    card.danmakuCount > 0
   ) {
     const rate = card.danmakuCount / card.viewCount;
     if (rate < settings.minDanmakuViewRate) {

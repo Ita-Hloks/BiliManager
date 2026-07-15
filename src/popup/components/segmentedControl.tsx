@@ -25,8 +25,11 @@ export function SegmentedControl<T extends string>({
               size === "sm" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-xs",
               active
                 ? "bg-white text-bili-blue shadow-sm dark:bg-[#2a2e36] dark:text-sky-200 dark:shadow-none"
-                : "text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200",
+                : option.disabled
+                  ? "cursor-not-allowed text-slate-400 opacity-60 dark:text-slate-500"
+                  : "text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200",
             ].join(" ")}
+            disabled={option.disabled}
             onClick={() => onChange(option.value)}
             type="button"
           >

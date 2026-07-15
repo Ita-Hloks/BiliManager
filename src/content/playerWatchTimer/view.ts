@@ -35,6 +35,7 @@ export class WatchTimerView {
 
     const root = document.createElement("aside");
     root.id = TIMER_ROOT_ID;
+    root.style.visibility = "hidden";
     root.setAttribute("aria-label", "播放器浏览计时器");
 
     this.backdrop = document.createElement("span");
@@ -113,6 +114,10 @@ export class WatchTimerView {
     this.applyPosition(this.position);
     this.syncFullscreen();
     return true;
+  }
+
+  show(): void {
+    if (this.root) this.root.style.visibility = "visible";
   }
 
   unmount(): void {

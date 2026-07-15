@@ -25,4 +25,5 @@ export interface SegmentedOption<T extends string> {
   value: T;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
+  disabled?: boolean;
 }
