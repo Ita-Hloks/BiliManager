@@ -90,22 +90,28 @@ export function destroyPlayerWatchTimer(): void {
 async function loadPersistentState(): Promise<void> {
   const loadId = ++persistentLoadId;
   const pageKey = getCurrentPageKey();
-  const [position, daily, videoElapsedMs, activeSession] = await Promise.all([
-    loadTimerPosition(),
-    loadWatchTimerDaily(),
-    getWatchTimerVideoDailyElapsed(pageKey, state.dateKey),
-    loadActiveSession(),
-    pruneWatchTimerSessions(),
-  ]);
+  try {
+    const [position, daily, videoElapsedMs, activeSession] = await Promise.all([
+      loadTimerPosition(),
+      loadWatchTimerDaily(),
+      getWatchTimerVideoDailyElapsed(pageKey, state.dateKey),
+      loadActiveSession(),
+      pruneWatchTimerSessions(),
+    ]);
 
-  if (loadId !== persistentLoadId || !view.mounted || pageKey !== state.pageKey) return;
+    if (loadId !== persistentLoadId || !view.mounted || pageKey !== state.pageKey) return;
 
-  view.applyPosition(position);
-  state.hydrate(pageKey, daily.dateKey, videoElapsedMs, daily.elapsedMs, activeSession);
-  persistentReady = true;
-  lastDailySaveAt = 0;
-  lastActiveSessionSaveAt = 0;
-  renderTime();
+    view.applyPosition(position);
+    state.hydrate(pageKey, daily.dateKey, videoElapsedMs, daily.elapsedMs, activeSession);
+    persistentReady = true;
+    lastDailySaveAt = 0;
+    lastActiveSessionSaveAt = 0;
+    renderTime();
+  } catch {
+    if (loadId !== persistentLoadId || !view.mounted || pageKey !== state.pageKey) return;
+  } finally {
+    if (loadId === persistentLoadId && view.mounted) view.show();
+  }
 }
 
 function bindLifecycleEvents(): void {
