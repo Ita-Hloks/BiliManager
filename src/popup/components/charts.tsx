@@ -92,7 +92,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
               </div>
               <span
                 className={[
-                  "max-w-full truncate text-[9px] leading-none transition-colors duration-200",
+                  "whitespace-nowrap text-[9px] leading-none transition-colors duration-200",
                   activeIndex === index
                     ? "text-bili-blue dark:text-sky-200"
                     : "text-slate-500 dark:text-slate-300",
@@ -181,7 +181,7 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-300">
         {data.map(point => (
-          <span className="min-w-0 truncate" key={point.label}>
+          <span className="shrink-0 whitespace-nowrap" key={point.label}>
             {point.label}
           </span>
         ))}
