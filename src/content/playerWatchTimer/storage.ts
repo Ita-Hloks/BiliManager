@@ -1,4 +1,5 @@
 import { isDateKey } from "../../shared/date";
+import { hasChromeLocalStorage } from "../../shared/chromeStorage";
 
 const TIMER_ACTIVE_SESSION_KEY = "biliManager.playerWatchTimerActiveSession";
 const TIMER_POSITION_KEY = "biliManager.playerWatchTimer";
@@ -22,7 +23,7 @@ export type PlayerWatchTimerActiveSessionStorage = {
 export async function loadActiveSession(): Promise<
   PlayerWatchTimerActiveSessionStorage | undefined
 > {
-  if (!hasChromeStorage()) return undefined;
+  if (!hasChromeLocalStorage()) return undefined;
 
   const saved = await chrome.storage.local.get(TIMER_ACTIVE_SESSION_KEY);
   return normalizeActiveSession(saved[TIMER_ACTIVE_SESSION_KEY]);
@@ -31,7 +32,7 @@ export async function loadActiveSession(): Promise<
 export async function saveActiveSession(
   session: PlayerWatchTimerActiveSessionStorage,
 ): Promise<void> {
-  if (!hasChromeStorage()) return;
+  if (!hasChromeLocalStorage()) return;
 
   await chrome.storage.local.set({
     [TIMER_ACTIVE_SESSION_KEY]: {
@@ -45,13 +46,13 @@ export async function saveActiveSession(
 }
 
 export async function loadTimerPosition(): Promise<PlayerWatchTimerPositionStorage> {
-  if (!hasChromeStorage()) return DEFAULT_POSITION;
+  if (!hasChromeLocalStorage()) return DEFAULT_POSITION;
   const saved = await chrome.storage.local.get(TIMER_POSITION_KEY);
   return normalizePosition(saved[TIMER_POSITION_KEY]);
 }
 
 export async function saveTimerPosition(position: PlayerWatchTimerPositionStorage): Promise<void> {
-  if (!hasChromeStorage()) return;
+  if (!hasChromeLocalStorage()) return;
   await chrome.storage.local.set({
     [TIMER_POSITION_KEY]: {
       left: Math.floor(position.left),
@@ -91,8 +92,4 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(Math.max(value, min), Math.max(min, max))
     : fallback;
-}
-
-function hasChromeStorage(): boolean {
-  return typeof chrome !== "undefined" && !!chrome.storage?.local;
 }

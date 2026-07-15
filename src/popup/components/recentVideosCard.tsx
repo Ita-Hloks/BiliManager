@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { formatCompactDuration } from "../../shared/duration";
 import {
   getRecentWatchTimerVideos,
   getWatchTimerVideoDailyElapsed,
@@ -9,17 +10,6 @@ import type { WatchTimerVideoHistoryItem } from "../../shared/watchTimerHistory"
 function formatUpdatedAt(timestamp: number) {
   const date = new Date(timestamp);
   return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
-}
-
-function formatDuration(ms: number) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) return `${hours}h${padTime(minutes)}m${padTime(seconds)}s`;
-  if (minutes > 0) return `${minutes}m${padTime(seconds)}s`;
-  return `${seconds}s`;
 }
 
 type RecentVideoViewItem = WatchTimerVideoHistoryItem & {
@@ -35,7 +25,7 @@ function RecentVideoRow({ video }: { video: RecentVideoViewItem }) {
           {video.title}
         </span>
         <span className="shrink-0 text-[11px] font-medium tabular-nums text-bili-blue dark:text-sky-200">
-          {formatDuration(video.dailyElapsedMs)}
+          {formatCompactDuration(video.dailyElapsedMs)}
         </span>
         <span className="min-w-0 truncate text-[10px] text-slate-400 dark:text-slate-500">
           {video.dateKey} {formatUpdatedAt(video.updatedAt)}
