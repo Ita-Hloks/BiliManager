@@ -8,7 +8,7 @@ import { SegmentedControl } from "./segmentedControl";
 
 const METRIC_OPTIONS: SegmentedOption<StatsMetric>[] = [
   { value: "duration", label: "观看时长", icon: Clock3 },
-  { value: "hitRate", label: "命中率", icon: Target },
+  { value: "hitRate", label: "等待更新", icon: Target, disabled: true },
 ];
 
 const PERIOD_OPTIONS: SegmentedOption<StatsPeriod>[] = [
