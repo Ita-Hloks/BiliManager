@@ -8,13 +8,13 @@ BiliManager 是一个基于 Manifest V3 的 Bilibili 浏览器扩展，使用 Re
 
 支持浅色、深色和跟随系统主题，并可设置自定义背景（黑白遮罩会跟随系统主题）
 
-<img src="./doc/dsp_bg.png" width="80%">
+<img src="./doc/dsp_bg.png" alt="主题与背景设置展示" width="80%">
 
 ### 搜索结果过滤：
 
 按标题规则，UP 昵称（自定义正则表达式），互动率，模糊或降权视频。
 
-<img src="./doc/dsp_fl.png" width="80%">
+<img src="./doc/dsp_fl.png" alt="搜索结果过滤展示" width="80%">
 
 ### 播放页个性化：
 
