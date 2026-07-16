@@ -10,6 +10,7 @@ yarn-error.log*
 .env.*.local
 dist/
 assets/
+/icons/
 .cache/
 # IDEA
 .idea
