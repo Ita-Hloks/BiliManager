@@ -1,4 +1,5 @@
 import { addDays, getTodayKey, isDateKey, parseLocalDateKey } from "./date";
+import { hasChromeLocalStorage } from "./chromeStorage";
 import { sendMessage } from "./messaging";
 
 export const WATCH_TIMER_SESSION_KEY_PREFIX = "biliManager.watchTimer.session:";
@@ -50,7 +51,7 @@ export async function loadWatchTimerDaily(): Promise<WatchTimerDailyStorage> {
 }
 
 export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
-  if (!hasChromeStorage()) return {};
+  if (!hasChromeLocalStorage()) return {};
 
   const dateKeys = await loadDateIndex();
   const [dailyTotals, sessionsByDate] = await Promise.all([
@@ -67,13 +68,13 @@ export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
 }
 
 export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVideoHistoryItem[]> {
-  if (!hasChromeStorage()) return [];
+  if (!hasChromeLocalStorage()) return [];
   const saved = await chrome.storage.local.get(WATCH_TIMER_RECENT_VIDEOS_KEY);
   return normalizeVideoList(saved[WATCH_TIMER_RECENT_VIDEOS_KEY]).slice(0, Math.max(0, limit));
 }
 
 export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
-  if (!hasChromeStorage()) return;
+  if (!hasChromeLocalStorage()) return;
   const normalized = normalizeSession(session);
   if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
   const response = await sendMessage({
@@ -87,13 +88,13 @@ export async function getWatchTimerVideoDailyElapsed(
   pageKey: string,
   dateKey = getTodayKey(),
 ): Promise<number> {
-  if (!hasChromeStorage() || !pageKey || !isDateKey(dateKey)) return 0;
+  if (!hasChromeLocalStorage() || !pageKey || !isDateKey(dateKey)) return 0;
   const sessions = await loadSessionsForDate(dateKey);
   return sumElapsed(sessions.filter(session => session.pageKey === pageKey));
 }
 
 async function getWatchTimerDailyElapsed(dateKey: string): Promise<number> {
-  if (!hasChromeStorage() || !isDateKey(dateKey)) return 0;
+  if (!hasChromeLocalStorage() || !isDateKey(dateKey)) return 0;
   const dailyTotalKey = getDailyTotalKey(dateKey);
   const [total, sessions] = await Promise.all([
     chrome.storage.local.get(dailyTotalKey),
@@ -104,7 +105,7 @@ async function getWatchTimerDailyElapsed(dateKey: string): Promise<number> {
 }
 
 export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
-  if (!hasChromeStorage()) return { history: {}, videos: [] };
+  if (!hasChromeLocalStorage()) return { history: {}, videos: [] };
   const dateKeys = await loadDateIndex();
   const [history, videosByDate] = await Promise.all([
     getWatchTimerHistory(),
@@ -114,7 +115,7 @@ export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup
 }
 
 export async function importWatchTimerHistory(history: WatchTimerHistoryBackup): Promise<void> {
-  if (!hasChromeStorage()) return;
+  if (!hasChromeLocalStorage()) return;
   const response = await sendMessage({
     type: "BILI_FILTER_REPLACE_WATCH_HISTORY",
     payload: history,
@@ -123,7 +124,7 @@ export async function importWatchTimerHistory(history: WatchTimerHistoryBackup):
 }
 
 export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise<void> {
-  if (!hasChromeStorage() || !isDateKey(todayKey)) return;
+  if (!hasChromeLocalStorage() || !isDateKey(todayKey)) return;
   const response = await sendMessage({
     type: "BILI_FILTER_PRUNE_WATCH_HISTORY",
     payload: { todayKey },
@@ -132,7 +133,7 @@ export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise
 }
 
 export async function writeWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
-  if (!hasChromeStorage()) return;
+  if (!hasChromeLocalStorage()) return;
   const normalized = normalizeSession(session);
   if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
 
@@ -173,7 +174,7 @@ export async function writeWatchTimerSession(session: WatchTimerSessionStorage):
 }
 
 export async function replaceWatchTimerHistory(backup: WatchTimerHistoryBackup): Promise<void> {
-  if (!hasChromeStorage()) return;
+  if (!hasChromeLocalStorage()) return;
   await clearIndexedHistory();
 
   const history = normalizeHistory(backup.history);
@@ -205,7 +206,7 @@ export async function replaceWatchTimerHistory(backup: WatchTimerHistoryBackup):
 }
 
 export async function pruneIndexedWatchTimerHistory(todayKey = getTodayKey()): Promise<void> {
-  if (!hasChromeStorage() || !isDateKey(todayKey)) return;
+  if (!hasChromeLocalStorage() || !isDateKey(todayKey)) return;
   const dateKeys = await loadDateIndex();
   const minDate = addDays(parseLocalDateKey(todayKey), -MAX_HISTORY_DAYS + 1).getTime();
   const expiredDates = dateKeys.filter(dateKey => parseLocalDateKey(dateKey).getTime() < minDate);
@@ -470,8 +471,4 @@ function getVideoKey(dateKey: string, pageKey: string): string {
 
 function getVideoIndexKey(dateKey: string): string {
   return `${WATCH_TIMER_VIDEO_INDEX_KEY_PREFIX}${dateKey}`;
-}
-
-function hasChromeStorage(): boolean {
-  return typeof chrome !== "undefined" && !!chrome.storage?.local;
 }

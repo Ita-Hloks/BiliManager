@@ -1,4 +1,5 @@
 import { clamp } from "../../shared/number";
+import { formatClockDuration } from "../../shared/duration";
 
 const TIMER_ROOT_ID = "bili-manager-watch-timer";
 const FULLSCREEN_ATTR = "data-bili-manager-watch-timer-fullscreen";
@@ -139,8 +140,8 @@ export class WatchTimerView {
   }
 
   setTime(elapsedMs: number, todayElapsedMs: number): void {
-    if (this.timeText) this.timeText.textContent = formatDuration(elapsedMs);
-    if (this.todayText) this.todayText.textContent = formatDuration(todayElapsedMs);
+    if (this.timeText) this.timeText.textContent = formatClockDuration(elapsedMs);
+    if (this.todayText) this.todayText.textContent = formatClockDuration(todayElapsedMs);
   }
 
   setOpacity(opacity: number): void {
@@ -239,17 +240,4 @@ export class WatchTimerView {
       top: clamp(position.top, 8, maxTop),
     };
   }
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const minuteSecond = `${padTime(minutes)}:${padTime(seconds)}`;
-  return hours > 0 ? `${hours}:${minuteSecond}` : minuteSecond;
-}
-
-function padTime(value: number): string {
-  return value.toString().padStart(2, "0");
 }

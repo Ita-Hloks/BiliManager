@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "BiliManager",
   "description": "A Bilibili management tool that allows you to focus on the current task and keep track of your browsing history!",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "action": {
     "default_title": "Bili Filter",
     "default_popup": "popup.html"

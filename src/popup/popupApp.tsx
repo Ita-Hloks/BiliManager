@@ -22,6 +22,7 @@ export function PopupApp(props: { initialSettings: ExtensionSettings }) {
   const [stats, setStats] = useState<SearchFilterStats>(unavailableStats);
   const [contentConnected, setContentConnected] = useState(false);
   const isDark = useEffectiveDarkTheme(settings.theme);
+  const extensionVersion = chrome.runtime.getManifest().version;
 
   useEffect(() => {
     void refreshPageStatus();
@@ -152,7 +153,7 @@ export function PopupApp(props: { initialSettings: ExtensionSettings }) {
       </div>
 
       <footer className="flex shrink-0 items-center justify-between border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-400 transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:text-slate-500">
-        <span>0.0.0 测试版</span>
+        <span>v{extensionVersion}</span>
         <button
           className="font-medium text-slate-500 transition-colors hover:text-bili-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 dark:text-slate-400 dark:hover:text-sky-200"
           onClick={openGithubRepository}

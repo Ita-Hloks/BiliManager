@@ -5,8 +5,18 @@ export type StatsPeriod = "7d" | "month" | "year";
 
 export interface DurationPoint {
   label: string;
-  minutes: number;
-  elapsedMs?: number;
+  elapsedMs: number;
+}
+
+export interface DurationComparison {
+  label: string;
+  elapsedMs: number;
+  previousElapsedMs: number;
+}
+
+export interface WatchDurationData {
+  points: DurationPoint[];
+  comparison: DurationComparison;
 }
 
 export interface HitRatePoint {
