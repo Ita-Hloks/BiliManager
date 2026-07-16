@@ -22,7 +22,7 @@
     "service_worker": "assets/background.js",
     "type": "module"
   },
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage"],
   "host_permissions": ["https://*.bilibili.com/*", "https://search.bilibili.com/*"],
   "content_scripts": [
     {
