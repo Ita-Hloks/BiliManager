@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BiliManager",
-  "description": "A Bilibili management tool that allows you to focus on the current task and keep track of your browsing history!",
+  "description": "面向哔哩哔哩的本地管理与浏览体验优化扩展",
   "version": "0.1.0",
   "icons": {
     "16": "icons/icon16.png",
@@ -10,7 +10,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "Bili Filter",
+    "default_title": "BiliManager",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -22,7 +22,7 @@
     "service_worker": "assets/background.js",
     "type": "module"
   },
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage"],
   "host_permissions": ["https://*.bilibili.com/*", "https://search.bilibili.com/*"],
   "content_scripts": [
     {
