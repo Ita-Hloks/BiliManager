@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
+import { copyFile, cp, mkdir, readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import prettier from "prettier";
 
@@ -10,6 +10,8 @@ await mkdir(resolve(root, "dist/assets"), { recursive: true });
 // Chrome users often select the project folder instead of dist/.
 await rm(resolve(root, "assets"), { recursive: true, force: true });
 await mkdir(resolve(root, "assets"), { recursive: true });
+await rm(resolve(root, "icons"), { recursive: true, force: true });
+await cp(resolve(root, "dist/icons"), resolve(root, "icons"), { recursive: true });
 await copyFile(resolve(root, "dist/popup.html"), resolve(root, "popup.html"));
 await copyFile(resolve(root, "dist/options.html"), resolve(root, "options.html"));
 await formatHtml(resolve(root, "popup.html"));
