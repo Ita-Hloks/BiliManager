@@ -85,7 +85,7 @@ export class WatchTimerView {
     promptTitle.textContent = "是否要关闭计时器？";
     const promptHint = document.createElement("span");
     promptHint.className = "bili-manager-watch-timer__prompt-hint";
-    promptHint.textContent = "如需重新打开，请前往设置 → 播放时间并重新启用";
+    promptHint.textContent = "如需重新打开，请前往设置 → 计时器并重新启用";
     promptText.append(promptTitle, promptHint);
 
     const promptActions = document.createElement("div");

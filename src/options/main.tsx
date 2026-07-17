@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Clock, Download, Filter, Sparkles } from "lucide-react";
+import { BellRing, Clock, Download, Filter, Sparkles } from "lucide-react";
 import "../styles/globals.css";
 import "../styles/options-controls.css";
 import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
@@ -17,6 +17,7 @@ import { DataPanel } from "./panels/dataPanel";
 import { PersonalizationPanel } from "./panels/personalizationPanel";
 import { SearchFilterPanel } from "./panels/searchFilterPanel";
 import { WatchTimerPanel } from "./panels/watchTimerPanel";
+import { WatchReminderPanel } from "./panels/watchReminderPanel";
 import type { DataExportKind } from "./dataTransfer";
 import {
   createDataExportPayload,
@@ -27,12 +28,13 @@ import {
 import { useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
 import { createBackgroundDataUrl, formatDateForFile } from "./utils";
 
-type SectionId = "search-filter" | "personalization" | "watch-timer" | "data";
+type SectionId = "search-filter" | "personalization" | "watch-timer" | "watch-reminder" | "data";
 
 const sectionNavItems = [
   { id: "search-filter", label: "过滤搜索", icon: Filter },
   { id: "personalization", label: "个性化", icon: Sparkles },
-  { id: "watch-timer", label: "播放时间", icon: Clock },
+  { id: "watch-timer", label: "计时器", icon: Clock },
+  { id: "watch-reminder", label: "定时器", icon: BellRing },
   { id: "data", label: "配置", icon: Download },
 ] as const satisfies ReadonlyArray<{
   id: SectionId;
@@ -281,14 +283,16 @@ function OptionsApp() {
               onChange={patch => void updatePersonalization(patch)}
             />
             <WatchTimerPanel
-              reminderEnabled={settings.features.watchReminder}
-              reminderSettings={settings.watchReminder}
-              timerEnabled={settings.features.watchTimer}
-              timerSettings={settings.watchTimer}
-              onReminderChange={patch => void updateWatchReminder(patch)}
-              onReminderEnabledChange={enabled => void updateWatchReminderEnabled(enabled)}
-              onTimerChange={patch => void updateWatchTimer(patch)}
-              onTimerEnabledChange={enabled => void updateWatchTimerEnabled(enabled)}
+              enabled={settings.features.watchTimer}
+              settings={settings.watchTimer}
+              onChange={patch => void updateWatchTimer(patch)}
+              onEnabledChange={enabled => void updateWatchTimerEnabled(enabled)}
+            />
+            <WatchReminderPanel
+              enabled={settings.features.watchReminder}
+              settings={settings.watchReminder}
+              onChange={patch => void updateWatchReminder(patch)}
+              onEnabledChange={enabled => void updateWatchReminderEnabled(enabled)}
             />
             <DataPanel
               importInputRef={importInputRef}
