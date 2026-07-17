@@ -11,6 +11,12 @@ export type SearchFilterSettings = {
   grayscaleMissingTitleHighlight: boolean;
 };
 
+export type FavoriteRecommendationSettings = {
+  enabled: boolean;
+  folderId: string;
+  recommendationRate: number;
+};
+
 export type CustomBackgroundSettings = {
   enabled: boolean;
   imageDataUrl: string;
@@ -38,6 +44,7 @@ export type WatchReminderSettings = {
 export type ExtensionSettings = {
   features: Record<FeatureKey, boolean>;
   searchFilter: SearchFilterSettings;
+  favoriteRecommendation: FavoriteRecommendationSettings;
   personalization: PlayerPersonalizationSettings;
   watchTimer: WatchTimerSettings;
   watchReminder: WatchReminderSettings;

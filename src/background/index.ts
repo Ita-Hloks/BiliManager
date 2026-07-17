@@ -4,6 +4,7 @@ import {
   replaceWatchTimerHistory,
   writeWatchTimerSession,
 } from "../shared/watchTimerHistory";
+import { fetchFavoriteVideos } from "./favoriteFolderApi";
 
 let watchTimerWriteQueue = Promise.resolve();
 
@@ -26,6 +27,24 @@ chrome.runtime.onMessage.addListener(
 
     if (message.type === "BILI_FILTER_SETTINGS_UPDATED") {
       sendResponse({ ok: true, source: "background", receivedAt: new Date().toISOString() });
+      return true;
+    }
+
+    if (message.type === "BILI_FILTER_GET_FAVORITE_VIDEOS") {
+      void fetchFavoriteVideos(message.payload.folderId).then(
+        favoriteFolder =>
+          sendResponse({
+            ok: true,
+            source: "background",
+            receivedAt: new Date().toISOString(),
+            favoriteFolder,
+          }),
+        error =>
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : "收藏夹读取失败",
+          }),
+      );
       return true;
     }
 

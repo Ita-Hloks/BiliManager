@@ -2,6 +2,7 @@ import { clamp } from "./number";
 import type {
   CustomBackgroundSettings,
   ExtensionSettings,
+  FavoriteRecommendationSettings,
   PlayerPersonalizationSettings,
   SearchFilterSettings,
   WatchReminderSettings,
@@ -24,6 +25,11 @@ export const defaultSettings: ExtensionSettings = {
     grayscaleLowDanmakuViewRate: true,
     filterMissingTitleHighlight: true,
     grayscaleMissingTitleHighlight: true,
+  },
+  favoriteRecommendation: {
+    enabled: true,
+    folderId: "2045665532",
+    recommendationRate: 0.35,
   },
   personalization: {
     blockRelatedVideos: false,
@@ -56,6 +62,10 @@ export function normalizeSettings(
   const source = value ?? {};
   const theme = normalizeTheme(source.theme, currentSettings.theme);
   const searchFilter = normalizeSearchFilter(source.searchFilter, currentSettings.searchFilter);
+  const favoriteRecommendation = normalizeFavoriteRecommendation(
+    source.favoriteRecommendation,
+    currentSettings.favoriteRecommendation,
+  );
   const personalization = normalizePersonalization(
     source.personalization,
     currentSettings.personalization,
@@ -73,7 +83,6 @@ export function normalizeSettings(
 
   return {
     ...currentSettings,
-    ...source,
     features: {
       enabled: source.features?.enabled ?? currentSettings.features.enabled ?? true,
       watchTimer: source.features?.watchTimer ?? currentSettings.features.watchTimer,
@@ -84,11 +93,31 @@ export function normalizeSettings(
       ...searchFilter,
       enabled: searchFilterEnabled,
     },
+    favoriteRecommendation,
     personalization,
     watchTimer: normalizeWatchTimer(source.watchTimer, currentSettings.watchTimer),
     watchReminder: normalizeWatchReminder(source.watchReminder, currentSettings.watchReminder),
     theme,
     updatedAt: new Date().toISOString(),
+  };
+}
+
+export function normalizeFavoriteRecommendation(
+  value: Partial<FavoriteRecommendationSettings> | undefined,
+  currentRecommendation: FavoriteRecommendationSettings,
+): FavoriteRecommendationSettings {
+  const folderId = typeof value?.folderId === "string" ? value.folderId.trim() : undefined;
+
+  return {
+    enabled: typeof value?.enabled === "boolean" ? value.enabled : currentRecommendation.enabled,
+    folderId:
+      folderId === undefined || (!/^\d+$/.test(folderId) && folderId !== "")
+        ? currentRecommendation.folderId
+        : folderId,
+    recommendationRate:
+      typeof value?.recommendationRate === "number"
+        ? clamp(value.recommendationRate, 0, 1)
+        : currentRecommendation.recommendationRate,
   };
 }
 

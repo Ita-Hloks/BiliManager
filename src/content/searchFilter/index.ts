@@ -1,4 +1,11 @@
+import type { FavoriteVideo } from "../../shared/favoriteFolder";
 import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../../shared/types";
+import type { FavoriteRecommendationPool } from "../favoriteRecommendation";
+import {
+  getFavoriteVideoUrl,
+  normalizeFavoriteCoverUrl,
+  pickFavoriteRecommendation,
+} from "../favoriteRecommendation";
 import type { BilibiliPageThemeDetection } from "../pageTheme";
 import { detectBilibiliPageTheme } from "../pageTheme";
 
@@ -6,6 +13,7 @@ type SearchCard = {
   cardEl: HTMLElement;
   titleEl: HTMLElement | null;
   title: string;
+  videoUrl: string;
   uploader: string;
   viewCount: number | null;
   danmakuCount: number | null;
@@ -25,6 +33,9 @@ const GATE_ATTR = "data-bili-manager-filter-gate";
 const ORIGINAL_TITLE_ATTR = "data-bili-manager-original-title";
 const REASON_TEXT_ATTR = "data-bili-manager-filter-reason-text";
 const REASON_CLASS = "bili-manager-filter-reasons";
+const RECOMMENDATION_HOST_CLASS = "bili-manager-filter-reasons--recommendation";
+const RECOMMENDATION_LINK_ATTR = "data-bili-manager-favorite-recommendation-link";
+const RECOMMENDATION_ID_ATTR = "data-bili-manager-favorite-recommendation-id";
 const TITLE_CLASS = "bili-manager-filtered-title";
 const UNHIGHLIGHTED_TITLE_CLASS = "bili-manager-unhighlighted-title";
 const GRAYSCALE_COVER_CLASS = "bili-manager-grayscale-cover";
@@ -35,6 +46,11 @@ const PAGE_DARK_CLASS = "bili-manager-page-dark";
 const PAGE_LIGHT_CLASS = "bili-manager-page-light";
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
 type FilterGateState = "locked" | "peek" | "unlocked";
+const recommendationsByCard = new WeakMap<HTMLElement, FavoriteVideo>();
+const EMPTY_RECOMMENDATION_POOL: FavoriteRecommendationPool = {
+  videos: [],
+  recommendationRate: 0,
+};
 const TEXT = {
   titleRuleLabel: "过滤词",
   uploaderRuleLabel: "UP 主过滤词",
@@ -125,7 +141,10 @@ export function getSearchSnapshot(stats: SearchFilterStats): RuntimeSnapshot {
   };
 }
 
-export function applySearchFilter(settings: SearchFilterSettings): SearchFilterStats {
+export function applySearchFilter(
+  settings: SearchFilterSettings,
+  recommendationPool: FavoriteRecommendationPool = EMPTY_RECOMMENDATION_POOL,
+): SearchFilterStats {
   if (!isSearchPage()) {
     clearAllFilterStates();
     return createStats(false, settings.enabled, 0, 0, []);
@@ -143,7 +162,12 @@ export function applySearchFilter(settings: SearchFilterSettings): SearchFilterS
 
     if (settings.enabled && result.reasons.length > 0) {
       filtered += 1;
-      markFiltered(card, result.reasons, pageTheme);
+      const recommendation = pickFavoriteRecommendation(
+        recommendationPool,
+        `${location.pathname}${location.search}:${card.videoUrl || card.title}`,
+        getBvid(card.videoUrl),
+      );
+      markFiltered(card, result.reasons, pageTheme, recommendation);
     } else {
       clearFilterState(card.cardEl);
       applyGrayscaleState(
@@ -208,6 +232,7 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
 function toSearchCard(cardEl: HTMLElement): SearchCard {
   const titleEl = queryFirst(cardEl, selectors.title);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
+  const videoLink = queryFirst(cardEl, selectors.videoLinks);
   const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
 
@@ -215,6 +240,7 @@ function toSearchCard(cardEl: HTMLElement): SearchCard {
     cardEl,
     titleEl,
     title: normalizeText(titleEl?.textContent || titleEl?.getAttribute("title") || ""),
+    videoUrl: videoLink?.getAttribute("href") ?? "",
     uploader: normalizeText(queryFirst(cardEl, selectors.uploader)?.textContent ?? ""),
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
     danmakuCount: parseMetric(metricsText, TEXT.danmakuLabels) ?? fallbackCounts[1] ?? null,
@@ -286,7 +312,12 @@ function evaluateCard(
   return { reasons, regexErrors, lowInteractionRate };
 }
 
-function markFiltered(card: SearchCard, reasons: string[], pageTheme: BilibiliPageThemeDetection) {
+function markFiltered(
+  card: SearchCard,
+  reasons: string[],
+  pageTheme: BilibiliPageThemeDetection,
+  recommendation: FavoriteVideo | null,
+) {
   bindFilterGateEvents();
   if (!card.cardEl.hasAttribute(GATE_ATTR)) card.cardEl.setAttribute(GATE_ATTR, "locked");
 
@@ -313,6 +344,8 @@ function markFiltered(card: SearchCard, reasons: string[], pageTheme: BilibiliPa
   }
 
   const visibleReason = reasons.join(" / ");
+  if (recommendation) recommendationsByCard.set(card.cardEl, recommendation);
+  else recommendationsByCard.delete(card.cardEl);
   card.cardEl.setAttribute(REASON_TEXT_ATTR, visibleReason);
   updateReasonOverlay(card.cardEl, reasonEl, visibleReason);
   suppressTitleTooltips(card.cardEl);
@@ -331,6 +364,7 @@ function clearAllFilterStates() {
 }
 
 function clearFilterState(cardEl: HTMLElement) {
+  recommendationsByCard.delete(cardEl);
   restoreTitleTooltips(cardEl);
   cardEl.removeAttribute(STATE_ATTR);
   cardEl.removeAttribute(GATE_ATTR);
@@ -436,6 +470,7 @@ function handleFilteredContextMenu(event: MouseEvent) {
 function getEventFilteredCard(event: Event): HTMLElement | null {
   const target = event.target;
   if (!(target instanceof Element)) return null;
+  if (target.closest(`[${RECOMMENDATION_LINK_ATTR}]`)) return null;
   return target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
 }
 
@@ -455,11 +490,94 @@ function refreshReasonOverlay(cardEl: HTMLElement) {
 function updateReasonOverlay(cardEl: HTMLElement, reasonEl: HTMLElement, visibleReason: string) {
   const gateState = getGateState(cardEl);
   const text = gateState === "peek" ? TEXT.gateGuide : visibleReason;
+  const recommendation = gateState === "locked" ? recommendationsByCard.get(cardEl) : undefined;
 
   reasonEl.classList.toggle("bili-manager-filter-reasons--hidden", gateState === "unlocked");
-  if (reasonEl.textContent !== text) reasonEl.textContent = text;
-  reasonEl.setAttribute("aria-label", text || visibleReason);
+  reasonEl.classList.toggle(RECOMMENDATION_HOST_CLASS, !!recommendation);
+  if (recommendation) renderFavoriteRecommendation(reasonEl, recommendation);
+  else setReasonText(reasonEl, text);
+  reasonEl.setAttribute(
+    "aria-label",
+    recommendation
+      ? `来自收藏夹：${recommendation.title}；原结果过滤原因：${visibleReason}`
+      : text || visibleReason,
+  );
   reasonEl.removeAttribute("title");
+}
+
+function renderFavoriteRecommendation(reasonEl: HTMLElement, video: FavoriteVideo): void {
+  const recommendationId = video.bvid || video.id;
+  if (
+    reasonEl.getAttribute(RECOMMENDATION_ID_ATTR) === recommendationId &&
+    reasonEl.querySelector(`[${RECOMMENDATION_LINK_ATTR}]`)
+  ) {
+    return;
+  }
+
+  const link = document.createElement("span");
+  link.className = "bili-manager-favorite-recommendation";
+  link.tabIndex = 0;
+  link.setAttribute("role", "link");
+  link.setAttribute(RECOMMENDATION_LINK_ATTR, "true");
+  const videoUrl = getFavoriteVideoUrl(video);
+  link.addEventListener("click", event => openFavoriteVideo(event, videoUrl));
+  link.addEventListener("auxclick", event => {
+    if (event.button === 1) openFavoriteVideo(event, videoUrl);
+  });
+  link.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") openFavoriteVideo(event, videoUrl);
+  });
+
+  if (video.coverUrl) {
+    const cover = document.createElement("img");
+    cover.className = "bili-manager-favorite-recommendation__cover";
+    cover.src = normalizeFavoriteCoverUrl(video.coverUrl);
+    cover.alt = "";
+    cover.loading = "lazy";
+    link.append(cover);
+  }
+
+  const shade = document.createElement("span");
+  shade.className = "bili-manager-favorite-recommendation__shade";
+
+  const content = document.createElement("span");
+  content.className = "bili-manager-favorite-recommendation__content";
+
+  const source = document.createElement("span");
+  source.className = "bili-manager-favorite-recommendation__source";
+  source.textContent = "来自收藏夹";
+
+  const title = document.createElement("span");
+  title.className = "bili-manager-favorite-recommendation__title";
+  title.textContent = video.title;
+
+  content.append(source, title);
+  if (video.uploader) {
+    const uploader = document.createElement("span");
+    uploader.className = "bili-manager-favorite-recommendation__uploader";
+    uploader.textContent = video.uploader;
+    content.append(uploader);
+  }
+
+  link.append(shade, content);
+  reasonEl.replaceChildren(link);
+  reasonEl.setAttribute(RECOMMENDATION_ID_ATTR, recommendationId);
+}
+
+function setReasonText(reasonEl: HTMLElement, text: string): void {
+  reasonEl.removeAttribute(RECOMMENDATION_ID_ATTR);
+  if (reasonEl.textContent !== text || reasonEl.children.length > 0) reasonEl.textContent = text;
+}
+
+function openFavoriteVideo(event: Event, videoUrl: string): void {
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  window.open(videoUrl, "_blank", "noopener,noreferrer");
+}
+
+function getBvid(value: string): string {
+  return value.match(/\/video\/(BV[0-9A-Z]+)/i)?.[1]?.toUpperCase() ?? "";
 }
 
 function suppressTitleTooltips(cardEl: HTMLElement) {

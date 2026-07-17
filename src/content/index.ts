@@ -1,6 +1,7 @@
 import type { ExtensionMessage } from "../shared/messaging";
 import { getSettings, SETTINGS_KEY } from "../shared/storage";
 import type {
+  FavoriteRecommendationSettings,
   PlayerPersonalizationSettings,
   RuntimeSnapshot,
   SearchFilterSettings,
@@ -18,6 +19,10 @@ import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applyPlayerWatchReminder } from "./playerWatchReminder";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
+import {
+  getCachedFavoriteRecommendationPool,
+  loadFavoriteRecommendationPool,
+} from "./favoriteRecommendation";
 
 const disabledPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
@@ -63,8 +68,29 @@ async function scanCurrentPage() {
   applyCustomBackground(settings.personalization.customBackground);
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
   applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
+  if (searchPage) {
+    const cachedRecommendationPool = getCachedFavoriteRecommendationPool(
+      settings.favoriteRecommendation,
+    );
+    const initialStats = applySearchFilter(
+      settings.searchFilter,
+      cachedRecommendationPool ?? undefined,
+    );
+    if (
+      !settings.searchFilter.enabled ||
+      !settings.favoriteRecommendation.enabled ||
+      !settings.favoriteRecommendation.folderId ||
+      settings.favoriteRecommendation.recommendationRate <= 0
+    ) {
+      return initialStats;
+    }
 
-  if (searchPage) return applySearchFilter(settings.searchFilter);
+    const recommendationPool = await loadFavoriteRecommendationPool(
+      settings.favoriteRecommendation,
+    );
+    if (recommendationPool.videos.length === 0) return initialStats;
+    return applySearchFilter(settings.searchFilter, recommendationPool);
+  }
 
   return {
     ...unavailableSearchStats,
@@ -75,6 +101,7 @@ async function scanCurrentPage() {
 
 async function getContentSettings(): Promise<{
   searchFilter: SearchFilterSettings;
+  favoriteRecommendation: FavoriteRecommendationSettings;
   personalization: PlayerPersonalizationSettings;
   watchTimer: WatchTimerSettings;
   watchTimerEnabled: boolean;
@@ -88,6 +115,9 @@ async function getContentSettings(): Promise<{
     searchFilter: pluginEnabled
       ? settings.searchFilter
       : { ...settings.searchFilter, enabled: false },
+    favoriteRecommendation: pluginEnabled
+      ? settings.favoriteRecommendation
+      : { ...settings.favoriteRecommendation, enabled: false },
     personalization: pluginEnabled ? settings.personalization : disabledPersonalization,
     watchTimer: settings.watchTimer,
     watchTimerEnabled: pluginEnabled && settings.features.watchTimer,

@@ -100,3 +100,29 @@
 .bili-manager-filter-reasons--hidden {
   @apply opacity-0;
 }
+.bili-manager-filter-reasons--recommendation {
+  @apply p-0;
+}
+.bili-manager-favorite-recommendation {
+  @apply absolute inset-0 cursor-pointer overflow-hidden text-left no-underline outline-none focus-visible:ring-2 focus-visible:ring-bili-blue;
+  border-radius: inherit;
+  pointer-events: auto;
+}
+.bili-manager-favorite-recommendation__cover {
+  @apply absolute inset-0 h-full w-full object-cover brightness-75;
+}
+.bili-manager-favorite-recommendation__shade {
+  @apply absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10;
+}
+.bili-manager-favorite-recommendation__content {
+  @apply absolute inset-x-0 bottom-0 flex flex-col gap-1 p-3 text-white;
+}
+.bili-manager-favorite-recommendation__source {
+  @apply w-fit rounded-full bg-bili-pink px-2 py-0.5 text-[10px] font-semibold text-white;
+}
+.bili-manager-favorite-recommendation__title {
+  @apply max-h-10 overflow-hidden text-sm font-semibold leading-5 text-white;
+}
+.bili-manager-favorite-recommendation__uploader {
+  @apply truncate text-[11px] text-white/75;
+}

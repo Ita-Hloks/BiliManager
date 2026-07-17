@@ -7,6 +7,7 @@ import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../sha
 import type {
   CustomBackgroundSettings,
   ExtensionSettings,
+  FavoriteRecommendationSettings,
   PlayerPersonalizationSettings,
   SearchFilterSettings,
   WatchReminderSettings,
@@ -93,6 +94,16 @@ function OptionsApp() {
     await updateSettings({
       ...settings,
       searchFilter,
+    });
+  }
+
+  async function updateFavoriteRecommendation(patch: Partial<FavoriteRecommendationSettings>) {
+    await updateSettings({
+      ...settings,
+      favoriteRecommendation: {
+        ...settings.favoriteRecommendation,
+        ...patch,
+      },
     });
   }
 
@@ -271,7 +282,9 @@ function OptionsApp() {
 
           <div className="space-y-4">
             <SearchFilterPanel
+              favoriteRecommendation={settings.favoriteRecommendation}
               settings={settings.searchFilter}
+              onFavoriteRecommendationChange={patch => void updateFavoriteRecommendation(patch)}
               onChange={patch => void updateSearchFilter(patch)}
             />
             <PersonalizationPanel
