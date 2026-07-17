@@ -4,7 +4,6 @@ import { Button } from "../components/button";
 import { Switch } from "../components/switch";
 import { clamp, getRangeProgressStyle } from "../utils";
 
-// 定时器面板把功能启用状态和浮层参数分开回传，避免 features.watchTimer 与 watchTimer 设置互相污染。
 export function WatchTimerPanel(props: {
   enabled: boolean;
   settings: WatchTimerSettings;
@@ -21,17 +20,17 @@ export function WatchTimerPanel(props: {
           <div className="flex items-start gap-3">
             <Clock className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
-              <h2 className="bm-text-heading text-base font-medium">定时器</h2>
+              <h2 className="bm-text-heading text-base font-medium">计时器</h2>
               <p className="bm-text-muted mt-1 text-sm">统计当前播放器实际播放时间</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-5 px-4 pb-5 sm:px-5">
+      <div className="space-y-5 px-4 py-5 sm:px-5">
         <Button onClick={() => props.onEnabledChange(!props.enabled)} variant="toggleRow">
           <span>
-            <span className="block font-medium">启用定时器</span>
+            <span className="block font-medium">启用计时器</span>
             <span className="bm-text-muted mt-1 block text-xs">
               播放器浮层可拖动，全屏时自动隐藏
             </span>
@@ -62,7 +61,7 @@ export function WatchTimerPanel(props: {
           </div>
 
           <label className="block min-w-0">
-            <span className="bm-text-label mb-2 block text-sm font-medium">定时器透明度</span>
+            <span className="bm-text-label mb-2 block text-sm font-medium">计时器透明度</span>
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 className="bm-range min-w-0 flex-1"

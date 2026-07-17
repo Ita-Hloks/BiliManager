@@ -52,8 +52,8 @@ export class WatchTimerView {
     this.closeButton = document.createElement("button");
     this.closeButton.className = "bili-manager-watch-timer__close";
     this.closeButton.type = "button";
-    this.closeButton.ariaLabel = "关闭定时器";
-    this.closeButton.title = "关闭定时器";
+    this.closeButton.ariaLabel = "关闭计时器";
+    this.closeButton.title = "关闭计时器";
     this.closeButton.textContent = "×";
     this.closeButton.addEventListener("click", event => {
       event.stopPropagation();
@@ -74,7 +74,7 @@ export class WatchTimerView {
     this.closePrompt = document.createElement("div");
     this.closePrompt.className = "bili-manager-watch-timer__prompt";
     this.closePrompt.setAttribute("aria-hidden", "true");
-    this.closePrompt.setAttribute("aria-label", "关闭定时器确认");
+    this.closePrompt.setAttribute("aria-label", "关闭计时器确认");
     this.closePrompt.setAttribute("role", "alertdialog");
     this.closePrompt.inert = true;
 
@@ -82,10 +82,10 @@ export class WatchTimerView {
     promptText.className = "bili-manager-watch-timer__prompt-text";
     const promptTitle = document.createElement("strong");
     promptTitle.className = "bili-manager-watch-timer__prompt-title";
-    promptTitle.textContent = "是否要关闭定时器？";
+    promptTitle.textContent = "是否要关闭计时器？";
     const promptHint = document.createElement("span");
     promptHint.className = "bili-manager-watch-timer__prompt-hint";
-    promptHint.textContent = "如需重新打开，请前往设置 → 定时器并重新启用。";
+    promptHint.textContent = "如需重新打开，请前往设置 → 计时器并重新启用";
     promptText.append(promptTitle, promptHint);
 
     const promptActions = document.createElement("div");

@@ -32,5 +32,11 @@ export function parseImportedSettings(
 }
 
 function hasSettingsShape(value: Partial<ExtensionSettings>) {
-  return !!value.searchFilter || !!value.personalization || !!value.features || !!value.theme;
+  return (
+    !!value.searchFilter ||
+    !!value.personalization ||
+    !!value.features ||
+    !!value.watchReminder ||
+    !!value.theme
+  );
 }

@@ -5,6 +5,7 @@ import type {
   RuntimeSnapshot,
   SearchFilterSettings,
   SearchFilterStats,
+  WatchReminderSettings,
   WatchTimerSettings,
 } from "../shared/types";
 import {
@@ -15,6 +16,7 @@ import {
 import { applyCustomBackground } from "./customBackground";
 import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
+import { applyPlayerWatchReminder } from "./playerWatchReminder";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
 
 const disabledPersonalization: PlayerPersonalizationSettings = {
@@ -60,6 +62,7 @@ async function scanCurrentPage() {
   applyPlayerPersonalization(settings.personalization);
   applyCustomBackground(settings.personalization.customBackground);
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
+  applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
 
   if (searchPage) return applySearchFilter(settings.searchFilter);
 
@@ -75,6 +78,8 @@ async function getContentSettings(): Promise<{
   personalization: PlayerPersonalizationSettings;
   watchTimer: WatchTimerSettings;
   watchTimerEnabled: boolean;
+  watchReminder: WatchReminderSettings;
+  watchReminderEnabled: boolean;
 }> {
   const settings = await getSettings();
   const pluginEnabled = settings.features.enabled;
@@ -86,6 +91,8 @@ async function getContentSettings(): Promise<{
     personalization: pluginEnabled ? settings.personalization : disabledPersonalization,
     watchTimer: settings.watchTimer,
     watchTimerEnabled: pluginEnabled && settings.features.watchTimer,
+    watchReminder: settings.watchReminder,
+    watchReminderEnabled: pluginEnabled && settings.features.watchReminder,
   };
 }
 

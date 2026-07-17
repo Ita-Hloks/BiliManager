@@ -4,6 +4,7 @@ import type {
   ExtensionSettings,
   PlayerPersonalizationSettings,
   SearchFilterSettings,
+  WatchReminderSettings,
   WatchTimerSettings,
 } from "./types";
 
@@ -11,6 +12,7 @@ export const defaultSettings: ExtensionSettings = {
   features: {
     enabled: true,
     watchTimer: false,
+    watchReminder: false,
     dailyStats: false,
   },
   searchFilter: {
@@ -37,6 +39,10 @@ export const defaultSettings: ExtensionSettings = {
   },
   watchTimer: {
     opacity: 0.86,
+  },
+  watchReminder: {
+    limitMinutes: 60,
+    interruptionMinutes: 10,
   },
   theme: "system",
   updatedAt: new Date(0).toISOString(),
@@ -71,6 +77,7 @@ export function normalizeSettings(
     features: {
       enabled: source.features?.enabled ?? currentSettings.features.enabled ?? true,
       watchTimer: source.features?.watchTimer ?? currentSettings.features.watchTimer,
+      watchReminder: source.features?.watchReminder ?? currentSettings.features.watchReminder,
       dailyStats: source.features?.dailyStats ?? currentSettings.features.dailyStats,
     },
     searchFilter: {
@@ -79,6 +86,7 @@ export function normalizeSettings(
     },
     personalization,
     watchTimer: normalizeWatchTimer(source.watchTimer, currentSettings.watchTimer),
+    watchReminder: normalizeWatchReminder(source.watchReminder, currentSettings.watchReminder),
     theme,
     updatedAt: new Date().toISOString(),
   };
@@ -174,7 +182,7 @@ export function normalizeCustomBackground(
   };
 }
 
-// 定时器透明度同时影响设置页预览和内容脚本浮层，统一限制在可读范围内。
+// 计时器透明度同时影响设置页预览和内容脚本浮层，统一限制在可读范围内。
 export function normalizeWatchTimer(
   value: Partial<WatchTimerSettings> | undefined,
   currentWatchTimer: WatchTimerSettings,
@@ -185,6 +193,22 @@ export function normalizeWatchTimer(
       typeof value?.opacity === "number"
         ? clamp(value.opacity, 0.45, 1)
         : currentWatchTimer.opacity,
+  };
+}
+
+export function normalizeWatchReminder(
+  value: Partial<WatchReminderSettings> | undefined,
+  currentWatchReminder: WatchReminderSettings,
+): WatchReminderSettings {
+  return {
+    limitMinutes:
+      typeof value?.limitMinutes === "number"
+        ? Math.round(clamp(value.limitMinutes, 1, 720))
+        : currentWatchReminder.limitMinutes,
+    interruptionMinutes:
+      typeof value?.interruptionMinutes === "number"
+        ? Math.round(clamp(value.interruptionMinutes, 1, 120))
+        : currentWatchReminder.interruptionMinutes,
   };
 }
 
