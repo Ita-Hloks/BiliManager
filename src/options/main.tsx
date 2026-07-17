@@ -9,6 +9,7 @@ import type {
   ExtensionSettings,
   PlayerPersonalizationSettings,
   SearchFilterSettings,
+  WatchReminderSettings,
   WatchTimerSettings,
 } from "../shared/types";
 import { ThemeSwitch } from "./components/themeSwitch";
@@ -31,7 +32,7 @@ type SectionId = "search-filter" | "personalization" | "watch-timer" | "data";
 const sectionNavItems = [
   { id: "search-filter", label: "过滤搜索", icon: Filter },
   { id: "personalization", label: "个性化", icon: Sparkles },
-  { id: "watch-timer", label: "定时器", icon: Clock },
+  { id: "watch-timer", label: "播放时间", icon: Clock },
   { id: "data", label: "配置", icon: Download },
 ] as const satisfies ReadonlyArray<{
   id: SectionId;
@@ -124,6 +125,26 @@ function OptionsApp() {
       features: {
         ...settings.features,
         watchTimer: enabled,
+      },
+    });
+  }
+
+  async function updateWatchReminder(patch: Partial<WatchReminderSettings>) {
+    await updateSettings({
+      ...settings,
+      watchReminder: {
+        ...settings.watchReminder,
+        ...patch,
+      },
+    });
+  }
+
+  async function updateWatchReminderEnabled(enabled: boolean) {
+    await updateSettings({
+      ...settings,
+      features: {
+        ...settings.features,
+        watchReminder: enabled,
       },
     });
   }
@@ -260,10 +281,14 @@ function OptionsApp() {
               onChange={patch => void updatePersonalization(patch)}
             />
             <WatchTimerPanel
-              enabled={settings.features.watchTimer}
-              settings={settings.watchTimer}
-              onChange={patch => void updateWatchTimer(patch)}
-              onEnabledChange={enabled => void updateWatchTimerEnabled(enabled)}
+              reminderEnabled={settings.features.watchReminder}
+              reminderSettings={settings.watchReminder}
+              timerEnabled={settings.features.watchTimer}
+              timerSettings={settings.watchTimer}
+              onReminderChange={patch => void updateWatchReminder(patch)}
+              onReminderEnabledChange={enabled => void updateWatchReminderEnabled(enabled)}
+              onTimerChange={patch => void updateWatchTimer(patch)}
+              onTimerEnabledChange={enabled => void updateWatchTimerEnabled(enabled)}
             />
             <DataPanel
               importInputRef={importInputRef}

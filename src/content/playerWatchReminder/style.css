@@ -1,0 +1,19 @@
+#bili-manager-watch-reminder {
+  @apply fixed inset-0 z-[2147483647] flex items-center justify-center bg-slate-950/55 p-4 font-sans backdrop-blur-sm;
+}
+
+.bili-manager-watch-reminder__panel {
+  @apply flex w-full max-w-sm flex-col rounded-2xl border border-white/10 bg-[#1c1f26] p-5 text-slate-100 shadow-[0_24px_80px_rgba(2,8,23,0.55)];
+}
+
+.bili-manager-watch-reminder__title {
+  @apply text-lg font-semibold;
+}
+
+.bili-manager-watch-reminder__message {
+  @apply mt-2 text-sm text-slate-300;
+}
+
+.bili-manager-watch-reminder__button {
+  @apply mt-5 self-end rounded-lg bg-bili-blue px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#009bd3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60;
+}

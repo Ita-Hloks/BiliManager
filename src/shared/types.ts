@@ -1,4 +1,4 @@
-export type FeatureKey = "enabled" | "watchTimer" | "dailyStats";
+export type FeatureKey = "enabled" | "watchTimer" | "watchReminder" | "dailyStats";
 
 export type SearchFilterSettings = {
   enabled: boolean;
@@ -30,11 +30,17 @@ export type WatchTimerSettings = {
   opacity: number;
 };
 
+export type WatchReminderSettings = {
+  limitMinutes: number;
+  interruptionMinutes: number;
+};
+
 export type ExtensionSettings = {
   features: Record<FeatureKey, boolean>;
   searchFilter: SearchFilterSettings;
   personalization: PlayerPersonalizationSettings;
   watchTimer: WatchTimerSettings;
+  watchReminder: WatchReminderSettings;
   theme: "system" | "light" | "dark";
   updatedAt: string;
 };

@@ -123,6 +123,7 @@ function createPortableSettings(settings: ExtensionSettings): PortableSettings {
       disableRecommendationAutoplay: settings.personalization.disableRecommendationAutoplay,
     },
     watchTimer: settings.watchTimer,
+    watchReminder: settings.watchReminder,
     theme: settings.theme,
     updatedAt: settings.updatedAt,
   };
@@ -173,7 +174,13 @@ function hasSettingsShape(value: unknown): value is PortableSettings {
   if (!value || typeof value !== "object") return false;
 
   const record = value as PortableSettings;
-  return !!record.searchFilter || !!record.personalization || !!record.features || !!record.theme;
+  return (
+    !!record.searchFilter ||
+    !!record.personalization ||
+    !!record.features ||
+    !!record.watchReminder ||
+    !!record.theme
+  );
 }
 
 function getImportMessage(kind: DataExportKind): string {
