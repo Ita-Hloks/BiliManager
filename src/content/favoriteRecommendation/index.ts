@@ -67,8 +67,8 @@ export function pickFavoriteRecommendation(
 
 export function getFavoriteVideoUrl(video: FavoriteVideo): string {
   return video.bvid
-    ? `https://www.bilibili.com/video/${video.bvid}`
-    : `https://www.bilibili.com/video/av${video.id}`;
+    ? `https://www.bilibili.com/video/${video.bvid}/`
+    : `https://www.bilibili.com/video/av${video.id}/`;
 }
 
 export function normalizeFavoriteCoverUrl(value: string): string {

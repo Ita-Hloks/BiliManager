@@ -12,6 +12,7 @@ import { detectBilibiliPageTheme } from "../pageTheme";
 type SearchCard = {
   cardEl: HTMLElement;
   titleEl: HTMLElement | null;
+  uploaderEl: HTMLElement | null;
   title: string;
   videoUrl: string;
   uploader: string;
@@ -34,6 +35,7 @@ const ORIGINAL_TITLE_ATTR = "data-bili-manager-original-title";
 const REASON_TEXT_ATTR = "data-bili-manager-filter-reason-text";
 const REASON_CLASS = "bili-manager-filter-reasons";
 const RECOMMENDATION_HOST_CLASS = "bili-manager-filter-reasons--recommendation";
+const RECOMMENDATION_META_HIDDEN_CLASS = "bili-manager-favorite-original-meta-hidden";
 const RECOMMENDATION_LINK_ATTR = "data-bili-manager-favorite-recommendation-link";
 const RECOMMENDATION_ID_ATTR = "data-bili-manager-favorite-recommendation-id";
 const TITLE_CLASS = "bili-manager-filtered-title";
@@ -47,6 +49,10 @@ const PAGE_LIGHT_CLASS = "bili-manager-page-light";
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
 type FilterGateState = "locked" | "peek" | "unlocked";
 const recommendationsByCard = new WeakMap<HTMLElement, FavoriteVideo>();
+const originalRecommendationText = new WeakMap<
+  HTMLElement,
+  { titleHtml: string | null; uploaderHtml: string | null }
+>();
 const EMPTY_RECOMMENDATION_POOL: FavoriteRecommendationPool = {
   videos: [],
   recommendationRate: 0,
@@ -232,6 +238,7 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
 function toSearchCard(cardEl: HTMLElement): SearchCard {
   const titleEl = queryFirst(cardEl, selectors.title);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
+  const uploaderEl = queryFirst(cardEl, selectors.uploader);
   const videoLink = queryFirst(cardEl, selectors.videoLinks);
   const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
@@ -239,6 +246,7 @@ function toSearchCard(cardEl: HTMLElement): SearchCard {
   return {
     cardEl,
     titleEl,
+    uploaderEl,
     title: normalizeText(titleEl?.textContent || titleEl?.getAttribute("title") || ""),
     videoUrl: videoLink?.getAttribute("href") ?? "",
     uploader: normalizeText(queryFirst(cardEl, selectors.uploader)?.textContent ?? ""),
@@ -347,6 +355,7 @@ function markFiltered(
   if (recommendation) recommendationsByCard.set(card.cardEl, recommendation);
   else recommendationsByCard.delete(card.cardEl);
   card.cardEl.setAttribute(REASON_TEXT_ATTR, visibleReason);
+  applyFavoriteCardText(card, recommendation);
   updateReasonOverlay(card.cardEl, reasonEl, visibleReason);
   suppressTitleTooltips(card.cardEl);
 }
@@ -364,6 +373,7 @@ function clearAllFilterStates() {
 }
 
 function clearFilterState(cardEl: HTMLElement) {
+  restoreFavoriteCardText(cardEl);
   recommendationsByCard.delete(cardEl);
   restoreTitleTooltips(cardEl);
   cardEl.removeAttribute(STATE_ATTR);
@@ -392,6 +402,47 @@ function clearFilterState(cardEl: HTMLElement) {
   cardEl
     .querySelectorAll<HTMLElement>(".bili-manager-preview-disabled")
     .forEach(element => element.classList.remove("bili-manager-preview-disabled"));
+}
+
+function applyFavoriteCardText(card: SearchCard, recommendation: FavoriteVideo | null): void {
+  if (!recommendation) {
+    restoreFavoriteCardText(card.cardEl);
+    return;
+  }
+
+  if (!originalRecommendationText.has(card.cardEl)) {
+    originalRecommendationText.set(card.cardEl, {
+      titleHtml: card.titleEl?.innerHTML ?? null,
+      uploaderHtml: card.uploaderEl?.innerHTML ?? null,
+    });
+  }
+
+  if (card.titleEl) {
+    card.titleEl.textContent = recommendation.title;
+    card.titleEl.classList.remove(TITLE_CLASS);
+  }
+  if (card.uploaderEl) {
+    card.uploaderEl.textContent = recommendation.uploader || "";
+    card.uploaderEl.classList.remove(META_CLASS);
+  }
+
+  card.metadataEls.forEach(element => {
+    if (element !== card.uploaderEl) element.classList.add(RECOMMENDATION_META_HIDDEN_CLASS);
+  });
+}
+
+function restoreFavoriteCardText(cardEl: HTMLElement): void {
+  const original = originalRecommendationText.get(cardEl);
+  if (!original) return;
+
+  const titleEl = queryFirst(cardEl, selectors.title);
+  const uploaderEl = queryFirst(cardEl, selectors.uploader);
+  if (titleEl && original.titleHtml !== null) titleEl.innerHTML = original.titleHtml;
+  if (uploaderEl && original.uploaderHtml !== null) uploaderEl.innerHTML = original.uploaderHtml;
+  cardEl
+    .querySelectorAll<HTMLElement>(`.${RECOMMENDATION_META_HIDDEN_CLASS}`)
+    .forEach(element => element.classList.remove(RECOMMENDATION_META_HIDDEN_CLASS));
+  originalRecommendationText.delete(cardEl);
 }
 
 function applyGrayscaleState(card: SearchCard, enabled: boolean): void {
@@ -545,19 +596,9 @@ function renderFavoriteRecommendation(reasonEl: HTMLElement, video: FavoriteVide
 
   const source = document.createElement("span");
   source.className = "bili-manager-favorite-recommendation__source";
-  source.textContent = "来自收藏夹";
+  source.textContent = "收藏夹";
 
-  const title = document.createElement("span");
-  title.className = "bili-manager-favorite-recommendation__title";
-  title.textContent = video.title;
-
-  content.append(source, title);
-  if (video.uploader) {
-    const uploader = document.createElement("span");
-    uploader.className = "bili-manager-favorite-recommendation__uploader";
-    uploader.textContent = video.uploader;
-    content.append(uploader);
-  }
+  content.append(source);
 
   link.append(shade, content);
   reasonEl.replaceChildren(link);
