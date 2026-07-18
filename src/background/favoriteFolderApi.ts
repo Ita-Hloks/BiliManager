@@ -3,7 +3,15 @@ import type { FavoriteFolderResult, FavoriteVideo } from "../shared/favoriteFold
 const FAVORITE_LIST_ENDPOINT = "https://api.bilibili.com/x/v3/fav/resource/list";
 const PAGE_SIZE = 20;
 const MAX_PAGE_COUNT = 100;
+const FAVORITE_CACHE_KEY = "biliFilter.favoriteFolderCache";
 const INVALID_TITLES = new Set(["已失效视频", "视频已失效"]);
+
+type FavoriteVideoCacheEntry = {
+  result: FavoriteFolderResult;
+  cachedAt: string;
+};
+
+const favoriteVideoRequests = new Map<string, Promise<FavoriteFolderResult>>();
 
 type FavoriteResourceRecord = {
   id?: number | string;
@@ -30,6 +38,52 @@ type FavoriteListResponse = {
 export async function fetchFavoriteVideos(folderId: string): Promise<FavoriteFolderResult> {
   if (!/^\d+$/.test(folderId)) throw new Error("收藏夹 ID 无效");
 
+  const cached = await readFavoriteVideoCache(folderId);
+  if (cached) return cached.result;
+  return refreshFavoriteVideos(folderId);
+}
+
+export async function refreshFavoriteVideos(folderId: string): Promise<FavoriteFolderResult> {
+  if (!/^\d+$/.test(folderId)) throw new Error("收藏夹 ID 无效");
+
+  const pending = favoriteVideoRequests.get(folderId);
+  if (pending) return pending;
+
+  const request = fetchFavoriteVideosFromApi(folderId);
+  favoriteVideoRequests.set(folderId, request);
+
+  try {
+    const result = await request;
+    await writeFavoriteVideoCache({ result, cachedAt: new Date().toISOString() });
+    return result;
+  } finally {
+    if (favoriteVideoRequests.get(folderId) === request) {
+      favoriteVideoRequests.delete(folderId);
+    }
+  }
+}
+
+async function readFavoriteVideoCache(folderId: string): Promise<FavoriteVideoCacheEntry | null> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) return null;
+  const stored = await chrome.storage.local.get(FAVORITE_CACHE_KEY);
+  const cache = stored[FAVORITE_CACHE_KEY] as Record<string, FavoriteVideoCacheEntry> | undefined;
+  const entry = cache?.[folderId];
+  if (!entry || entry.result?.folderId !== folderId || !Array.isArray(entry.result.videos)) {
+    return null;
+  }
+  return entry;
+}
+
+async function writeFavoriteVideoCache(entry: FavoriteVideoCacheEntry): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) return;
+  const stored = await chrome.storage.local.get(FAVORITE_CACHE_KEY);
+  const cache =
+    (stored[FAVORITE_CACHE_KEY] as Record<string, FavoriteVideoCacheEntry> | undefined) ?? {};
+  cache[entry.result.folderId] = entry;
+  await chrome.storage.local.set({ [FAVORITE_CACHE_KEY]: cache });
+}
+
+async function fetchFavoriteVideosFromApi(folderId: string): Promise<FavoriteFolderResult> {
   const videos = new Map<string, FavoriteVideo>();
 
   for (let pageNumber = 1; pageNumber <= MAX_PAGE_COUNT; pageNumber += 1) {

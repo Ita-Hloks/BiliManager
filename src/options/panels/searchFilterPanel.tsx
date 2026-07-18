@@ -10,6 +10,8 @@ export function SearchFilterPanel(props: {
   favoriteRecommendation: FavoriteRecommendationSettings;
   settings: SearchFilterSettings;
   onFavoriteRecommendationChange: (patch: Partial<FavoriteRecommendationSettings>) => void;
+  favoriteRecommendationMessage: string;
+  onRefreshFavoriteRecommendation: () => void;
   onChange: (patch: Partial<SearchFilterSettings>) => void;
 }) {
   const ratePercent = toRatePercent(props.settings.minDanmakuViewRate);
@@ -234,6 +236,20 @@ export function SearchFilterPanel(props: {
               />
               <span className="bm-text-muted mt-1 block text-xs">取自收藏夹地址中的 fid 参数</span>
             </label>
+
+            <div className="flex items-center gap-3">
+              <Button
+                disabled={!props.favoriteRecommendation.folderId}
+                onClick={props.onRefreshFavoriteRecommendation}
+                size="sm"
+                variant="secondary"
+              >
+                手动更新收藏夹
+              </Button>
+              {props.favoriteRecommendationMessage && (
+                <span className="bm-text-muted text-xs">{props.favoriteRecommendationMessage}</span>
+              )}
+            </div>
 
             <label className="block">
               <span className="mb-2 flex items-center justify-between gap-3">
