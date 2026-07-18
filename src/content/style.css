@@ -1,4 +1,5 @@
 @import "./searchFilter/style.css";
+@import "./searchCleanup/style.css";
 @import "./playerPersonalization/style.css";
 @import "./playerWatchTimer/style.css";
 @import "./playerWatchReminder/style.css";
