@@ -19,12 +19,14 @@ import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applyPlayerWatchReminder } from "./playerWatchReminder";
 import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
+import { applySearchCleanup } from "./searchCleanup";
 import {
   getCachedFavoriteRecommendationPool,
   loadFavoriteRecommendationPool,
 } from "./favoriteRecommendation";
 
 const disabledPersonalization: PlayerPersonalizationSettings = {
+  filterTrending: false,
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
@@ -64,6 +66,7 @@ function getSnapshot(): RuntimeSnapshot {
 async function scanCurrentPage() {
   const settings = await getContentSettings();
   const searchPage = isSearchPage();
+  applySearchCleanup(settings.personalization.filterTrending);
   applyPlayerPersonalization(settings.personalization);
   applyCustomBackground(settings.personalization.customBackground);
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);

@@ -32,6 +32,7 @@ export const defaultSettings: ExtensionSettings = {
     recommendationRate: 0.35,
   },
   personalization: {
+    filterTrending: true,
     blockRelatedVideos: false,
     blockPlayerAds: false,
     disableRecommendationAutoplay: false,
@@ -167,6 +168,10 @@ export function normalizePersonalization(
 ): PlayerPersonalizationSettings {
   return {
     ...currentPersonalization,
+    filterTrending:
+      typeof value?.filterTrending === "boolean"
+        ? value.filterTrending
+        : currentPersonalization.filterTrending,
     blockRelatedVideos:
       typeof value?.blockRelatedVideos === "boolean"
         ? value.blockRelatedVideos

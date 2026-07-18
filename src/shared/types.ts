@@ -26,6 +26,7 @@ export type CustomBackgroundSettings = {
 };
 
 export type PlayerPersonalizationSettings = {
+  filterTrending: boolean;
   blockRelatedVideos: boolean;
   blockPlayerAds: boolean;
   disableRecommendationAutoplay: boolean;
