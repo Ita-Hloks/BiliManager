@@ -565,12 +565,14 @@ function renderFavoriteRecommendation(reasonEl: HTMLElement, video: FavoriteVide
     return;
   }
 
-  const link = document.createElement("span");
-  link.className = "bili-manager-favorite-recommendation";
-  link.tabIndex = 0;
-  link.setAttribute("role", "link");
-  link.setAttribute(RECOMMENDATION_LINK_ATTR, "true");
   const videoUrl = getFavoriteVideoUrl(video);
+  const link = document.createElement("a");
+  link.className = "bili-manager-favorite-recommendation";
+  link.href = videoUrl;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.tabIndex = 0;
+  link.setAttribute(RECOMMENDATION_LINK_ATTR, "true");
   link.addEventListener("click", event => openFavoriteVideo(event, videoUrl));
   link.addEventListener("auxclick", event => {
     if (event.button === 1) openFavoriteVideo(event, videoUrl);
@@ -618,7 +620,7 @@ function openFavoriteVideo(event: Event, videoUrl: string): void {
 }
 
 function getBvid(value: string): string {
-  return value.match(/\/video\/(BV[0-9A-Z]+)/i)?.[1]?.toUpperCase() ?? "";
+  return value.match(/\/video\/(BV[0-9A-Z]+)/i)?.[1] ?? "";
 }
 
 function suppressTitleTooltips(cardEl: HTMLElement) {

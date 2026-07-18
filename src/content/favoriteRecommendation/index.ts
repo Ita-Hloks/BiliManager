@@ -66,9 +66,30 @@ export function pickFavoriteRecommendation(
 }
 
 export function getFavoriteVideoUrl(video: FavoriteVideo): string {
-  return video.bvid
-    ? `https://www.bilibili.com/video/${video.bvid}/`
-    : `https://www.bilibili.com/video/av${video.id}/`;
+  const webLink = getBilibiliWebVideoUrl(video.link);
+  if (webLink) return webLink;
+  const bvid = getBilibiliVideoId(video.bvid);
+  return bvid
+    ? `https://www.bilibili.com/video/${bvid}`
+    : `https://www.bilibili.com/video/av${video.id}`;
+}
+
+function getBilibiliWebVideoUrl(value: string): string {
+  if (!value) return "";
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+    if (url.hostname !== "www.bilibili.com" && url.hostname !== "bilibili.com") return "";
+    if (!/^\/video\/(?:BV[0-9A-Za-z]+|av\d+)\/?$/.test(url.pathname)) return "";
+    return value;
+  } catch {
+    return "";
+  }
+}
+
+function getBilibiliVideoId(value: string): string {
+  return /^(?:BV[0-9A-Za-z]+|av\d+)$/.test(value) ? value : "";
 }
 
 export function normalizeFavoriteCoverUrl(value: string): string {

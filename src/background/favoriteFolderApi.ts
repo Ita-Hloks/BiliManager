@@ -12,6 +12,7 @@ type FavoriteResourceRecord = {
   cover?: string;
   bvid?: string;
   bv_id?: string;
+  link?: string;
   upper?: {
     name?: string;
   } | null;
@@ -100,13 +101,16 @@ function isFavoriteResourceRecord(value: unknown): value is FavoriteResourceReco
 
 function toFavoriteVideo(resource: FavoriteResourceRecord): FavoriteVideo | null {
   const id = resource.id === undefined ? "" : String(resource.id);
-  const bvid = (resource.bvid || resource.bv_id || "").trim().toUpperCase();
+  const bvidValue = (resource.bvid || resource.bv_id || "").trim();
+  const bvid = /^BV[0-9A-Za-z]+$/.test(bvidValue) ? bvidValue : "";
+  const link = resource.link?.trim() ?? "";
   const title = resource.title?.trim() ?? "";
   if ((!id && !bvid) || !title || resource.attr === 9 || INVALID_TITLES.has(title)) return null;
 
   return {
     id,
     bvid,
+    link,
     title,
     coverUrl: resource.cover?.trim() ?? "",
     uploader: resource.upper?.name?.trim() ?? "",
