@@ -1,5 +1,5 @@
-import { ChevronDown, ChevronUp, Filter } from "lucide-react";
-import type { SearchFilterSettings } from "../../shared/types";
+import { ChevronDown, ChevronUp, Filter, Folder } from "lucide-react";
+import type { FavoriteRecommendationSettings, SearchFilterSettings } from "../../shared/types";
 import { Button } from "../components/button";
 import { RuleListEditor } from "../components/ruleListEditor";
 import { Switch } from "../components/switch";
@@ -7,11 +7,19 @@ import { clamp, fromRatePercent, getRangeProgressStyle, toRatePercent } from "..
 
 // 搜索过滤面板只编辑 SearchFilterSettings patch，enabled 同步到 features 的规则留给 main.tsx 统一处理。
 export function SearchFilterPanel(props: {
+  favoriteRecommendation: FavoriteRecommendationSettings;
   settings: SearchFilterSettings;
+  onFavoriteRecommendationChange: (patch: Partial<FavoriteRecommendationSettings>) => void;
+  favoriteRecommendationMessage: string;
+  onRefreshFavoriteRecommendation: () => void;
   onChange: (patch: Partial<SearchFilterSettings>) => void;
 }) {
   const ratePercent = toRatePercent(props.settings.minDanmakuViewRate);
   const rangeStyle = getRangeProgressStyle(ratePercent * 100);
+  const recommendationPercent = Math.round(
+    clamp(props.favoriteRecommendation.recommendationRate, 0, 1) * 100,
+  );
+  const recommendationRangeStyle = getRangeProgressStyle(recommendationPercent);
 
   function stepRatePercent(delta: number) {
     const nextPercent = clamp(Number((ratePercent + delta).toFixed(2)), 0, 1);
@@ -187,6 +195,85 @@ export function SearchFilterPanel(props: {
               enabled={props.settings.grayscaleMissingTitleHighlight}
             />
           </Button>
+        </div>
+
+        <div className="overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:bg-[#15181e]">
+          <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-3 py-3 dark:border-[#30343c]">
+            <div className="flex items-center gap-2">
+              <Folder className="h-4 w-4 text-bili-blue" />
+              <span className="bm-text-label text-sm font-medium">收藏夹推荐</span>
+            </div>
+            <button
+              aria-label={
+                props.favoriteRecommendation.enabled ? "关闭收藏夹推荐" : "开启收藏夹推荐"
+              }
+              className="flex shrink-0 items-center justify-center"
+              onClick={() =>
+                props.onFavoriteRecommendationChange({
+                  enabled: !props.favoriteRecommendation.enabled,
+                })
+              }
+              type="button"
+            >
+              <Switch enabled={props.favoriteRecommendation.enabled} />
+            </button>
+          </div>
+
+          <div className="space-y-4 px-3 py-4">
+            <label className="block">
+              <span className="bm-text-label mb-2 block text-sm font-medium">收藏夹 ID</span>
+              <input
+                className="bm-text-input w-full"
+                inputMode="numeric"
+                placeholder="2045665532"
+                type="text"
+                value={props.favoriteRecommendation.folderId}
+                onChange={event =>
+                  props.onFavoriteRecommendationChange({
+                    folderId: event.target.value.replace(/\D/g, ""),
+                  })
+                }
+              />
+              <span className="bm-text-muted mt-1 block text-xs">取自收藏夹地址中的 fid 参数</span>
+            </label>
+
+            <div className="flex items-center gap-3">
+              <Button
+                disabled={!props.favoriteRecommendation.folderId}
+                onClick={props.onRefreshFavoriteRecommendation}
+                size="sm"
+                variant="secondary"
+              >
+                手动更新收藏夹
+              </Button>
+              {props.favoriteRecommendationMessage && (
+                <span className="bm-text-muted text-xs">{props.favoriteRecommendationMessage}</span>
+              )}
+            </div>
+
+            <label className="block">
+              <span className="mb-2 flex items-center justify-between gap-3">
+                <span className="bm-text-label text-sm font-medium">遮罩推荐比例</span>
+                <output className="bm-text-muted text-sm tabular-nums">
+                  {recommendationPercent}%
+                </output>
+              </span>
+              <input
+                className="bm-range w-full"
+                max="100"
+                min="0"
+                step="5"
+                style={recommendationRangeStyle}
+                type="range"
+                value={recommendationPercent.toString()}
+                onChange={event =>
+                  props.onFavoriteRecommendationChange({
+                    recommendationRate: clamp(Number(event.target.value), 0, 100) / 100,
+                  })
+                }
+              />
+            </label>
+          </div>
         </div>
       </div>
     </section>

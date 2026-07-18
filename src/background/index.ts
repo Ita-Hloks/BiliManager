@@ -4,6 +4,8 @@ import {
   replaceWatchTimerHistory,
   writeWatchTimerSession,
 } from "../shared/watchTimerHistory";
+import { fetchFavoriteVideos, refreshFavoriteVideos } from "./favoriteFolderApi";
+import type { FavoriteFolderResult } from "../shared/favoriteFolder";
 
 let watchTimerWriteQueue = Promise.resolve();
 
@@ -29,6 +31,22 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
 
+    if (message.type === "BILI_FILTER_GET_FAVORITE_VIDEOS") {
+      void respondWithFavoriteVideos(
+        () => fetchFavoriteVideos(message.payload.folderId),
+        sendResponse,
+      );
+      return true;
+    }
+
+    if (message.type === "BILI_FILTER_REFRESH_FAVORITE_VIDEOS") {
+      void respondWithFavoriteVideos(
+        () => refreshFavoriteVideos(message.payload.folderId),
+        sendResponse,
+      );
+      return true;
+    }
+
     if (message.type === "BILI_FILTER_SAVE_WATCH_SESSION") {
       enqueueWatchTimerWrite(() => writeWatchTimerSession(message.payload), sendResponse);
       return true;
@@ -51,6 +69,26 @@ chrome.runtime.onMessage.addListener(
     return true;
   },
 );
+
+function respondWithFavoriteVideos(
+  operation: () => Promise<FavoriteFolderResult>,
+  sendResponse: (response: ExtensionResponse) => void,
+): void {
+  void operation().then(
+    favoriteFolder =>
+      sendResponse({
+        ok: true,
+        source: "background",
+        receivedAt: new Date().toISOString(),
+        favoriteFolder,
+      }),
+    error =>
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : "收藏夹读取失败",
+      }),
+  );
+}
 
 function enqueueWatchTimerWrite(
   operation: () => Promise<void>,

@@ -7,6 +7,7 @@ import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../sha
 import type {
   CustomBackgroundSettings,
   ExtensionSettings,
+  FavoriteRecommendationSettings,
   PlayerPersonalizationSettings,
   SearchFilterSettings,
   WatchReminderSettings,
@@ -27,6 +28,7 @@ import {
 } from "./dataTransfer";
 import { useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
 import { createBackgroundDataUrl, formatDateForFile } from "./utils";
+import { sendMessage } from "../shared/messaging";
 
 type SectionId = "search-filter" | "personalization" | "watch-timer" | "watch-reminder" | "data";
 
@@ -46,6 +48,7 @@ function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
   const [importMessage, setImportMessage] = useState("");
   const [backgroundMessage, setBackgroundMessage] = useState("");
+  const [favoriteRecommendationMessage, setFavoriteRecommendationMessage] = useState("");
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
@@ -94,6 +97,36 @@ function OptionsApp() {
       ...settings,
       searchFilter,
     });
+  }
+
+  async function updateFavoriteRecommendation(patch: Partial<FavoriteRecommendationSettings>) {
+    await updateSettings({
+      ...settings,
+      favoriteRecommendation: {
+        ...settings.favoriteRecommendation,
+        ...patch,
+      },
+    });
+  }
+
+  async function refreshFavoriteRecommendation() {
+    const folderId = settings.favoriteRecommendation.folderId;
+    if (!/^\d+$/.test(folderId)) return;
+
+    setFavoriteRecommendationMessage("更新中…");
+    const response = await sendMessage({
+      type: "BILI_FILTER_REFRESH_FAVORITE_VIDEOS",
+      payload: { folderId },
+    });
+    if (!response || !response.ok) {
+      setFavoriteRecommendationMessage(response?.error ?? "更新失败");
+      return;
+    }
+    if (!("favoriteFolder" in response)) {
+      setFavoriteRecommendationMessage("更新失败");
+      return;
+    }
+    setFavoriteRecommendationMessage(`已更新 ${response.favoriteFolder.videos.length} 个视频`);
   }
 
   async function updatePersonalization(patch: Partial<PlayerPersonalizationSettings>) {
@@ -271,7 +304,11 @@ function OptionsApp() {
 
           <div className="space-y-4">
             <SearchFilterPanel
+              favoriteRecommendationMessage={favoriteRecommendationMessage}
+              favoriteRecommendation={settings.favoriteRecommendation}
               settings={settings.searchFilter}
+              onFavoriteRecommendationChange={patch => void updateFavoriteRecommendation(patch)}
+              onRefreshFavoriteRecommendation={() => void refreshFavoriteRecommendation()}
               onChange={patch => void updateSearchFilter(patch)}
             />
             <PersonalizationPanel

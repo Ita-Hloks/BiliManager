@@ -34,6 +34,7 @@ export function parseImportedSettings(
 function hasSettingsShape(value: Partial<ExtensionSettings>) {
   return (
     !!value.searchFilter ||
+    !!value.favoriteRecommendation ||
     !!value.personalization ||
     !!value.features ||
     !!value.watchReminder ||

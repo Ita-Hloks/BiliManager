@@ -117,6 +117,7 @@ function createPortableSettings(settings: ExtensionSettings): PortableSettings {
   return {
     features: settings.features,
     searchFilter: settings.searchFilter,
+    favoriteRecommendation: settings.favoriteRecommendation,
     personalization: {
       blockRelatedVideos: settings.personalization.blockRelatedVideos,
       blockPlayerAds: settings.personalization.blockPlayerAds,
@@ -176,6 +177,7 @@ function hasSettingsShape(value: unknown): value is PortableSettings {
   const record = value as PortableSettings;
   return (
     !!record.searchFilter ||
+    !!record.favoriteRecommendation ||
     !!record.personalization ||
     !!record.features ||
     !!record.watchReminder ||
