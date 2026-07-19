@@ -31,6 +31,7 @@ const PLAYER_AD_SELECTOR = [
   '.right-container [class*="_ad_"]',
 ].join(", ");
 let latestSettings: PlayerPersonalizationSettings = {
+  filterTrending: false,
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,

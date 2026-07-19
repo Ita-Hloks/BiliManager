@@ -1,0 +1,3 @@
+html[data-bili-manager-filter-trending="true"] .trending {
+  display: none !important;
+}

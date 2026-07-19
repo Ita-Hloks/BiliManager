@@ -4,7 +4,7 @@ import { Button } from "../components/button";
 import { CustomBackgroundPanel } from "../components/customBackgroundPanel";
 import { Switch } from "../components/switch";
 
-// 个性化面板聚合推荐拦截、广告拦截和背景图 UI，但只通过 patch 回传，不直接保存全局设置。
+// 个性化面板聚合热榜、推荐、广告和背景图 UI，但只通过 patch 回传，不直接保存全局设置。
 export function PersonalizationPanel(props: {
   backgroundMessage: string;
   settings: PlayerPersonalizationSettings;
@@ -21,13 +21,24 @@ export function PersonalizationPanel(props: {
             <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
               <h2 className="bm-text-heading text-base font-medium">个性化</h2>
-              <p className="bm-text-muted mt-1 text-sm">控制播放器页视频推荐、广告和推荐连播</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="space-y-3 px-4 py-5 sm:px-5">
+        <Button
+          onClick={() =>
+            props.onChange({
+              filterTrending: !props.settings.filterTrending,
+            })
+          }
+          variant="toggleRow"
+        >
+          <span className="font-medium">过滤搜索热榜</span>
+          <Switch enabled={props.settings.filterTrending} />
+        </Button>
+
         <div className="divide-y divide-slate-100 overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:divide-[#30343c] dark:bg-[#15181e]">
           <Button
             onClick={() =>

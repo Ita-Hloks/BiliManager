@@ -119,6 +119,7 @@ function createPortableSettings(settings: ExtensionSettings): PortableSettings {
     searchFilter: settings.searchFilter,
     favoriteRecommendation: settings.favoriteRecommendation,
     personalization: {
+      filterTrending: settings.personalization.filterTrending,
       blockRelatedVideos: settings.personalization.blockRelatedVideos,
       blockPlayerAds: settings.personalization.blockPlayerAds,
       disableRecommendationAutoplay: settings.personalization.disableRecommendationAutoplay,
@@ -152,6 +153,7 @@ function stripCustomBackground(source: PortableSettings): PortableSettings {
     ...source,
     personalization: source.personalization
       ? {
+          filterTrending: source.personalization.filterTrending,
           blockRelatedVideos: source.personalization.blockRelatedVideos,
           blockPlayerAds: source.personalization.blockPlayerAds,
           disableRecommendationAutoplay: source.personalization.disableRecommendationAutoplay,
