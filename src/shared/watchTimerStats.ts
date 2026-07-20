@@ -17,8 +17,27 @@ type DateRange = {
 };
 
 export async function getWatchDurationData(period: StatsPeriod): Promise<WatchDurationData> {
+  const dataByPeriod = await getWatchDurationDataByPeriod();
+  return dataByPeriod[period];
+}
+
+export async function getWatchDurationDataByPeriod(): Promise<
+  Record<StatsPeriod, WatchDurationData>
+> {
   const history = await getWatchTimerHistory();
   const todayKey = getLocalDateKey(new Date());
+  return {
+    "7d": buildWatchDurationData(history, "7d", todayKey),
+    month: buildWatchDurationData(history, "month", todayKey),
+    year: buildWatchDurationData(history, "year", todayKey),
+  };
+}
+
+function buildWatchDurationData(
+  history: WatchTimerHistory,
+  period: StatsPeriod,
+  todayKey: string,
+): WatchDurationData {
   return {
     points: buildDurationPoints(history, period, todayKey),
     comparison: buildCurrentComparison(history, period, todayKey),

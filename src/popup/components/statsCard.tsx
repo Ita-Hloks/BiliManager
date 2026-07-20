@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Clock3, Target } from "lucide-react";
 import { HIT_RATE_DATA, PERIOD_LABEL } from "../demoData";
 import { formatReadableDuration } from "../../shared/duration";
-import { getWatchDurationData } from "../../shared/watchTimerStats";
+import { getWatchDurationDataByPeriod } from "../../shared/watchTimerStats";
 import type {
   DurationComparison,
   SegmentedOption,
@@ -54,18 +54,16 @@ export function StatsCard({
   onDateSelect,
   selectedDateKey,
 }: {
-  onDateSelect: (dateKey: string | undefined) => void;
+  onDateSelect: (dateKey: string) => void;
   selectedDateKey?: string;
 }) {
   const [metric, setMetric] = useState<StatsMetric>("duration");
   const [period, setPeriod] = useState<StatsPeriod>("7d");
-  const [durationResult, setDurationResult] = useState<{
-    period: StatsPeriod;
-    data: WatchDurationData;
-  }>();
+  const [durationDataByPeriod, setDurationDataByPeriod] =
+    useState<Record<StatsPeriod, WatchDurationData>>();
 
   const hitRatePoints = HIT_RATE_DATA[period];
-  const durationData = durationResult?.period === period ? durationResult.data : undefined;
+  const durationData = durationDataByPeriod?.[period];
   const durationPoints = durationData?.points ?? [];
   const totalMinutes = durationPoints.reduce(
     (sum, point) => sum + Math.floor(point.elapsedMs / 60000),
@@ -80,30 +78,20 @@ export function StatsCard({
 
   useEffect(() => {
     let active = true;
-    void getWatchDurationData(period).then(data => {
-      if (active) setDurationResult({ period, data });
+    void getWatchDurationDataByPeriod().then(data => {
+      if (active) setDurationDataByPeriod(data);
     });
     return () => {
       active = false;
     };
-  }, [period]);
-
-  function selectPeriod(nextPeriod: StatsPeriod) {
-    setPeriod(nextPeriod);
-    onDateSelect(undefined);
-  }
+  }, []);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
       <SegmentedControl onChange={setMetric} options={METRIC_OPTIONS} value={metric} />
 
       <div className="mt-2.5">
-        <SegmentedControl
-          onChange={selectPeriod}
-          options={PERIOD_OPTIONS}
-          size="sm"
-          value={period}
-        />
+        <SegmentedControl onChange={setPeriod} options={PERIOD_OPTIONS} size="sm" value={period} />
       </div>
 
       <div className="mt-3.5">
@@ -111,7 +99,6 @@ export function StatsCard({
           <React.Fragment key="duration">
             <DurationBarChart
               data={durationPoints}
-              key={period}
               onSelect={period === "7d" ? onDateSelect : undefined}
               selectedDateKey={selectedDateKey}
             />
