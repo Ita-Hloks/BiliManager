@@ -6,6 +6,7 @@ export type StatsPeriod = "7d" | "month" | "year";
 export interface DurationPoint {
   label: string;
   elapsedMs: number;
+  dateKey?: string;
 }
 
 export interface DurationComparison {

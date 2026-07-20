@@ -13,7 +13,15 @@ function useMountedAnimation() {
   return mounted;
 }
 
-export function DurationBarChart({ data }: { data: DurationPoint[] }) {
+export function DurationBarChart({
+  data,
+  onSelect,
+  selectedDateKey,
+}: {
+  data: DurationPoint[];
+  onSelect?: (dateKey: string) => void;
+  selectedDateKey?: string;
+}) {
   const mounted = useMountedAnimation();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [tooltipX, setTooltipX] = useState(0);
@@ -48,18 +56,32 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
         {data.map((point, index) => {
           const elapsed = elapsedValues[index];
           const pct = elapsed > 0 ? Math.max((elapsed / maxElapsed) * 90, 3) : 0;
+          const selectable = !!point.dateKey && !!onSelect;
+          const selected = point.dateKey === selectedDateKey;
           return (
-            <div
-              key={point.label}
-              className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+            <button
+              aria-label={selectable ? `查看${point.dateKey}观看排行` : undefined}
+              aria-disabled={!selectable}
+              aria-pressed={selectable ? selected : undefined}
+              className={[
+                "flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40",
+                selectable ? "cursor-pointer" : "cursor-default",
+              ].join(" ")}
+              key={point.dateKey ?? point.label}
+              onClick={() => point.dateKey && onSelect?.(point.dateKey)}
               onPointerEnter={event => {
                 setActiveIndex(index);
                 setTooltipX(event.currentTarget.offsetLeft + event.currentTarget.offsetWidth / 2);
               }}
+              tabIndex={selectable ? 0 : -1}
+              type="button"
             >
               <div className="flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-sky-50 dark:bg-slate-700/60">
                 <div
-                  className="w-full rounded-t-sm bg-bili-blue opacity-75 transition-[height] duration-700 ease-out"
+                  className={[
+                    "w-full rounded-t-sm bg-bili-blue transition-[height,opacity] duration-700 ease-out",
+                    selected ? "opacity-100" : "opacity-75",
+                  ].join(" ")}
                   style={{
                     height: mounted ? `${pct}%` : "0%",
                     transitionDelay: `${index * 45}ms`,
@@ -69,7 +91,7 @@ export function DurationBarChart({ data }: { data: DurationPoint[] }) {
               <span className="whitespace-nowrap text-[9px] leading-none text-slate-500 dark:text-slate-300">
                 {point.label}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

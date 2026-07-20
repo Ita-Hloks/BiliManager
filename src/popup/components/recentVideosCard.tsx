@@ -3,20 +3,17 @@ import { ChevronDown } from "lucide-react";
 import { formatCompactDuration } from "../../shared/duration";
 import {
   getRecentWatchTimerVideos,
+  getTopWatchTimerVideosForDate,
   getWatchTimerVideoDailyElapsed,
 } from "../../shared/watchTimerHistory";
-import type { WatchTimerVideoHistoryItem } from "../../shared/watchTimerHistory";
+import type { WatchTimerVideoDailyItem } from "../../shared/watchTimerHistory";
 
 function formatUpdatedAt(timestamp: number) {
   const date = new Date(timestamp);
   return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
 }
 
-type RecentVideoViewItem = WatchTimerVideoHistoryItem & {
-  dailyElapsedMs: number;
-};
-
-function RecentVideoRow({ video }: { video: RecentVideoViewItem }) {
+function RecentVideoRow({ video }: { video: WatchTimerVideoDailyItem }) {
   return (
     <li className="border-b border-slate-100 py-2 last:border-b-0 dark:border-[#30343c]">
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 text-left">
@@ -35,29 +32,39 @@ function RecentVideoRow({ video }: { video: RecentVideoViewItem }) {
   );
 }
 
-export function RecentVideosCard() {
-  const [videos, setVideos] = useState<RecentVideoViewItem[]>([]);
+export function RecentVideosCard({ selectedDateKey }: { selectedDateKey?: string }) {
+  const [videos, setVideos] = useState<WatchTimerVideoDailyItem[]>([]);
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
-    void getRecentWatchTimerVideos(3).then(async recentVideos => {
-      const videosWithElapsed = await Promise.all(
-        recentVideos.map(async video => ({
-          ...video,
-          dailyElapsedMs: await getWatchTimerVideoDailyElapsed(video.pageKey, video.dateKey),
-        })),
-      );
-      setVideos(videosWithElapsed);
+    let active = true;
+    const request = selectedDateKey
+      ? getTopWatchTimerVideosForDate(selectedDateKey, 3)
+      : getRecentWatchTimerVideos(3).then(recentVideos =>
+          Promise.all(
+            recentVideos.map(async video => ({
+              ...video,
+              dailyElapsedMs: await getWatchTimerVideoDailyElapsed(video.pageKey, video.dateKey),
+            })),
+          ),
+        );
+    void request.then(nextVideos => {
+      if (active) setVideos(nextVideos);
     });
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [selectedDateKey]);
+
+  const title = selectedDateKey ? `${formatDateLabel(selectedDateKey)}观看排行` : "最近播放";
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold text-slate-700 dark:text-slate-200">最近播放</h2>
+        <h2 className="text-xs font-semibold text-slate-700 dark:text-slate-200">{title}</h2>
         <button
           aria-expanded={expanded}
-          aria-label={expanded ? "折叠最近播放" : "展开最近播放"}
+          aria-label={expanded ? `折叠${title}` : `展开${title}`}
           className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-slate-500 transition-colors duration-200 hover:bg-sky-50 hover:text-bili-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 dark:text-slate-400 dark:hover:bg-bili-blue/10 dark:hover:text-sky-200"
           onClick={() => setExpanded(current => !current)}
           type="button"
@@ -95,4 +102,9 @@ export function RecentVideosCard() {
 
 function padTime(value: number) {
   return value.toString().padStart(2, "0");
+}
+
+function formatDateLabel(dateKey: string) {
+  const [, month, day] = dateKey.split("-").map(Number);
+  return `${month}月${day}日`;
 }

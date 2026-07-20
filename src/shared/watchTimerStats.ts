@@ -43,6 +43,7 @@ function buildLastSevenDays(history: WatchTimerHistory, todayKey: string): Durat
     return {
       label: WEEKDAY_LABELS[date.getDay()],
       elapsedMs: history[dateKey] ?? 0,
+      dateKey,
     };
   });
 }

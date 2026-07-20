@@ -50,7 +50,13 @@ function formatDurationComparison(comparison: DurationComparison): string {
   return `${comparison.label}${direction} ${duration}（${sign}${formattedPercent}%）`;
 }
 
-export function StatsCard() {
+export function StatsCard({
+  onDateSelect,
+  selectedDateKey,
+}: {
+  onDateSelect: (dateKey: string | undefined) => void;
+  selectedDateKey?: string;
+}) {
   const [metric, setMetric] = useState<StatsMetric>("duration");
   const [period, setPeriod] = useState<StatsPeriod>("7d");
   const [durationResult, setDurationResult] = useState<{
@@ -82,18 +88,33 @@ export function StatsCard() {
     };
   }, [period]);
 
+  function selectPeriod(nextPeriod: StatsPeriod) {
+    setPeriod(nextPeriod);
+    onDateSelect(undefined);
+  }
+
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
       <SegmentedControl onChange={setMetric} options={METRIC_OPTIONS} value={metric} />
 
       <div className="mt-2.5">
-        <SegmentedControl onChange={setPeriod} options={PERIOD_OPTIONS} size="sm" value={period} />
+        <SegmentedControl
+          onChange={selectPeriod}
+          options={PERIOD_OPTIONS}
+          size="sm"
+          value={period}
+        />
       </div>
 
       <div className="mt-3.5">
         {metric === "duration" ? (
           <React.Fragment key="duration">
-            <DurationBarChart data={durationPoints} key={period} />
+            <DurationBarChart
+              data={durationPoints}
+              key={period}
+              onSelect={period === "7d" ? onDateSelect : undefined}
+              selectedDateKey={selectedDateKey}
+            />
             <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
               {PERIOD_LABEL[period]}观看时长共{" "}
               <span className="font-semibold text-slate-700 dark:text-slate-200">
