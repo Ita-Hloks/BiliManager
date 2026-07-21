@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatCompactDuration } from "../../shared/duration";
-import type { DurationPoint, HitRatePoint } from "../types";
+import type { DurationPoint, VideoCountPoint } from "../types";
 
 function useMountedAnimation() {
   const [mounted, setMounted] = useState(false);
@@ -30,7 +30,7 @@ export function DurationBarChart({
   const activeElapsed = activeIndex === null ? 0 : elapsedValues[activeIndex];
 
   return (
-    <div className="relative min-w-0 overflow-hidden pb-1 pt-6">
+    <div className="min-w-0 overflow-hidden pb-1">
       {activeIndex !== null && (
         <div
           className={[
@@ -99,43 +99,86 @@ export function DurationBarChart({
   );
 }
 
-export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
+export function VideoCountLineChart({ data }: { data: VideoCountPoint[] }) {
   const mounted = useMountedAnimation();
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  if (data.length === 0) return <div className="h-28" />;
+
   const width = Math.max(280, data.length * 20);
   const height = 96;
-  const stepX = width / (data.length - 1 || 1);
+  const plotPadding = 8;
+  const plotWidth = width - plotPadding * 2;
+  const plotHeight = height - plotPadding * 2;
+  const stepX = plotWidth / (data.length - 1 || 1);
+  const maxCount = Math.max(...data.map(point => point.count), 1);
 
   const points = data.map((point, index) => ({
-    x: index * stepX,
-    y: height - (point.rate / 100) * height,
+    x: plotPadding + index * stepX,
+    y: plotPadding + (1 - point.count / maxCount) * plotHeight,
   }));
 
   const linePath = points
     .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
     .join(" ");
-  const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
-  const last = points[points.length - 1];
+  const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${height - plotPadding} L${points[0].x.toFixed(1)},${height - plotPadding} Z`;
+  const activePoint = activeIndex === null ? undefined : points[activeIndex];
 
   return (
-    <div className="overflow-hidden pb-1">
-      <svg className="h-24 w-full overflow-visible" viewBox={`0 0 ${width} ${height}`}>
+    <div className="relative min-w-0 overflow-hidden pb-1 pt-6">
+      {activeIndex !== null && activePoint && (
+        <span
+          className={[
+            "pointer-events-none absolute top-0 z-30 whitespace-nowrap text-[10px] font-medium tabular-nums text-emerald-600 dark:text-emerald-300",
+            activeIndex === 0
+              ? "left-0"
+              : activeIndex === data.length - 1
+                ? "right-0"
+                : "-translate-x-1/2",
+          ].join(" ")}
+          style={
+            activeIndex > 0 && activeIndex < data.length - 1
+              ? { left: `${(activePoint.x / width) * 100}%` }
+              : undefined
+          }
+        >
+          {data[activeIndex].count} 个
+        </span>
+      )}
+
+      <svg
+        className="h-24 w-full"
+        onPointerLeave={() => setActiveIndex(null)}
+        onPointerMove={event => {
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const pointerX = ((event.clientX - bounds.left) / bounds.width) * width;
+          const nearestIndex = points.reduce(
+            (nearest, point, index) =>
+              Math.abs(point.x - pointerX) < Math.abs(points[nearest].x - pointerX)
+                ? index
+                : nearest,
+            0,
+          );
+          setActiveIndex(nearestIndex);
+        }}
+        viewBox={`0 0 ${width} ${height}`}
+      >
         <defs>
-          <linearGradient id="hitRateFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(0,174,236,0.22)" />
-            <stop offset="100%" stopColor="rgba(0,174,236,0)" />
+          <linearGradient id="videoCountFill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(16,185,129,0.24)" />
+            <stop offset="100%" stopColor="rgba(16,185,129,0)" />
           </linearGradient>
         </defs>
         <path
           className="transition-opacity duration-700 ease-out"
           d={areaPath}
-          fill="url(#hitRateFill)"
+          fill="url(#videoCountFill)"
           opacity={mounted ? 1 : 0}
         />
         <path
           d={linePath}
           fill="none"
           pathLength={1}
-          stroke="rgb(0,174,236)"
+          stroke="rgb(16,185,129)"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
@@ -152,23 +195,15 @@ export function HitRateLineChart({ data }: { data: HitRatePoint[] }) {
             className="fill-white dark:fill-[#1c1f26]"
             key={data[index].label}
             opacity={mounted ? 1 : 0}
-            r={2.5}
-            stroke="rgb(0,174,236)"
+            pointerEvents="none"
+            r={activeIndex === index ? 4 : 2.5}
+            stroke="rgb(16,185,129)"
             strokeWidth={1.5}
-            style={{ transition: `opacity 400ms ease-out ${300 + index * 60}ms` }}
+            style={{
+              transition: `opacity 400ms ease-out ${300 + index * 60}ms, r 150ms ease-out`,
+            }}
           />
         ))}
-        <text
-          fill="rgb(0,174,236)"
-          fontSize="9"
-          opacity={mounted ? 1 : 0}
-          style={{ transition: "opacity 400ms ease-out 700ms" }}
-          textAnchor="end"
-          x={last.x}
-          y={Math.max(last.y - 8, 9)}
-        >
-          {data[data.length - 1].rate}%
-        </text>
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-300">
         {data.map(point => (

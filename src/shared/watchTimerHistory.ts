@@ -77,6 +77,13 @@ export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVi
   return normalizeVideoList(saved[WATCH_TIMER_RECENT_VIDEOS_KEY]).slice(0, Math.max(0, limit));
 }
 
+export async function getWatchTimerVideos(): Promise<WatchTimerVideoHistoryItem[]> {
+  if (!hasChromeLocalStorage()) return [];
+  const dateKeys = await loadDateIndex();
+  const videosByDate = await loadVideosByDate(dateKeys);
+  return dateKeys.flatMap(dateKey => videosByDate[dateKey] ?? []);
+}
+
 export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
   if (!hasChromeLocalStorage()) return;
   const normalized = normalizeSession(session);
@@ -139,12 +146,8 @@ async function getWatchTimerDailyElapsed(dateKey: string): Promise<number> {
 
 export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
   if (!hasChromeLocalStorage()) return { history: {}, videos: [] };
-  const dateKeys = await loadDateIndex();
-  const [history, videosByDate] = await Promise.all([
-    getWatchTimerHistory(),
-    loadVideosByDate(dateKeys),
-  ]);
-  return { history, videos: dateKeys.flatMap(dateKey => videosByDate[dateKey] ?? []) };
+  const [history, videos] = await Promise.all([getWatchTimerHistory(), getWatchTimerVideos()]);
+  return { history, videos };
 }
 
 export async function importWatchTimerHistory(history: WatchTimerHistoryBackup): Promise<void> {

@@ -1,6 +1,6 @@
 import type React from "react";
 
-export type StatsMetric = "duration" | "hitRate";
+export type StatsMetric = "duration" | "videoCount";
 export type StatsPeriod = "7d" | "month" | "year";
 
 export interface DurationPoint {
@@ -20,16 +20,9 @@ export interface WatchDurationData {
   comparison: DurationComparison;
 }
 
-export interface HitRatePoint {
+export interface VideoCountPoint {
   label: string;
-  rate: number;
-}
-
-export interface RecentVideo {
-  id: string;
-  title: string;
-  matched: boolean;
-  keyword?: string;
+  count: number;
 }
 
 export interface SegmentedOption<T extends string> {

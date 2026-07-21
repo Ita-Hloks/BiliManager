@@ -2,10 +2,11 @@ import type {
   DurationComparison,
   DurationPoint,
   StatsPeriod,
+  VideoCountPoint,
   WatchDurationData,
 } from "../popup/types";
 import { addDays, getLocalDateKey, parseLocalDateKey } from "./date";
-import { getWatchTimerHistory } from "./watchTimerHistory";
+import { getWatchTimerHistory, getWatchTimerVideos } from "./watchTimerHistory";
 import type { WatchTimerHistory } from "./watchTimerHistory";
 
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -14,6 +15,12 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 type DateRange = {
   start: Date;
   end: Date;
+};
+
+type PeriodValuePoint = {
+  label: string;
+  value: number;
+  dateKey?: string;
 };
 
 export async function getWatchDurationData(period: StatsPeriod): Promise<WatchDurationData> {
@@ -33,6 +40,22 @@ export async function getWatchDurationDataByPeriod(): Promise<
   };
 }
 
+export async function getWatchVideoCountDataByPeriod(): Promise<
+  Record<StatsPeriod, VideoCountPoint[]>
+> {
+  const videos = await getWatchTimerVideos();
+  const videoCountsByDate = videos.reduce<WatchTimerHistory>((counts, video) => {
+    counts[video.dateKey] = (counts[video.dateKey] ?? 0) + 1;
+    return counts;
+  }, {});
+  const todayKey = getLocalDateKey(new Date());
+  return {
+    "7d": buildVideoCountPoints(videoCountsByDate, "7d", todayKey),
+    month: buildVideoCountPoints(videoCountsByDate, "month", todayKey),
+    year: buildVideoCountPoints(videoCountsByDate, "year", todayKey),
+  };
+}
+
 function buildWatchDurationData(
   history: WatchTimerHistory,
   period: StatsPeriod,
@@ -49,25 +72,48 @@ function buildDurationPoints(
   period: StatsPeriod,
   todayKey: string,
 ): DurationPoint[] {
+  return buildPeriodValuePoints(history, period, todayKey).map(point => ({
+    label: point.label,
+    elapsedMs: point.value,
+    dateKey: point.dateKey,
+  }));
+}
+
+function buildVideoCountPoints(
+  videoCountsByDate: WatchTimerHistory,
+  period: StatsPeriod,
+  todayKey: string,
+): VideoCountPoint[] {
+  return buildPeriodValuePoints(videoCountsByDate, period, todayKey).map(point => ({
+    label: point.label,
+    count: point.value,
+  }));
+}
+
+function buildPeriodValuePoints(
+  history: WatchTimerHistory,
+  period: StatsPeriod,
+  todayKey: string,
+): PeriodValuePoint[] {
   if (period === "7d") return buildLastSevenDays(history, todayKey);
   if (period === "month") return buildCurrentMonthWeeks(history, todayKey);
   return buildCurrentYearMonths(history, todayKey);
 }
 
-function buildLastSevenDays(history: WatchTimerHistory, todayKey: string): DurationPoint[] {
+function buildLastSevenDays(history: WatchTimerHistory, todayKey: string): PeriodValuePoint[] {
   const today = parseLocalDateKey(todayKey);
   return Array.from({ length: 7 }, (_, index) => {
     const date = addDays(today, index - 6);
     const dateKey = getLocalDateKey(date);
     return {
       label: WEEKDAY_LABELS[date.getDay()],
-      elapsedMs: history[dateKey] ?? 0,
+      value: history[dateKey] ?? 0,
       dateKey,
     };
   });
 }
 
-function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): DurationPoint[] {
+function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): PeriodValuePoint[] {
   const today = parseLocalDateKey(todayKey);
   const monthRange = getMonthRange(today);
   const firstWeekStart = getWeekRange(monthRange.start).start;
@@ -85,7 +131,7 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): D
 
     return {
       label: `${index + 1}周`,
-      elapsedMs: totalMs,
+      value: totalMs,
     };
   });
 
@@ -95,7 +141,7 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): D
   );
 }
 
-function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): DurationPoint[] {
+function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): PeriodValuePoint[] {
   const today = parseLocalDateKey(todayKey);
   const year = today.getFullYear();
   const currentMonth = today.getMonth();
@@ -108,7 +154,7 @@ function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): D
 
     return {
       label: `${month + 1}月`,
-      elapsedMs: totalMs,
+      value: totalMs,
     };
   });
 
