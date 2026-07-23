@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Clock3, Film } from "lucide-react";
-import { PERIOD_LABEL } from "../demoData";
 import { formatReadableDuration } from "../../shared/duration";
 import {
   getWatchDurationDataByPeriod,
@@ -69,6 +68,7 @@ export function StatsCard({
     useState<Record<StatsPeriod, VideoCountPoint[]>>();
 
   const durationData = durationDataByPeriod?.[period];
+  const periodLabel = PERIOD_OPTIONS.find(option => option.value === period)?.label ?? "";
   const durationPoints = durationData?.points ?? [];
   const videoCountPoints = videoCountDataByPeriod?.[period] ?? [];
   const totalMinutes = durationPoints.reduce(
@@ -111,7 +111,7 @@ export function StatsCard({
               selectedDateKey={selectedDateKey}
             />
             <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              {PERIOD_LABEL[period]}观看时长共{" "}
+              {periodLabel}观看时长共{" "}
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 {formatMinutes(totalMinutes)}
               </span>
@@ -126,7 +126,7 @@ export function StatsCard({
           <React.Fragment key="videoCount">
             <VideoCountLineChart data={videoCountPoints} />
             <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              {PERIOD_LABEL[period]}观看视频共{" "}
+              {periodLabel}观看视频共{" "}
               <span className="font-semibold text-emerald-600 dark:text-emerald-300">
                 {totalVideoCount} 个
               </span>
