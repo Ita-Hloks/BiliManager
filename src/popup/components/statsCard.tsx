@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { Clock3, Target } from "lucide-react";
-import { HIT_RATE_DATA, PERIOD_LABEL } from "../demoData";
+import { Clock3, Film } from "lucide-react";
 import { formatReadableDuration } from "../../shared/duration";
-import { getWatchDurationData } from "../../shared/watchTimerStats";
+import {
+  getWatchDurationDataByPeriod,
+  getWatchVideoCountDataByPeriod,
+} from "../../shared/watchTimerStats";
 import type {
   DurationComparison,
   SegmentedOption,
   StatsMetric,
   StatsPeriod,
+  VideoCountPoint,
   WatchDurationData,
 } from "../types";
-import { DurationBarChart, HitRateLineChart } from "./charts";
+import { DurationBarChart, VideoCountLineChart } from "./charts";
 import { SegmentedControl } from "./segmentedControl";
 
 const METRIC_OPTIONS: SegmentedOption<StatsMetric>[] = [
   { value: "duration", label: "观看时长", icon: Clock3 },
-  { value: "hitRate", label: "等待更新", icon: Target, disabled: true },
+  { value: "videoCount", label: "观看数量", icon: Film },
 ];
 
 const PERIOD_OPTIONS: SegmentedOption<StatsPeriod>[] = [
@@ -50,37 +53,46 @@ function formatDurationComparison(comparison: DurationComparison): string {
   return `${comparison.label}${direction} ${duration}（${sign}${formattedPercent}%）`;
 }
 
-export function StatsCard() {
+export function StatsCard({
+  onDateSelect,
+  selectedDateKey,
+}: {
+  onDateSelect: (dateKey: string) => void;
+  selectedDateKey?: string;
+}) {
   const [metric, setMetric] = useState<StatsMetric>("duration");
   const [period, setPeriod] = useState<StatsPeriod>("7d");
-  const [durationResult, setDurationResult] = useState<{
-    period: StatsPeriod;
-    data: WatchDurationData;
-  }>();
+  const [durationDataByPeriod, setDurationDataByPeriod] =
+    useState<Record<StatsPeriod, WatchDurationData>>();
+  const [videoCountDataByPeriod, setVideoCountDataByPeriod] =
+    useState<Record<StatsPeriod, VideoCountPoint[]>>();
 
-  const hitRatePoints = HIT_RATE_DATA[period];
-  const durationData = durationResult?.period === period ? durationResult.data : undefined;
+  const durationData = durationDataByPeriod?.[period];
+  const periodLabel = PERIOD_OPTIONS.find(option => option.value === period)?.label ?? "";
   const durationPoints = durationData?.points ?? [];
+  const videoCountPoints = videoCountDataByPeriod?.[period] ?? [];
   const totalMinutes = durationPoints.reduce(
     (sum, point) => sum + Math.floor(point.elapsedMs / 60000),
     0,
   );
+  const totalVideoCount = videoCountPoints.reduce((sum, point) => sum + point.count, 0);
   const durationComparison = durationData
     ? formatDurationComparison(durationData.comparison)
     : null;
-  const avgHitRate = Math.round(
-    hitRatePoints.reduce((sum, point) => sum + point.rate, 0) / hitRatePoints.length,
-  );
 
   useEffect(() => {
     let active = true;
-    void getWatchDurationData(period).then(data => {
-      if (active) setDurationResult({ period, data });
-    });
+    void Promise.all([getWatchDurationDataByPeriod(), getWatchVideoCountDataByPeriod()]).then(
+      ([durationData, videoCountData]) => {
+        if (!active) return;
+        setDurationDataByPeriod(durationData);
+        setVideoCountDataByPeriod(videoCountData);
+      },
+    );
     return () => {
       active = false;
     };
-  }, [period]);
+  }, []);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
@@ -93,9 +105,13 @@ export function StatsCard() {
       <div className="mt-3.5">
         {metric === "duration" ? (
           <React.Fragment key="duration">
-            <DurationBarChart data={durationPoints} key={period} />
+            <DurationBarChart
+              data={durationPoints}
+              onSelect={period === "7d" ? onDateSelect : undefined}
+              selectedDateKey={selectedDateKey}
+            />
             <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              {PERIOD_LABEL[period]}观看时长共{" "}
+              {periodLabel}观看时长共{" "}
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 {formatMinutes(totalMinutes)}
               </span>
@@ -107,11 +123,13 @@ export function StatsCard() {
             )}
           </React.Fragment>
         ) : (
-          <React.Fragment key="hitRate">
-            <HitRateLineChart data={hitRatePoints} key={period} />
+          <React.Fragment key="videoCount">
+            <VideoCountLineChart data={videoCountPoints} />
             <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              {PERIOD_LABEL[period]}平均命中率{" "}
-              <span className="font-semibold text-bili-blue dark:text-sky-200">{avgHitRate}%</span>
+              {periodLabel}观看视频共{" "}
+              <span className="font-semibold text-emerald-600 dark:text-emerald-300">
+                {totalVideoCount} 个
+              </span>
             </p>
           </React.Fragment>
         )}

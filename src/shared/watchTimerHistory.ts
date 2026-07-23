@@ -35,6 +35,10 @@ export type WatchTimerVideoHistoryItem = {
   updatedAt: number;
 };
 
+export type WatchTimerVideoDailyItem = WatchTimerVideoHistoryItem & {
+  dailyElapsedMs: number;
+};
+
 export type WatchTimerHistoryBackup = {
   history: WatchTimerHistory;
   videos: WatchTimerVideoHistoryItem[];
@@ -73,6 +77,13 @@ export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVi
   return normalizeVideoList(saved[WATCH_TIMER_RECENT_VIDEOS_KEY]).slice(0, Math.max(0, limit));
 }
 
+export async function getWatchTimerVideos(): Promise<WatchTimerVideoHistoryItem[]> {
+  if (!hasChromeLocalStorage()) return [];
+  const dateKeys = await loadDateIndex();
+  const videosByDate = await loadVideosByDate(dateKeys);
+  return dateKeys.flatMap(dateKey => videosByDate[dateKey] ?? []);
+}
+
 export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
   if (!hasChromeLocalStorage()) return;
   const normalized = normalizeSession(session);
@@ -93,6 +104,35 @@ export async function getWatchTimerVideoDailyElapsed(
   return sumElapsed(sessions.filter(session => session.pageKey === pageKey));
 }
 
+export async function getTopWatchTimerVideosForDate(
+  dateKey: string,
+  limit = 3,
+): Promise<WatchTimerVideoDailyItem[]> {
+  if (!hasChromeLocalStorage() || !isDateKey(dateKey)) return [];
+  const [videosByDate, sessions] = await Promise.all([
+    loadVideosByDate([dateKey]),
+    loadSessionsForDate(dateKey),
+  ]);
+  const elapsedByPageKey = new Map<string, number>();
+  sessions.forEach(session => {
+    elapsedByPageKey.set(
+      session.pageKey,
+      (elapsedByPageKey.get(session.pageKey) ?? 0) + session.elapsedMs,
+    );
+  });
+
+  return (videosByDate[dateKey] ?? [])
+    .map(video => ({
+      ...video,
+      dailyElapsedMs: elapsedByPageKey.get(video.pageKey) ?? 0,
+    }))
+    .sort(
+      (left, right) =>
+        right.dailyElapsedMs - left.dailyElapsedMs || right.updatedAt - left.updatedAt,
+    )
+    .slice(0, Math.max(0, limit));
+}
+
 async function getWatchTimerDailyElapsed(dateKey: string): Promise<number> {
   if (!hasChromeLocalStorage() || !isDateKey(dateKey)) return 0;
   const dailyTotalKey = getDailyTotalKey(dateKey);
@@ -106,12 +146,8 @@ async function getWatchTimerDailyElapsed(dateKey: string): Promise<number> {
 
 export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
   if (!hasChromeLocalStorage()) return { history: {}, videos: [] };
-  const dateKeys = await loadDateIndex();
-  const [history, videosByDate] = await Promise.all([
-    getWatchTimerHistory(),
-    loadVideosByDate(dateKeys),
-  ]);
-  return { history, videos: dateKeys.flatMap(dateKey => videosByDate[dateKey] ?? []) };
+  const [history, videos] = await Promise.all([getWatchTimerHistory(), getWatchTimerVideos()]);
+  return { history, videos };
 }
 
 export async function importWatchTimerHistory(history: WatchTimerHistoryBackup): Promise<void> {
