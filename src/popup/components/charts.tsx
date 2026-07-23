@@ -27,14 +27,13 @@ export function DurationBarChart({
   const [tooltipX, setTooltipX] = useState(0);
   const elapsedValues = data.map(point => Math.max(0, point.elapsedMs));
   const maxElapsed = Math.max(...elapsedValues, 1);
-  const activeElapsed = activeIndex === null ? 0 : elapsedValues[activeIndex];
 
   return (
-    <div className="min-w-0 overflow-hidden pb-1">
+    <div className="relative min-w-0 overflow-hidden pb-1 pt-6">
       {activeIndex !== null && (
-        <div
+        <span
           className={[
-            "pointer-events-none absolute top-0 z-30 max-w-[10rem] truncate whitespace-nowrap rounded-md border border-sky-100 bg-white px-2 py-1 text-[10px] font-medium leading-none text-bili-blue shadow-sm dark:border-bili-blue/30 dark:bg-[#242830] dark:text-sky-200 dark:shadow-none",
+            "pointer-events-none absolute top-0 z-30 max-w-[10rem] truncate whitespace-nowrap text-[10px] font-medium leading-none tabular-nums text-bili-blue dark:text-sky-200",
             activeIndex === 0
               ? "left-0"
               : activeIndex === data.length - 1
@@ -45,8 +44,8 @@ export function DurationBarChart({
             activeIndex > 0 && activeIndex < data.length - 1 ? { left: `${tooltipX}px` } : undefined
           }
         >
-          {formatCompactDuration(activeElapsed)}
-        </div>
+          {formatCompactDuration(elapsedValues[activeIndex])}
+        </span>
       )}
 
       <div
@@ -128,18 +127,20 @@ export function VideoCountLineChart({ data }: { data: VideoCountPoint[] }) {
       {activeIndex !== null && activePoint && (
         <span
           className={[
-            "pointer-events-none absolute top-0 z-30 whitespace-nowrap text-[10px] font-medium tabular-nums text-emerald-600 dark:text-emerald-300",
+            "pointer-events-none absolute z-30 whitespace-nowrap text-[10px] font-medium tabular-nums text-emerald-600 dark:text-emerald-300",
             activeIndex === 0
               ? "left-0"
               : activeIndex === data.length - 1
                 ? "right-0"
                 : "-translate-x-1/2",
           ].join(" ")}
-          style={
-            activeIndex > 0 && activeIndex < data.length - 1
-              ? { left: `${(activePoint.x / width) * 100}%` }
-              : undefined
-          }
+          style={{
+            left:
+              activeIndex > 0 && activeIndex < data.length - 1
+                ? `${(activePoint.x / width) * 100}%`
+                : undefined,
+            top: `${Math.max(0, 24 + activePoint.y - 14)}px`,
+          }}
         >
           {data[activeIndex].count} 个
         </span>
