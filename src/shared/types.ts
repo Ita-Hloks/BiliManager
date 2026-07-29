@@ -30,6 +30,7 @@ export type PlayerPersonalizationSettings = {
   blockRelatedVideos: boolean;
   blockPlayerAds: boolean;
   disableRecommendationAutoplay: boolean;
+  disableDanmakuOnVideoEnter: boolean;
   customBackground: CustomBackgroundSettings;
 };
 

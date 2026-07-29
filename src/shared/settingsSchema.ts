@@ -36,6 +36,7 @@ export const defaultSettings: ExtensionSettings = {
     blockRelatedVideos: false,
     blockPlayerAds: false,
     disableRecommendationAutoplay: false,
+    disableDanmakuOnVideoEnter: false,
     customBackground: {
       enabled: false,
       imageDataUrl: "",
@@ -184,6 +185,10 @@ export function normalizePersonalization(
       typeof value?.disableRecommendationAutoplay === "boolean"
         ? value.disableRecommendationAutoplay
         : currentPersonalization.disableRecommendationAutoplay,
+    disableDanmakuOnVideoEnter:
+      typeof value?.disableDanmakuOnVideoEnter === "boolean"
+        ? value.disableDanmakuOnVideoEnter
+        : currentPersonalization.disableDanmakuOnVideoEnter,
     customBackground: normalizeCustomBackground(
       value?.customBackground,
       currentPersonalization.customBackground,
