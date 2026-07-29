@@ -7,6 +7,11 @@ const VIDEO_ENDED_ATTR = "data-bili-manager-ended-bound";
 const BLOCK_RELATED_ATTR = "data-bili-manager-block-related";
 const BLOCK_ADS_ATTR = "data-bili-manager-block-ads";
 const PLAYER_PERSONALIZATION_ATTR = "data-bili-manager-player-personalization";
+const DANMAKU_SWITCH_SELECTOR = [
+  ".bpx-player-dm-switch input.bui-danmaku-switch-input",
+  '.bilibili-player-video-danmaku-switch input[type="checkbox"]',
+].join(", ");
+const MAX_DANMAKU_DISABLE_ATTEMPTS = 3;
 
 const RELATED_VIDEO_SELECTOR = [
   // 播放器右侧新版推荐列表
@@ -35,6 +40,7 @@ let latestSettings: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+  disableDanmakuOnVideoEnter: false,
   customBackground: {
     enabled: false,
     imageDataUrl: "",
@@ -43,6 +49,9 @@ let latestSettings: PlayerPersonalizationSettings = {
     positionY: 50,
   },
 };
+let currentDanmakuVideoKey: string | undefined;
+let danmakuDisableHandled = false;
+let danmakuDisableAttempts = 0;
 
 export function isPlayerPage(url = location.href): boolean {
   try {
@@ -59,6 +68,7 @@ export function isPlayerPage(url = location.href): boolean {
 
 export function applyPlayerPersonalization(settings: PlayerPersonalizationSettings): void {
   latestSettings = settings;
+  applyDanmakuPreference(settings.disableDanmakuOnVideoEnter);
 
   if (!isPlayerPage()) {
     clearPersonalizationModules();
@@ -89,6 +99,7 @@ export function applyPlayerPersonalization(settings: PlayerPersonalizationSettin
 export function getPlayerObservationTargets(): HTMLElement[] {
   const targets = [
     document.querySelector<HTMLElement>(".right-container"),
+    document.querySelector<HTMLElement>(".bpx-player-container"),
     document.querySelector<HTMLElement>(".rec-list"),
     document.querySelector<HTMLElement>(".bpx-player-ending-related"),
     document.querySelector<HTMLElement>(".video-card-ad-small"),
@@ -98,6 +109,50 @@ export function getPlayerObservationTargets(): HTMLElement[] {
   ].filter(Boolean) as HTMLElement[];
 
   return targets.length > 0 ? removeNestedModules(targets) : [document.body];
+}
+
+function applyDanmakuPreference(enabled: boolean) {
+  const videoKey = getOrdinaryVideoKey();
+  if (videoKey !== currentDanmakuVideoKey) {
+    currentDanmakuVideoKey = videoKey;
+    danmakuDisableHandled = false;
+    danmakuDisableAttempts = 0;
+  }
+
+  if (!enabled) {
+    danmakuDisableHandled = false;
+    danmakuDisableAttempts = 0;
+    return;
+  }
+  if (
+    !videoKey ||
+    danmakuDisableHandled ||
+    danmakuDisableAttempts >= MAX_DANMAKU_DISABLE_ATTEMPTS
+  ) {
+    return;
+  }
+
+  const control = document.querySelector<HTMLInputElement>(DANMAKU_SWITCH_SELECTOR);
+  if (!control) return;
+  if (!control.checked) {
+    danmakuDisableHandled = true;
+    return;
+  }
+
+  danmakuDisableAttempts += 1;
+  control.click();
+  danmakuDisableHandled = !control.checked;
+}
+
+function getOrdinaryVideoKey(url = location.href): string | undefined {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.endsWith("bilibili.com")) return undefined;
+
+    return parsed.pathname.match(/^\/video\/(BV[\da-z]+|av\d+)/i)?.[1]?.toLowerCase();
+  } catch {
+    return undefined;
+  }
 }
 
 function syncPlayerPersonalizationState(

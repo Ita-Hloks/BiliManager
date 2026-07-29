@@ -123,6 +123,7 @@ function createPortableSettings(settings: ExtensionSettings): PortableSettings {
       blockRelatedVideos: settings.personalization.blockRelatedVideos,
       blockPlayerAds: settings.personalization.blockPlayerAds,
       disableRecommendationAutoplay: settings.personalization.disableRecommendationAutoplay,
+      disableDanmakuOnVideoEnter: settings.personalization.disableDanmakuOnVideoEnter,
     },
     watchTimer: settings.watchTimer,
     watchReminder: settings.watchReminder,
@@ -157,6 +158,7 @@ function stripCustomBackground(source: PortableSettings): PortableSettings {
           blockRelatedVideos: source.personalization.blockRelatedVideos,
           blockPlayerAds: source.personalization.blockPlayerAds,
           disableRecommendationAutoplay: source.personalization.disableRecommendationAutoplay,
+          disableDanmakuOnVideoEnter: source.personalization.disableDanmakuOnVideoEnter,
         }
       : undefined,
   };

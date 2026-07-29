@@ -30,6 +30,7 @@ const disabledPersonalization: PlayerPersonalizationSettings = {
   blockRelatedVideos: false,
   blockPlayerAds: false,
   disableRecommendationAutoplay: false,
+  disableDanmakuOnVideoEnter: false,
   customBackground: {
     enabled: false,
     imageDataUrl: "",

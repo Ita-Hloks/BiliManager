@@ -81,6 +81,18 @@ export function PersonalizationPanel(props: {
         <Button
           onClick={() =>
             props.onChange({
+              disableDanmakuOnVideoEnter: !props.settings.disableDanmakuOnVideoEnter,
+            })
+          }
+          variant="toggleRow"
+        >
+          <span className="font-medium">进入视频时关闭弹幕</span>
+          <Switch enabled={props.settings.disableDanmakuOnVideoEnter} />
+        </Button>
+
+        <Button
+          onClick={() =>
+            props.onChange({
               blockPlayerAds: !props.settings.blockPlayerAds,
             })
           }
