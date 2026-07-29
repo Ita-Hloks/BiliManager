@@ -61,7 +61,7 @@ const TEXT = {
   titleRuleLabel: "过滤词",
   uploaderRuleLabel: "UP 主过滤词",
   titleMatched: "过滤词命中",
-  uploaderMatched: "UP 主命中",
+  uploaderMatched: "UP过滤词命中",
   missingSearchTerm: "未命中搜索词",
   lowInteraction: "互动率过低",
   invalidRegex: "正则无效",
@@ -294,8 +294,7 @@ function evaluateCard(
 
   const uploaderPattern = compilePattern(settings.uploaderPattern, TEXT.uploaderRuleLabel);
   if (uploaderPattern.error) regexErrors.push(uploaderPattern.error);
-  if (uploaderPattern.regex?.test(card.uploader))
-    reasons.push(`${TEXT.uploaderMatched}：${settings.uploaderPattern}`);
+  if (uploaderPattern.regex?.test(card.uploader)) reasons.push(TEXT.uploaderMatched);
 
   if (settings.filterMissingTitleHighlight && !titleHighlighted) {
     reasons.push(TEXT.missingSearchTerm);
