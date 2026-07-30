@@ -33,7 +33,6 @@ export function UploaderBlockPanel(props: {
   useEffect(() => {
     if (!managerOpen) return;
 
-    const previousOverflow = document.body.style.overflow;
     const handleDialogKeydown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeManager();
@@ -58,12 +57,12 @@ export function UploaderBlockPanel(props: {
         first.focus();
       }
     };
-    document.body.style.overflow = "hidden";
+    document.documentElement.classList.add("bm-dialog-open");
     document.addEventListener("keydown", handleDialogKeydown);
     searchInputRef.current?.focus();
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.documentElement.classList.remove("bm-dialog-open");
       document.removeEventListener("keydown", handleDialogKeydown);
     };
   }, [managerOpen]);
@@ -150,7 +149,7 @@ export function UploaderBlockPanel(props: {
                 </label>
               </div>
 
-              <div className="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto dark:divide-[#30343c]">
+              <div className="bm-scrollbar min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto dark:divide-[#30343c]">
                 {visibleUploaders.map(uploader => (
                   <div
                     key={uploader.id}

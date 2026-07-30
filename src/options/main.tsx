@@ -307,7 +307,7 @@ function OptionsApp() {
         <div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
           <nav
             aria-label="偏好分类"
-            className="flex h-fit gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none"
+            className="bm-scrollbar flex h-fit gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition-colors duration-300 ease-out xl:sticky xl:top-4 xl:flex-col xl:overflow-visible dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none"
           >
             {sectionNavItems.map(item => {
               const Icon = item.icon;
