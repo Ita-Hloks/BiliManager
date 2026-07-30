@@ -1,3 +1,56 @@
+html {
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+html.bm-dialog-open {
+  overflow: hidden;
+}
+html.dark {
+  scrollbar-color: #475569 transparent;
+}
+html::-webkit-scrollbar,
+.bm-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html::-webkit-scrollbar-track,
+.bm-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb,
+.bm-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  background-clip: content-box;
+}
+html::-webkit-scrollbar-thumb:hover,
+.bm-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #7dd3fc;
+}
+html.dark::-webkit-scrollbar-thumb,
+html.dark .bm-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+html.dark::-webkit-scrollbar-thumb:hover,
+html.dark .bm-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #0284c7;
+}
+html::-webkit-scrollbar-corner,
+.bm-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.bm-scrollbar {
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+html.dark .bm-scrollbar {
+  scrollbar-color: #475569 transparent;
+}
+
 .bm-number-input {
   appearance: textfield;
 }

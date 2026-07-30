@@ -1,5 +1,7 @@
 import type { ExtensionMessage } from "../shared/messaging";
 import { getSettings, SETTINGS_KEY } from "../shared/storage";
+import { getUploaderBlocklist, UPLOADER_BLOCKLIST_KEY } from "../shared/uploaderBlocklist";
+import type { BlockedUploader } from "../shared/uploaderBlocklist";
 import type {
   FavoriteRecommendationSettings,
   PlayerPersonalizationSettings,
@@ -79,6 +81,8 @@ async function scanCurrentPage() {
     const initialStats = applySearchFilter(
       settings.searchFilter,
       cachedRecommendationPool ?? undefined,
+      settings.uploaderBlocklist,
+      settings.uploaderBlockingEnabled,
     );
     if (
       !settings.searchFilter.enabled ||
@@ -93,7 +97,12 @@ async function scanCurrentPage() {
       settings.favoriteRecommendation,
     );
     if (recommendationPool.videos.length === 0) return initialStats;
-    return applySearchFilter(settings.searchFilter, recommendationPool);
+    return applySearchFilter(
+      settings.searchFilter,
+      recommendationPool,
+      settings.uploaderBlocklist,
+      settings.uploaderBlockingEnabled,
+    );
   }
 
   return {
@@ -111,8 +120,10 @@ async function getContentSettings(): Promise<{
   watchTimerEnabled: boolean;
   watchReminder: WatchReminderSettings;
   watchReminderEnabled: boolean;
+  uploaderBlocklist: BlockedUploader[];
+  uploaderBlockingEnabled: boolean;
 }> {
-  const settings = await getSettings();
+  const [settings, uploaderBlocklist] = await Promise.all([getSettings(), getUploaderBlocklist()]);
   const pluginEnabled = settings.features.enabled;
 
   return {
@@ -127,6 +138,8 @@ async function getContentSettings(): Promise<{
     watchTimerEnabled: pluginEnabled && settings.features.watchTimer,
     watchReminder: settings.watchReminder,
     watchReminderEnabled: pluginEnabled && settings.features.watchReminder,
+    uploaderBlocklist,
+    uploaderBlockingEnabled: pluginEnabled,
   };
 }
 
@@ -173,7 +186,9 @@ function watchUrlChanges() {
 
 function bindStorageChanges() {
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && changes[SETTINGS_KEY]) scheduleScan(0);
+    if (areaName === "local" && (changes[SETTINGS_KEY] || changes[UPLOADER_BLOCKLIST_KEY])) {
+      scheduleScan(0);
+    }
   });
 }
 

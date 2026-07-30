@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: "class",
-  content: ["./popup.html", "./options.html", "./src/**/*.{ts,tsx}"],
+  content: ["./popup.html", "./options.html", "./src/{popup,options,shared}/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {

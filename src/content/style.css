@@ -3,3 +3,6 @@
 @import "./playerPersonalization/style.css";
 @import "./playerWatchTimer/style.css";
 @import "./playerWatchReminder/style.css";
+
+@config "../../tailwind.content.config.ts";
+@tailwind utilities;
