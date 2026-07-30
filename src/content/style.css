@@ -1,6 +1,8 @@
 @import "./searchFilter/style.css";
-@import "./uploaderBlock/style.css";
 @import "./searchCleanup/style.css";
 @import "./playerPersonalization/style.css";
 @import "./playerWatchTimer/style.css";
 @import "./playerWatchReminder/style.css";
+
+@config "../../tailwind.content.config.ts";
+@tailwind utilities;
