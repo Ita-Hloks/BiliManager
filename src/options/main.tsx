@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BellRing, Clock, Download, Filter, Sparkles } from "lucide-react";
+import { BellRing, Clock, Download, Filter, Sparkles, UserX } from "lucide-react";
 import "../styles/globals.css";
 import "../styles/options-controls.css";
 import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
@@ -29,11 +29,25 @@ import {
 import { useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
 import { createBackgroundDataUrl, formatDateForFile } from "./utils";
 import { sendMessage } from "../shared/messaging";
+import {
+  getUploaderBlocklist,
+  removeBlockedUploader,
+  UPLOADER_BLOCKLIST_KEY,
+} from "../shared/uploaderBlocklist";
+import type { BlockedUploader } from "../shared/uploaderBlocklist";
+import { UploaderBlockPanel } from "./panels/uploaderBlockPanel";
 
-type SectionId = "search-filter" | "personalization" | "watch-timer" | "watch-reminder" | "data";
+type SectionId =
+  | "search-filter"
+  | "uploader-block"
+  | "personalization"
+  | "watch-timer"
+  | "watch-reminder"
+  | "data";
 
 const sectionNavItems = [
   { id: "search-filter", label: "过滤搜索", icon: Filter },
+  { id: "uploader-block", label: "UP 拦截", icon: UserX },
   { id: "personalization", label: "个性化", icon: Sparkles },
   { id: "watch-timer", label: "计时器", icon: Clock },
   { id: "watch-reminder", label: "定时器", icon: BellRing },
@@ -49,12 +63,18 @@ function OptionsApp() {
   const [importMessage, setImportMessage] = useState("");
   const [backgroundMessage, setBackgroundMessage] = useState("");
   const [favoriteRecommendationMessage, setFavoriteRecommendationMessage] = useState("");
+  const [uploaderBlocklist, setUploaderBlocklist] = useState<BlockedUploader[]>([]);
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
 
   useEffect(() => {
-    void getSettings().then(setSettings);
+    void Promise.all([getSettings(), getUploaderBlocklist()]).then(
+      ([nextSettings, nextUploaderBlocklist]) => {
+        setSettings(nextSettings);
+        setUploaderBlocklist(nextUploaderBlocklist);
+      },
+    );
   }, []);
 
   useEffect(() => {
@@ -64,8 +84,11 @@ function OptionsApp() {
       changes: Record<string, chrome.storage.StorageChange>,
       areaName: string,
     ) => {
-      if (areaName !== "local" || !changes[SETTINGS_KEY]) return;
-      void getSettings().then(setSettings);
+      if (areaName !== "local") return;
+      if (changes[SETTINGS_KEY]) void getSettings().then(setSettings);
+      if (changes[UPLOADER_BLOCKLIST_KEY]) {
+        void getUploaderBlocklist().then(setUploaderBlocklist);
+      }
     };
 
     chrome.storage.onChanged.addListener(syncStoredSettings);
@@ -80,6 +103,10 @@ function OptionsApp() {
   async function updateSettings(next: ExtensionSettings) {
     setSettings(next);
     await saveSettings(next);
+  }
+
+  async function unblockUploader(id: string) {
+    await removeBlockedUploader(id);
   }
 
   async function updateSearchFilter(patch: Partial<SearchFilterSettings>) {
@@ -310,6 +337,10 @@ function OptionsApp() {
               onFavoriteRecommendationChange={patch => void updateFavoriteRecommendation(patch)}
               onRefreshFavoriteRecommendation={() => void refreshFavoriteRecommendation()}
               onChange={patch => void updateSearchFilter(patch)}
+            />
+            <UploaderBlockPanel
+              blocklist={uploaderBlocklist}
+              onRemove={id => void unblockUploader(id)}
             />
             <PersonalizationPanel
               backgroundMessage={backgroundMessage}

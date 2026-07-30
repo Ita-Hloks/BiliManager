@@ -1,4 +1,6 @@
 import type { FavoriteVideo } from "../../shared/favoriteFolder";
+import type { BlockedUploader } from "../../shared/uploaderBlocklist";
+import { findBlockedUploader } from "../../shared/uploaderBlocklist";
 import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../../shared/types";
 import type { FavoriteRecommendationPool } from "../favoriteRecommendation";
 import {
@@ -8,6 +10,11 @@ import {
 } from "../favoriteRecommendation";
 import type { BilibiliPageThemeDetection } from "../pageTheme";
 import { detectBilibiliPageTheme } from "../pageTheme";
+import {
+  clearUploaderBlockControls,
+  syncUploaderBlockControl,
+  UPLOADER_BLOCK_CONTROL_ATTR,
+} from "../uploaderBlock";
 
 type SearchCard = {
   cardEl: HTMLElement;
@@ -16,6 +23,7 @@ type SearchCard = {
   title: string;
   videoUrl: string;
   uploader: string;
+  uploaderMid: string;
   viewCount: number | null;
   danmakuCount: number | null;
   thumbnailEl: HTMLElement | null;
@@ -62,6 +70,7 @@ const TEXT = {
   uploaderRuleLabel: "UP 主过滤词",
   titleMatched: "过滤词命中",
   uploaderMatched: "UP过滤词命中",
+  uploaderBlocked: "已屏蔽 UP",
   missingSearchTerm: "未命中搜索词",
   lowInteraction: "互动率过低",
   invalidRegex: "正则无效",
@@ -150,8 +159,11 @@ export function getSearchSnapshot(stats: SearchFilterStats): RuntimeSnapshot {
 export function applySearchFilter(
   settings: SearchFilterSettings,
   recommendationPool: FavoriteRecommendationPool = EMPTY_RECOMMENDATION_POOL,
+  uploaderBlocklist: BlockedUploader[] = [],
+  uploaderBlockingEnabled = false,
 ): SearchFilterStats {
   if (!isSearchPage()) {
+    clearUploaderBlockControls();
     clearAllFilterStates();
     return createStats(false, settings.enabled, 0, 0, []);
   }
@@ -164,16 +176,33 @@ export function applySearchFilter(
   for (const card of cards) {
     const titleHighlighted = hasTitleHighlight(card.titleEl);
     const result = evaluateCard(card, settings, titleHighlighted);
+    const blockedUploader = findBlockedUploader(uploaderBlocklist, {
+      mid: card.uploaderMid,
+      name: card.uploader,
+    });
+    syncUploaderBlockControl(
+      {
+        cardEl: card.cardEl,
+        mid: card.uploaderMid,
+        name: card.uploader,
+      },
+      uploaderBlockingEnabled && !blockedUploader,
+    );
     for (const error of result.regexErrors) regexErrors.add(error);
 
-    if (settings.enabled && result.reasons.length > 0) {
+    const activeReasons = settings.enabled ? [...result.reasons] : [];
+    if (uploaderBlockingEnabled && blockedUploader) {
+      activeReasons.unshift(`${TEXT.uploaderBlocked}：${blockedUploader.name}`);
+    }
+
+    if (activeReasons.length > 0) {
       filtered += 1;
       const recommendation = pickFavoriteRecommendation(
         recommendationPool,
         `${location.pathname}${location.search}:${card.videoUrl || card.title}`,
         getBvid(card.videoUrl),
       );
-      markFiltered(card, result.reasons, pageTheme, recommendation);
+      markFiltered(card, activeReasons, pageTheme, recommendation);
     } else {
       clearFilterState(card.cardEl);
       applyGrayscaleState(
@@ -239,6 +268,9 @@ function toSearchCard(cardEl: HTMLElement): SearchCard {
   const titleEl = queryFirst(cardEl, selectors.title);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
   const uploaderEl = queryFirst(cardEl, selectors.uploader);
+  const uploaderLink =
+    uploaderEl?.closest<HTMLAnchorElement>("a[href*='space.bilibili.com']") ??
+    cardEl.querySelector<HTMLAnchorElement>("a[href*='space.bilibili.com']");
   const videoLink = queryFirst(cardEl, selectors.videoLinks);
   const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
@@ -249,7 +281,8 @@ function toSearchCard(cardEl: HTMLElement): SearchCard {
     uploaderEl,
     title: normalizeText(titleEl?.textContent || titleEl?.getAttribute("title") || ""),
     videoUrl: videoLink?.getAttribute("href") ?? "",
-    uploader: normalizeText(queryFirst(cardEl, selectors.uploader)?.textContent ?? ""),
+    uploader: normalizeText(uploaderEl?.textContent ?? ""),
+    uploaderMid: getUploaderMid(uploaderLink?.getAttribute("href") ?? ""),
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
     danmakuCount: parseMetric(metricsText, TEXT.danmakuLabels) ?? fallbackCounts[1] ?? null,
     thumbnailEl,
@@ -521,6 +554,7 @@ function getEventFilteredCard(event: Event): HTMLElement | null {
   const target = event.target;
   if (!(target instanceof Element)) return null;
   if (target.closest(`[${RECOMMENDATION_LINK_ATTR}]`)) return null;
+  if (target.closest(`[${UPLOADER_BLOCK_CONTROL_ATTR}]`)) return null;
   return target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
 }
 
@@ -620,6 +654,10 @@ function openFavoriteVideo(event: Event, videoUrl: string): void {
 
 function getBvid(value: string): string {
   return value.match(/\/video\/(BV[0-9A-Z]+)/i)?.[1] ?? "";
+}
+
+function getUploaderMid(value: string): string {
+  return value.match(/space\.bilibili\.com\/(\d+)/i)?.[1] ?? "";
 }
 
 function suppressTitleTooltips(cardEl: HTMLElement) {
