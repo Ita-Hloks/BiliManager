@@ -221,6 +221,12 @@ export function applySearchFilter(
   return createStats(true, settings.enabled, cards.length, filtered, [...regexErrors]);
 }
 
+export function clearSearchFilter(): void {
+  clearAllFilterStates();
+  clearUploaderBlockControls();
+  unbindFilterGateEvents();
+}
+
 function createStats(
   available: boolean,
   enabled: boolean,
@@ -504,6 +510,20 @@ function bindFilterGateEvents() {
   document.addEventListener("mouseover", stopLockedHoverDetails, true);
   document.addEventListener("mouseenter", stopLockedHoverDetails, true);
   filterGateEventsBound = true;
+}
+
+function unbindFilterGateEvents(): void {
+  if (!filterGateEventsBound) return;
+
+  document.removeEventListener("click", stopLockedNavigation, true);
+  document.removeEventListener("auxclick", stopLockedNavigation, true);
+  document.removeEventListener("keydown", stopLockedKeyboardNavigation, true);
+  document.removeEventListener("contextmenu", handleFilteredContextMenu, true);
+  document.removeEventListener("pointerover", stopLockedHoverDetails, true);
+  document.removeEventListener("pointerenter", stopLockedHoverDetails, true);
+  document.removeEventListener("mouseover", stopLockedHoverDetails, true);
+  document.removeEventListener("mouseenter", stopLockedHoverDetails, true);
+  filterGateEventsBound = false;
 }
 
 function stopLockedNavigation(event: MouseEvent) {

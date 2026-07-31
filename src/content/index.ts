@@ -20,7 +20,12 @@ import { applyCustomBackground } from "./customBackground";
 import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applyPlayerWatchReminder } from "./playerWatchReminder";
-import { applySearchFilter, getSearchSnapshot, isSearchPage } from "./searchFilter";
+import {
+  applySearchFilter,
+  clearSearchFilter,
+  getSearchSnapshot,
+  isSearchPage,
+} from "./searchFilter";
 import { applySearchCleanup } from "./searchCleanup";
 import {
   getCachedFavoriteRecommendationPool,
@@ -52,9 +57,12 @@ const unavailableSearchStats: SearchFilterStats = {
 
 let rescanTimer: number | undefined;
 let observer: MutationObserver | undefined;
+let urlPollTimer: number | undefined;
 let currentUrl = location.href;
 let scanQueued = false;
 let unbindPageThemeUpdates: (() => void) | undefined;
+let scanGeneration = 0;
+let managedPageActive = false;
 
 function getSnapshot(): RuntimeSnapshot {
   return {
@@ -67,7 +75,25 @@ function getSnapshot(): RuntimeSnapshot {
 }
 
 async function scanCurrentPage() {
+  const generation = scanGeneration;
   const settings = await getContentSettings();
+  if (generation !== scanGeneration) return unavailableSearchStats;
+
+  if (!settings.pluginEnabled) {
+    stopManagedPage();
+    applySearchCleanup(false);
+    applyPlayerPersonalization(disabledPersonalization);
+    applyCustomBackground(disabledPersonalization.customBackground);
+    applyPlayerWatchTimer(false, settings.watchTimer);
+    applyPlayerWatchReminder(false, settings.watchReminder);
+    clearSearchFilter();
+    return {
+      ...unavailableSearchStats,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  startManagedPage();
   const searchPage = isSearchPage();
   applySearchCleanup(settings.personalization.filterTrending);
   applyPlayerPersonalization(settings.personalization);
@@ -96,6 +122,7 @@ async function scanCurrentPage() {
     const recommendationPool = await loadFavoriteRecommendationPool(
       settings.favoriteRecommendation,
     );
+    if (generation !== scanGeneration) return unavailableSearchStats;
     if (recommendationPool.videos.length === 0) return initialStats;
     return applySearchFilter(
       settings.searchFilter,
@@ -105,6 +132,7 @@ async function scanCurrentPage() {
     );
   }
 
+  clearSearchFilter();
   return {
     ...unavailableSearchStats,
     enabled: settings.searchFilter.enabled,
@@ -122,6 +150,7 @@ async function getContentSettings(): Promise<{
   watchReminderEnabled: boolean;
   uploaderBlocklist: BlockedUploader[];
   uploaderBlockingEnabled: boolean;
+  pluginEnabled: boolean;
 }> {
   const [settings, uploaderBlocklist] = await Promise.all([getSettings(), getUploaderBlocklist()]);
   const pluginEnabled = settings.features.enabled;
@@ -140,6 +169,7 @@ async function getContentSettings(): Promise<{
     watchReminderEnabled: pluginEnabled && settings.features.watchReminder,
     uploaderBlocklist,
     uploaderBlockingEnabled: pluginEnabled,
+    pluginEnabled,
   };
 }
 
@@ -153,6 +183,29 @@ function scheduleScan(delay = 150) {
       void scanCurrentPage();
     });
   }, delay);
+}
+
+function startManagedPage(): void {
+  if (managedPageActive) return;
+
+  managedPageActive = true;
+  if (!urlPollTimer) watchUrlChanges();
+  bindPageThemeUpdates();
+  watchManagedPage();
+}
+
+function stopManagedPage(): void {
+  managedPageActive = false;
+  scanGeneration += 1;
+  observer?.disconnect();
+  observer = undefined;
+  window.clearTimeout(rescanTimer);
+  rescanTimer = undefined;
+  window.clearInterval(urlPollTimer);
+  urlPollTimer = undefined;
+  scanQueued = false;
+  unbindPageThemeUpdates?.();
+  unbindPageThemeUpdates = undefined;
 }
 
 function watchManagedPage() {
@@ -175,7 +228,9 @@ function watchManagedPage() {
 }
 
 function watchUrlChanges() {
-  window.setInterval(() => {
+  if (urlPollTimer) return;
+
+  urlPollTimer = window.setInterval(() => {
     if (location.href === currentUrl) return;
 
     currentUrl = location.href;
@@ -235,9 +290,6 @@ function bindRuntimeMessages() {
 async function boot() {
   bindRuntimeMessages();
   bindStorageChanges();
-  bindPageThemeUpdates();
-  watchManagedPage();
-  watchUrlChanges();
   await scanCurrentPage();
   await sendRuntimeMessage({ type: "BILI_FILTER_HELLO", payload: getSnapshot() });
 }

@@ -1,84 +1,84 @@
 #bili-manager-watch-timer {
-  @apply fixed z-[2147483646] box-border min-h-[68px] w-[158px] select-none overflow-hidden rounded-[14px] font-sans text-slate-50 shadow-[0_16px_38px_rgba(2,8,23,0.38)] transition-[width,min-height,opacity,transform] duration-200 ease-out;
+  @apply bm-fixed bm-z-[2147483646] bm-box-border bm-min-h-[68px] bm-w-[158px] bm-select-none bm-overflow-hidden bm-rounded-[14px] bm-font-sans bm-text-slate-50 bm-shadow-[0_16px_38px_rgba(2,8,23,0.38)] bm-transition-[width,min-height,opacity,transform] bm-duration-200 bm-ease-out;
 }
 
 #bili-manager-watch-timer.bili-manager-watch-timer--confirming {
-  @apply min-h-[132px] w-56;
+  @apply bm-min-h-[132px] bm-w-56;
 }
 
 #bili-manager-watch-timer.bili-manager-watch-timer--closing {
-  @apply scale-[0.96] opacity-0;
+  @apply bm-scale-[0.96] bm-opacity-0;
 }
 
 html[data-bili-manager-watch-timer-fullscreen="true"] #bili-manager-watch-timer {
-  @apply hidden;
+  @apply bm-hidden;
 }
 
 #bili-manager-watch-timer * {
-  @apply box-border;
+  @apply bm-box-border;
 }
 
 .bili-manager-watch-timer__backdrop {
-  @apply pointer-events-none absolute inset-0 rounded-[inherit] border border-slate-400/25 bg-gradient-to-br from-[#081824]/95 to-[#112f41]/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-[18px] backdrop-saturate-[1.45] transition-opacity duration-200 ease-out;
+  @apply bm-pointer-events-none bm-absolute bm-inset-0 bm-rounded-[inherit] bm-border bm-border-slate-400/25 bm-bg-gradient-to-br bm-from-[#081824]/95 bm-to-[#112f41]/90 bm-shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] bm-backdrop-blur-[18px] bm-backdrop-saturate-[1.45] bm-transition-opacity bm-duration-200 bm-ease-out;
 }
 
 .bili-manager-watch-timer__handle {
-  @apply relative z-10 block w-full cursor-grab border-0 bg-transparent pb-2.5 pl-3 pr-[50px] pt-3 text-left text-inherit transition-[opacity,transform] duration-200 ease-out active:cursor-grabbing;
+  @apply bm-relative bm-z-10 bm-block bm-w-full bm-cursor-grab bm-border-0 bm-bg-transparent bm-pb-2.5 bm-pl-3 bm-pr-[50px] bm-pt-3 bm-text-left bm-text-inherit bm-transition-[opacity,transform] bm-duration-200 bm-ease-out active:bm-cursor-grabbing;
 }
 
 .bili-manager-watch-timer__close {
-  @apply absolute right-2 top-2 z-20 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-white/10 bg-slate-950/30 p-0 text-sm font-medium leading-none text-slate-300/60 opacity-0 transition-[opacity,color,background-color] duration-150 ease-out hover:bg-slate-800/60 hover:text-slate-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40;
+  @apply bm-absolute bm-right-2 bm-top-2 bm-z-20 bm-inline-flex bm-h-6 bm-w-6 bm-cursor-pointer bm-items-center bm-justify-center bm-rounded-md bm-border bm-border-white/10 bm-bg-slate-950/30 bm-p-0 bm-text-sm bm-font-medium bm-leading-none bm-text-slate-300/60 bm-opacity-0 bm-transition-[opacity,color,background-color] bm-duration-150 bm-ease-out hover:bm-bg-slate-800/60 hover:bm-text-slate-100/90 focus-visible:bm-outline-none focus-visible:bm-ring-2 focus-visible:bm-ring-slate-400/40;
 }
 
 #bili-manager-watch-timer:hover .bili-manager-watch-timer__close,
 .bili-manager-watch-timer__close:focus-visible {
-  @apply opacity-100;
+  @apply bm-opacity-100;
 }
 
 .bili-manager-watch-timer--confirming .bili-manager-watch-timer__handle {
-  @apply pointer-events-none -translate-y-1 scale-[0.98] opacity-0;
+  @apply bm-pointer-events-none -bm-translate-y-1 bm-scale-[0.98] bm-opacity-0;
 }
 
 .bili-manager-watch-timer--confirming .bili-manager-watch-timer__close {
-  @apply pointer-events-none opacity-0;
+  @apply bm-pointer-events-none bm-opacity-0;
 }
 
 .bili-manager-watch-timer__prompt {
-  @apply pointer-events-none absolute inset-0 z-30 flex translate-y-1 scale-[0.98] flex-col justify-between gap-3 p-3 opacity-0 transition-[opacity,transform] duration-200 ease-out;
+  @apply bm-pointer-events-none bm-absolute bm-inset-0 bm-z-30 bm-flex bm-translate-y-1 bm-scale-[0.98] bm-flex-col bm-justify-between bm-gap-3 bm-p-3 bm-opacity-0 bm-transition-[opacity,transform] bm-duration-200 bm-ease-out;
 }
 
 .bili-manager-watch-timer--confirming .bili-manager-watch-timer__prompt {
-  @apply pointer-events-auto translate-y-0 scale-100 opacity-100 delay-[60ms];
+  @apply bm-pointer-events-auto bm-translate-y-0 bm-scale-100 bm-opacity-100 bm-delay-[60ms];
 }
 
 .bili-manager-watch-timer__prompt-text {
-  @apply flex flex-col gap-1.5;
+  @apply bm-flex bm-flex-col bm-gap-1.5;
 }
 
 .bili-manager-watch-timer__prompt-title {
-  @apply text-sm font-semibold text-slate-100/95;
+  @apply bm-text-sm bm-font-semibold bm-text-slate-100/95;
 }
 
 .bili-manager-watch-timer__prompt-hint {
-  @apply text-[11px] font-medium leading-[1.45] text-slate-300/65;
+  @apply bm-text-[11px] bm-font-medium bm-leading-[1.45] bm-text-slate-300/65;
 }
 
 .bili-manager-watch-timer__prompt-actions {
-  @apply flex justify-end gap-1.5;
+  @apply bm-flex bm-justify-end bm-gap-1.5;
 }
 
 .bili-manager-watch-timer__prompt-button {
-  @apply rounded-md border border-white/10 bg-transparent px-2.5 py-1 text-[11px] font-medium text-slate-300/75 transition-colors duration-150 ease-out hover:bg-white/[0.06] hover:text-slate-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:pointer-events-none disabled:opacity-50;
+  @apply bm-rounded-md bm-border bm-border-white/10 bm-bg-transparent bm-px-2.5 bm-py-1 bm-text-[11px] bm-font-medium bm-text-slate-300/75 bm-transition-colors bm-duration-150 bm-ease-out hover:bm-bg-white/[0.06] hover:bm-text-slate-100/90 focus-visible:bm-outline-none focus-visible:bm-ring-2 focus-visible:bm-ring-slate-400/35 disabled:bm-pointer-events-none disabled:bm-opacity-50;
 }
 
 .bili-manager-watch-timer__prompt-button--confirm {
-  @apply bg-slate-200/10 text-slate-100/85 hover:bg-slate-200/15;
+  @apply bm-bg-slate-200/10 bm-text-slate-100/85 hover:bm-bg-slate-200/15;
 }
 
 .bili-manager-watch-timer__time {
-  @apply block text-2xl font-bold leading-[1.12] tracking-[0.01em] text-slate-50;
+  @apply bm-block bm-text-2xl bm-font-bold bm-leading-[1.12] bm-tracking-[0.01em] bm-text-slate-50;
 }
 
 .bili-manager-watch-timer__today {
-  @apply mt-2.5 flex justify-between gap-2.5 text-xs font-medium leading-[1.2] text-sky-100/80;
+  @apply bm-mt-2.5 bm-flex bm-justify-between bm-gap-2.5 bm-text-xs bm-font-medium bm-leading-[1.2] bm-text-sky-100/80;
 }
