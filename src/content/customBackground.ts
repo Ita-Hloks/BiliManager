@@ -6,13 +6,12 @@ const STYLE_ID = "bili-manager-custom-background-style";
 const ENABLED_ATTR = "data-bili-manager-custom-background";
 
 export function applyCustomBackground(settings: CustomBackgroundSettings): void {
-  ensureStyle();
-
   if (!shouldApplyCustomBackground(settings)) {
     removeBackground();
     return;
   }
 
+  ensureStyle();
   const root = ensureRoot();
   root.style.backgroundImage = `url("${settings.imageDataUrl}")`;
   root.style.setProperty(
@@ -72,8 +71,8 @@ function applyBackgroundThemeClass(root: HTMLElement) {
 
 function removeBackground() {
   document.getElementById(ROOT_ID)?.remove();
+  document.getElementById(STYLE_ID)?.remove();
   document.documentElement.removeAttribute(ENABLED_ATTR);
-  delete document.documentElement.dataset.biliManagerCustomBackground;
 }
 
 function ensureStyle() {

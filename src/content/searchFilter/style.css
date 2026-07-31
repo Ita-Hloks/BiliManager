@@ -1,8 +1,8 @@
 .bili-manager-filtered {
-  @apply relative;
+  @apply bm-relative;
 }
 .bili-manager-filtered-cover-wrap {
-  @apply relative overflow-hidden;
+  @apply bm-relative bm-overflow-hidden;
   isolation: isolate;
 }
 .bili-manager-filtered-cover {
@@ -58,14 +58,14 @@
   opacity: 0.5 !important;
 }
 .bili-manager-favorite-original-meta-hidden {
-  @apply hidden;
+  @apply bm-hidden;
 }
 .bili-manager-preview-disabled {
   display: none !important;
   pointer-events: none !important;
 }
 .bili-manager-filter-reasons {
-  @apply absolute inset-0 flex items-center justify-center text-center whitespace-pre-line;
+  @apply bm-absolute bm-inset-0 bm-flex bm-items-center bm-justify-center bm-text-center bm-whitespace-pre-line;
   box-sizing: border-box;
   z-index: 2147483646;
   padding: 14px;
@@ -79,8 +79,6 @@
     "Segoe UI",
     sans-serif;
   text-shadow: none;
-  backdrop-filter: none;
-  opacity: 1;
   pointer-events: none;
   transition:
     opacity 180ms ease,
@@ -89,8 +87,6 @@
 .bili-manager-page-light .bili-manager-filter-reasons {
   background: rgba(241, 245, 249, 0.72);
   color: rgba(51, 65, 85, 0.58);
-  text-shadow: none;
-  backdrop-filter: none;
 }
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
   background: rgba(8, 8, 10, 0.28);
@@ -101,25 +97,25 @@
   color: rgba(51, 65, 85, 0.72);
 }
 .bili-manager-filter-reasons--hidden {
-  @apply opacity-0;
+  @apply bm-opacity-0;
 }
 .bili-manager-filter-reasons--recommendation {
-  @apply p-0;
+  @apply bm-p-0;
 }
 .bili-manager-favorite-recommendation {
-  @apply absolute inset-0 cursor-pointer overflow-hidden text-left no-underline outline-none focus-visible:ring-2 focus-visible:ring-bili-blue;
+  @apply bm-absolute bm-inset-0 bm-cursor-pointer bm-overflow-hidden bm-text-left bm-no-underline bm-outline-none focus-visible:bm-ring-2 focus-visible:bm-ring-bili-blue;
   border-radius: inherit;
   pointer-events: auto;
 }
 .bili-manager-favorite-recommendation__cover {
-  @apply absolute inset-0 h-full w-full object-cover brightness-75;
+  @apply bm-absolute bm-inset-0 bm-h-full bm-w-full bm-object-cover bm-brightness-75;
 }
 .bili-manager-favorite-recommendation__shade {
-  @apply absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10;
+  @apply bm-absolute bm-inset-0 bm-bg-gradient-to-t bm-from-black/90 bm-via-black/45 bm-to-black/10;
 }
 .bili-manager-favorite-recommendation__content {
-  @apply absolute inset-0 flex items-start p-3 text-white;
+  @apply bm-absolute bm-inset-0 bm-flex bm-items-start bm-p-3 bm-text-white;
 }
 .bili-manager-favorite-recommendation__source {
-  @apply w-fit rounded-full bg-bili-pink px-2 py-0.5 text-[10px] font-semibold text-white;
+  @apply bm-w-fit bm-rounded-full bm-bg-bili-pink bm-px-2 bm-py-0.5 bm-text-[10px] bm-font-semibold bm-text-white;
 }
