@@ -79,8 +79,6 @@
     "Segoe UI",
     sans-serif;
   text-shadow: none;
-  backdrop-filter: none;
-  opacity: 1;
   pointer-events: none;
   transition:
     opacity 180ms ease,
@@ -89,8 +87,6 @@
 .bili-manager-page-light .bili-manager-filter-reasons {
   background: rgba(241, 245, 249, 0.72);
   color: rgba(51, 65, 85, 0.58);
-  text-shadow: none;
-  backdrop-filter: none;
 }
 .bili-manager-filtered[data-bili-manager-filter-gate="peek"] .bili-manager-filter-reasons {
   background: rgba(8, 8, 10, 0.28);

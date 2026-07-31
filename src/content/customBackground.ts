@@ -73,7 +73,6 @@ function removeBackground() {
   document.getElementById(ROOT_ID)?.remove();
   document.getElementById(STYLE_ID)?.remove();
   document.documentElement.removeAttribute(ENABLED_ATTR);
-  delete document.documentElement.dataset.biliManagerCustomBackground;
 }
 
 function ensureStyle() {
