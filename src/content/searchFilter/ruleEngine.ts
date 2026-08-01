@@ -12,45 +12,46 @@ const TEXT = {
   unknownError: "未知错误",
 };
 
-export function evaluateSearchCard(
-  card: SearchCard,
-  settings: SearchFilterSettings,
-  titleHighlighted: boolean,
-): FilterResult {
-  const reasons: string[] = [];
-  const regexErrors: string[] = [];
-
+export function createSearchCardEvaluator(settings: SearchFilterSettings) {
   const titlePattern = compilePattern(settings.titlePattern, TEXT.titleRuleLabel);
-  if (titlePattern.error) regexErrors.push(titlePattern.error);
-  if (titlePattern.regex?.test(card.title)) {
-    reasons.push(`${TEXT.titleMatched}：${settings.titlePattern}`);
-  }
-
   const uploaderPattern = compilePattern(settings.uploaderPattern, TEXT.uploaderRuleLabel);
-  if (uploaderPattern.error) regexErrors.push(uploaderPattern.error);
-  if (uploaderPattern.regex?.test(card.uploader)) reasons.push(TEXT.uploaderMatched);
+  const regexErrors = [titlePattern.error, uploaderPattern.error].filter(
+    (error): error is string => error !== null,
+  );
 
-  if (settings.filterMissingTitleHighlight && !titleHighlighted) {
-    reasons.push(TEXT.missingSearchTerm);
-  }
+  return {
+    regexErrors,
+    evaluate(card: SearchCard, titleHighlighted: boolean): FilterResult {
+      const reasons: string[] = [];
 
-  let lowInteractionRate: number | null = null;
-  if (
-    typeof card.viewCount === "number" &&
-    typeof card.danmakuCount === "number" &&
-    card.viewCount > 0 &&
-    card.danmakuCount > 0
-  ) {
-    const rate = card.danmakuCount / card.viewCount;
-    if (rate < settings.minDanmakuViewRate) {
-      lowInteractionRate = rate;
-      if (settings.filterLowDanmakuViewRate) {
-        reasons.push(`${TEXT.lowInteraction}：${formatRate(rate)}`);
+      if (titlePattern.regex?.test(card.title)) {
+        reasons.push(`${TEXT.titleMatched}：${settings.titlePattern}`);
       }
-    }
-  }
+      if (uploaderPattern.regex?.test(card.uploader)) reasons.push(TEXT.uploaderMatched);
 
-  return { reasons, regexErrors, lowInteractionRate };
+      if (settings.filterMissingTitleHighlight && !titleHighlighted) {
+        reasons.push(TEXT.missingSearchTerm);
+      }
+
+      let lowInteractionRate: number | null = null;
+      if (
+        typeof card.viewCount === "number" &&
+        typeof card.danmakuCount === "number" &&
+        card.viewCount > 0 &&
+        card.danmakuCount > 0
+      ) {
+        const rate = card.danmakuCount / card.viewCount;
+        if (rate < settings.minDanmakuViewRate) {
+          lowInteractionRate = rate;
+          if (settings.filterLowDanmakuViewRate) {
+            reasons.push(`${TEXT.lowInteraction}：${formatRate(rate)}`);
+          }
+        }
+      }
+
+      return { reasons, lowInteractionRate };
+    },
+  };
 }
 
 function compilePattern(

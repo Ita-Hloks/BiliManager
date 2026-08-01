@@ -13,7 +13,7 @@ import {
 } from "./cardPresenter";
 import { unbindFilterGateEvents } from "./filterGate";
 import { collectSearchCards, getBvid, hasTitleHighlight, isSearchPage } from "./pageAdapter";
-import { evaluateSearchCard } from "./ruleEngine";
+import { createSearchCardEvaluator } from "./ruleEngine";
 
 export { isSearchPage } from "./pageAdapter";
 
@@ -45,13 +45,15 @@ export function applySearchFilter(
   }
 
   const cards = collectSearchCards();
-  const regexErrors = new Set<string>();
+  if (cards.length === 0) return createStats(true, settings.enabled, 0, 0, []);
+
+  const evaluator = createSearchCardEvaluator(settings);
   const pageTheme = detectBilibiliPageTheme();
   let filtered = 0;
 
   for (const card of cards) {
     const titleHighlighted = hasTitleHighlight(card.titleEl);
-    const result = evaluateSearchCard(card, settings, titleHighlighted);
+    const result = evaluator.evaluate(card, titleHighlighted);
     const blockedUploader = findBlockedUploader(uploaderBlocklist, {
       mid: card.uploaderMid,
       name: card.uploader,
@@ -64,8 +66,6 @@ export function applySearchFilter(
       },
       uploaderBlockingEnabled && !blockedUploader,
     );
-    for (const error of result.regexErrors) regexErrors.add(error);
-
     const activeReasons = settings.enabled ? [...result.reasons] : [];
     if (uploaderBlockingEnabled && blockedUploader) {
       activeReasons.unshift(`已屏蔽 UP：${blockedUploader.name}`);
@@ -94,7 +94,7 @@ export function applySearchFilter(
     }
   }
 
-  return createStats(true, settings.enabled, cards.length, filtered, [...regexErrors]);
+  return createStats(true, settings.enabled, cards.length, filtered, evaluator.regexErrors);
 }
 
 export function clearSearchFilter(): void {

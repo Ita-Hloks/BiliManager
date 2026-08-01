@@ -15,6 +15,5 @@ export type SearchCard = {
 
 export type FilterResult = {
   reasons: string[];
-  regexErrors: string[];
   lowInteractionRate: number | null;
 };
