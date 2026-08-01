@@ -13,6 +13,15 @@ const RECOMMENDATION_ID_ATTR = "data-bili-manager-favorite-recommendation-id";
 
 type FilterGateState = "locked" | "peek" | "unlocked";
 
+const LOCKED_POINTER_EVENT_NAMES = [
+  "click",
+  "auxclick",
+  "pointerover",
+  "pointerenter",
+  "mouseover",
+  "mouseenter",
+] as const;
+
 const recommendationsByCard = new WeakMap<HTMLElement, FavoriteVideo>();
 
 let filterGateEventsBound = false;
@@ -49,67 +58,43 @@ export function getFilteredCards(): HTMLElement[] {
 export function unbindFilterGateEvents(): void {
   if (!filterGateEventsBound) return;
 
-  document.removeEventListener("click", stopLockedNavigation, true);
-  document.removeEventListener("auxclick", stopLockedNavigation, true);
+  LOCKED_POINTER_EVENT_NAMES.forEach(eventName => {
+    document.removeEventListener(eventName, stopLockedCardEvent, true);
+  });
   document.removeEventListener("keydown", stopLockedKeyboardNavigation, true);
   document.removeEventListener("contextmenu", handleFilteredContextMenu, true);
-  document.removeEventListener("pointerover", stopLockedHoverDetails, true);
-  document.removeEventListener("pointerenter", stopLockedHoverDetails, true);
-  document.removeEventListener("mouseover", stopLockedHoverDetails, true);
-  document.removeEventListener("mouseenter", stopLockedHoverDetails, true);
   filterGateEventsBound = false;
 }
 
 function bindFilterGateEvents(): void {
   if (filterGateEventsBound) return;
 
-  document.addEventListener("click", stopLockedNavigation, true);
-  document.addEventListener("auxclick", stopLockedNavigation, true);
+  LOCKED_POINTER_EVENT_NAMES.forEach(eventName => {
+    document.addEventListener(eventName, stopLockedCardEvent, true);
+  });
   document.addEventListener("keydown", stopLockedKeyboardNavigation, true);
   document.addEventListener("contextmenu", handleFilteredContextMenu, true);
-  document.addEventListener("pointerover", stopLockedHoverDetails, true);
-  document.addEventListener("pointerenter", stopLockedHoverDetails, true);
-  document.addEventListener("mouseover", stopLockedHoverDetails, true);
-  document.addEventListener("mouseenter", stopLockedHoverDetails, true);
   filterGateEventsBound = true;
 }
 
-function stopLockedNavigation(event: MouseEvent): void {
+function stopLockedCardEvent(event: Event): void {
   const cardEl = getEventFilteredCard(event);
   if (!cardEl || getGateState(cardEl) === "unlocked") return;
 
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
+  stopEvent(event);
 }
 
 function stopLockedKeyboardNavigation(event: KeyboardEvent): void {
   if (event.key !== "Enter" && event.key !== " ") return;
 
-  const cardEl = getEventFilteredCard(event);
-  if (!cardEl || getGateState(cardEl) === "unlocked") return;
-
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-}
-
-function stopLockedHoverDetails(event: MouseEvent | PointerEvent): void {
-  const cardEl = getEventFilteredCard(event);
-  if (!cardEl || getGateState(cardEl) === "unlocked") return;
-
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
+  stopLockedCardEvent(event);
 }
 
 function handleFilteredContextMenu(event: MouseEvent): void {
   const cardEl = getEventFilteredCard(event);
   if (!cardEl) return;
 
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
+  stopEvent(event);
 
   const currentState = getGateState(cardEl);
   const nextState: FilterGateState =
@@ -124,6 +109,12 @@ function getEventFilteredCard(event: Event): HTMLElement | null {
   if (target.closest(`[${RECOMMENDATION_LINK_ATTR}]`)) return null;
   if (target.closest(`[${UPLOADER_BLOCK_CONTROL_ATTR}]`)) return null;
   return target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
+}
+
+function stopEvent(event: Event): void {
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
 }
 
 function getGateState(cardEl: HTMLElement): FilterGateState {

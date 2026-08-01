@@ -21,6 +21,17 @@ const COVER_CLASS = "bili-manager-filtered-cover";
 const PAGE_DARK_CLASS = "bili-manager-page-dark";
 const PAGE_LIGHT_CLASS = "bili-manager-page-light";
 
+const GLOBAL_FILTER_STATE_CLASSES = [UNHIGHLIGHTED_TITLE_CLASS, GRAYSCALE_COVER_CLASS] as const;
+const CARD_FILTER_STATE_CLASSES = [
+  COVER_WRAP_CLASS,
+  COVER_CLASS,
+  TITLE_CLASS,
+  UNHIGHLIGHTED_TITLE_CLASS,
+  GRAYSCALE_COVER_CLASS,
+  META_CLASS,
+  "bili-manager-preview-disabled",
+] as const;
+
 const originalRecommendationText = new WeakMap<
   HTMLElement,
   { titleHtml: string; uploaderHtml: string | null }
@@ -63,12 +74,7 @@ export function markFiltered(
 
 export function clearAllFilterStates(): void {
   getFilteredCards().forEach(clearFilterState);
-  document
-    .querySelectorAll<HTMLElement>(`.${UNHIGHLIGHTED_TITLE_CLASS}`)
-    .forEach(element => element.classList.remove(UNHIGHLIGHTED_TITLE_CLASS));
-  document
-    .querySelectorAll<HTMLElement>(`.${GRAYSCALE_COVER_CLASS}`)
-    .forEach(element => element.classList.remove(GRAYSCALE_COVER_CLASS));
+  removeClassesFromDescendants(document, GLOBAL_FILTER_STATE_CLASSES);
 }
 
 export function clearFilterState(cardEl: HTMLElement): void {
@@ -77,27 +83,7 @@ export function clearFilterState(cardEl: HTMLElement): void {
   restoreTitleTooltips(cardEl);
   cardEl.classList.remove("bili-manager-filtered", PAGE_DARK_CLASS, PAGE_LIGHT_CLASS);
   cardEl.querySelector(`.${FILTER_REASON_CLASS}`)?.remove();
-  cardEl
-    .querySelectorAll<HTMLElement>(`.${COVER_WRAP_CLASS}`)
-    .forEach(element => element.classList.remove(COVER_WRAP_CLASS));
-  cardEl
-    .querySelectorAll<HTMLElement>(`.${COVER_CLASS}`)
-    .forEach(element => element.classList.remove(COVER_CLASS));
-  cardEl
-    .querySelectorAll<HTMLElement>(`.${TITLE_CLASS}`)
-    .forEach(element => element.classList.remove(TITLE_CLASS));
-  cardEl
-    .querySelectorAll<HTMLElement>(`.${UNHIGHLIGHTED_TITLE_CLASS}`)
-    .forEach(element => element.classList.remove(UNHIGHLIGHTED_TITLE_CLASS));
-  cardEl
-    .querySelectorAll<HTMLElement>(`.${GRAYSCALE_COVER_CLASS}`)
-    .forEach(element => element.classList.remove(GRAYSCALE_COVER_CLASS));
-  cardEl
-    .querySelectorAll<HTMLElement>(`.${META_CLASS}`)
-    .forEach(element => element.classList.remove(META_CLASS));
-  cardEl
-    .querySelectorAll<HTMLElement>(".bili-manager-preview-disabled")
-    .forEach(element => element.classList.remove("bili-manager-preview-disabled"));
+  removeClassesFromDescendants(cardEl, CARD_FILTER_STATE_CLASSES);
 }
 
 export function applyGrayscaleState(card: SearchCard, enabled: boolean): void {
@@ -138,9 +124,7 @@ function restoreFavoriteCardText(cardEl: HTMLElement): void {
   const uploaderEl = findSearchCardUploader(cardEl);
   if (titleEl) titleEl.innerHTML = original.titleHtml;
   if (uploaderEl && original.uploaderHtml !== null) uploaderEl.innerHTML = original.uploaderHtml;
-  cardEl
-    .querySelectorAll<HTMLElement>(`.${RECOMMENDATION_META_HIDDEN_CLASS}`)
-    .forEach(element => element.classList.remove(RECOMMENDATION_META_HIDDEN_CLASS));
+  removeClassesFromDescendants(cardEl, [RECOMMENDATION_META_HIDDEN_CLASS]);
   originalRecommendationText.delete(cardEl);
 }
 
@@ -178,6 +162,14 @@ function restoreTitleTooltips(cardEl: HTMLElement): void {
     const title = element.getAttribute(ORIGINAL_TITLE_ATTR);
     element.removeAttribute(ORIGINAL_TITLE_ATTR);
     if (title !== null) element.setAttribute("title", title);
+  });
+}
+
+function removeClassesFromDescendants(root: ParentNode, classNames: readonly string[]): void {
+  classNames.forEach(className => {
+    root.querySelectorAll<HTMLElement>(`.${className}`).forEach(element => {
+      element.classList.remove(className);
+    });
   });
 }
 
