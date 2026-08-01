@@ -1,6 +1,6 @@
 export type SearchCard = {
   cardEl: HTMLElement;
-  titleEl: HTMLElement | null;
+  titleEl: HTMLElement;
   uploaderEl: HTMLElement | null;
   title: string;
   videoUrl: string;
@@ -8,7 +8,7 @@ export type SearchCard = {
   uploaderMid: string;
   viewCount: number | null;
   danmakuCount: number | null;
-  thumbnailEl: HTMLElement | null;
+  thumbnailEl: HTMLElement;
   metadataEls: HTMLElement[];
   previewEls: HTMLElement[];
 };

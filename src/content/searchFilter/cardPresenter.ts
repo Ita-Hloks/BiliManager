@@ -23,7 +23,7 @@ const PAGE_LIGHT_CLASS = "bili-manager-page-light";
 
 const originalRecommendationText = new WeakMap<
   HTMLElement,
-  { titleHtml: string | null; uploaderHtml: string | null }
+  { titleHtml: string; uploaderHtml: string | null }
 >();
 
 export function markFiltered(
@@ -36,13 +36,13 @@ export function markFiltered(
 
   applyPageThemeClass(card.cardEl, pageTheme);
   card.cardEl.classList.add("bili-manager-filtered");
-  card.titleEl?.classList.add(TITLE_CLASS);
-  card.titleEl?.classList.remove(UNHIGHLIGHTED_TITLE_CLASS);
-  card.thumbnailEl?.classList.remove(GRAYSCALE_COVER_CLASS);
+  card.titleEl.classList.add(TITLE_CLASS);
+  card.titleEl.classList.remove(UNHIGHLIGHTED_TITLE_CLASS);
+  card.thumbnailEl.classList.remove(GRAYSCALE_COVER_CLASS);
   card.metadataEls.forEach(element => element.classList.add(META_CLASS));
   const coverHost = getCoverOverlayHost(card);
   coverHost.classList.add(COVER_WRAP_CLASS);
-  card.thumbnailEl?.classList.add(COVER_CLASS);
+  card.thumbnailEl.classList.add(COVER_CLASS);
   card.previewEls.forEach(element => {
     element.classList.add("bili-manager-preview-disabled");
     if (element instanceof HTMLVideoElement) element.pause();
@@ -101,8 +101,8 @@ export function clearFilterState(cardEl: HTMLElement): void {
 }
 
 export function applyGrayscaleState(card: SearchCard, enabled: boolean): void {
-  card.titleEl?.classList.toggle(UNHIGHLIGHTED_TITLE_CLASS, enabled);
-  card.thumbnailEl?.classList.toggle(GRAYSCALE_COVER_CLASS, enabled);
+  card.titleEl.classList.toggle(UNHIGHLIGHTED_TITLE_CLASS, enabled);
+  card.thumbnailEl.classList.toggle(GRAYSCALE_COVER_CLASS, enabled);
 }
 
 function applyFavoriteCardText(card: SearchCard, recommendation: FavoriteVideo | null): void {
@@ -113,15 +113,13 @@ function applyFavoriteCardText(card: SearchCard, recommendation: FavoriteVideo |
 
   if (!originalRecommendationText.has(card.cardEl)) {
     originalRecommendationText.set(card.cardEl, {
-      titleHtml: card.titleEl?.innerHTML ?? null,
+      titleHtml: card.titleEl.innerHTML,
       uploaderHtml: card.uploaderEl?.innerHTML ?? null,
     });
   }
 
-  if (card.titleEl) {
-    card.titleEl.textContent = recommendation.title;
-    card.titleEl.classList.remove(TITLE_CLASS);
-  }
+  card.titleEl.textContent = recommendation.title;
+  card.titleEl.classList.remove(TITLE_CLASS);
   if (card.uploaderEl) {
     card.uploaderEl.textContent = recommendation.uploader || "";
     card.uploaderEl.classList.remove(META_CLASS);
@@ -138,7 +136,7 @@ function restoreFavoriteCardText(cardEl: HTMLElement): void {
 
   const titleEl = findSearchCardTitle(cardEl);
   const uploaderEl = findSearchCardUploader(cardEl);
-  if (titleEl && original.titleHtml !== null) titleEl.innerHTML = original.titleHtml;
+  if (titleEl) titleEl.innerHTML = original.titleHtml;
   if (uploaderEl && original.uploaderHtml !== null) uploaderEl.innerHTML = original.uploaderHtml;
   cardEl
     .querySelectorAll<HTMLElement>(`.${RECOMMENDATION_META_HIDDEN_CLASS}`)
@@ -148,8 +146,8 @@ function restoreFavoriteCardText(cardEl: HTMLElement): void {
 
 function getCoverOverlayHost(card: SearchCard): HTMLElement {
   return (
-    card.thumbnailEl?.closest<HTMLElement>(".bili-video-card__image") ??
-    card.thumbnailEl?.parentElement ??
+    card.thumbnailEl.closest<HTMLElement>(".bili-video-card__image") ??
+    card.thumbnailEl.parentElement ??
     card.cardEl
   );
 }

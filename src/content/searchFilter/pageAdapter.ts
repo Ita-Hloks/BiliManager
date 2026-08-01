@@ -89,7 +89,7 @@ export function collectSearchCards(): SearchCard[] {
     });
   }
 
-  return [...elements].map(toSearchCard).filter(isValidSearchCard);
+  return [...elements].map(toSearchCard).filter((card): card is SearchCard => card !== null);
 }
 
 export function findSearchCardTitle(cardEl: HTMLElement): HTMLElement | null {
@@ -100,9 +100,7 @@ export function findSearchCardUploader(cardEl: HTMLElement): HTMLElement | null 
   return queryFirst(cardEl, selectors.uploader);
 }
 
-export function hasTitleHighlight(titleEl: HTMLElement | null): boolean {
-  if (!titleEl) return false;
-
+export function hasTitleHighlight(titleEl: HTMLElement): boolean {
   for (const selector of selectors.titleHighlight) {
     const highlight = titleEl.querySelector<HTMLElement>(selector);
     if (highlight && isPinkHighlight(highlight)) return true;
@@ -122,14 +120,19 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
   return link.parentElement?.parentElement?.parentElement ?? link.parentElement;
 }
 
-function toSearchCard(cardEl: HTMLElement): SearchCard {
+function toSearchCard(cardEl: HTMLElement): SearchCard | null {
   const titleEl = findSearchCardTitle(cardEl);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
+  const videoLink = queryFirst(cardEl, selectors.videoLinks);
+  if (!titleEl || !thumbnailEl || !videoLink) return null;
+
+  const title = normalizeText(titleEl.textContent || titleEl.getAttribute("title") || "");
+  if (!title || cardEl.closest("footer, .footer, .bili-footer")) return null;
+
   const uploaderEl = findSearchCardUploader(cardEl);
   const uploaderLink =
     uploaderEl?.closest<HTMLAnchorElement>("a[href*='space.bilibili.com']") ??
     cardEl.querySelector<HTMLAnchorElement>("a[href*='space.bilibili.com']");
-  const videoLink = queryFirst(cardEl, selectors.videoLinks);
   const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
 
@@ -137,8 +140,8 @@ function toSearchCard(cardEl: HTMLElement): SearchCard {
     cardEl,
     titleEl,
     uploaderEl,
-    title: normalizeText(titleEl?.textContent || titleEl?.getAttribute("title") || ""),
-    videoUrl: videoLink?.getAttribute("href") ?? "",
+    title,
+    videoUrl: videoLink.getAttribute("href") ?? "",
     uploader: normalizeText(uploaderEl?.textContent ?? ""),
     uploaderMid: getUploaderMid(uploaderLink?.getAttribute("href") ?? ""),
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
@@ -151,18 +154,12 @@ function toSearchCard(cardEl: HTMLElement): SearchCard {
   };
 }
 
-function isValidSearchCard(card: SearchCard): boolean {
-  if (!card.titleEl || !card.thumbnailEl || !card.title) return false;
-  if (card.cardEl.closest("footer, .footer, .bili-footer")) return false;
-  return !!card.cardEl.querySelector(selectors.videoLinks.join(", "));
-}
-
-function collectMetadataElements(cardEl: HTMLElement, titleEl: HTMLElement | null): HTMLElement[] {
+function collectMetadataElements(cardEl: HTMLElement, titleEl: HTMLElement): HTMLElement[] {
   const elements = new Set<HTMLElement>();
 
   for (const selector of selectors.metadata) {
     cardEl.querySelectorAll<HTMLElement>(selector).forEach(element => {
-      if (element === titleEl || titleEl?.contains(element)) return;
+      if (element === titleEl || titleEl.contains(element)) return;
       elements.add(element);
     });
   }
