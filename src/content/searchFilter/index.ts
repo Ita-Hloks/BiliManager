@@ -10,8 +10,8 @@ import {
   clearAllFilterStates,
   clearFilterState,
   markFiltered,
-  unbindFilterGateEvents,
 } from "./cardPresenter";
+import { unbindFilterGateEvents } from "./filterGate";
 import { collectSearchCards, getBvid, hasTitleHighlight, isSearchPage } from "./pageAdapter";
 import { evaluateSearchCard } from "./ruleEngine";
 
