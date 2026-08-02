@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BellRing, Clock, Download, Filter, Sparkles, UserX } from "lucide-react";
+import { BellRing, Clock, Download, Filter, Sparkles, Tag, UserX } from "lucide-react";
 import "../styles/globals.css";
 import "../styles/options-controls.css";
 import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
@@ -36,10 +36,14 @@ import {
 } from "../shared/uploaderBlocklist";
 import type { BlockedUploader } from "../shared/uploaderBlocklist";
 import { UploaderBlockPanel } from "./panels/uploaderBlockPanel";
+import { getTagBlocklist, removeBlockedTag, TAG_BLOCKLIST_KEY } from "../shared/tagBlocklist";
+import type { BlockedTag } from "../shared/tagBlocklist";
+import { TagBlockPanel } from "./panels/tagBlockPanel";
 
 type SectionId =
   | "search-filter"
   | "uploader-block"
+  | "tag-block"
   | "personalization"
   | "watch-timer"
   | "watch-reminder"
@@ -48,6 +52,7 @@ type SectionId =
 const sectionNavItems = [
   { id: "search-filter", label: "过滤搜索", icon: Filter },
   { id: "uploader-block", label: "UP 拦截", icon: UserX },
+  { id: "tag-block", label: "TAG 拦截", icon: Tag },
   { id: "personalization", label: "个性化", icon: Sparkles },
   { id: "watch-timer", label: "计时器", icon: Clock },
   { id: "watch-reminder", label: "定时器", icon: BellRing },
@@ -64,15 +69,17 @@ function OptionsApp() {
   const [backgroundMessage, setBackgroundMessage] = useState("");
   const [favoriteRecommendationMessage, setFavoriteRecommendationMessage] = useState("");
   const [uploaderBlocklist, setUploaderBlocklist] = useState<BlockedUploader[]>([]);
+  const [tagBlocklist, setTagBlocklist] = useState<BlockedTag[]>([]);
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
 
   useEffect(() => {
-    void Promise.all([getSettings(), getUploaderBlocklist()]).then(
-      ([nextSettings, nextUploaderBlocklist]) => {
+    void Promise.all([getSettings(), getUploaderBlocklist(), getTagBlocklist()]).then(
+      ([nextSettings, nextUploaderBlocklist, nextTagBlocklist]) => {
         setSettings(nextSettings);
         setUploaderBlocklist(nextUploaderBlocklist);
+        setTagBlocklist(nextTagBlocklist);
       },
     );
   }, []);
@@ -89,6 +96,7 @@ function OptionsApp() {
       if (changes[UPLOADER_BLOCKLIST_KEY]) {
         void getUploaderBlocklist().then(setUploaderBlocklist);
       }
+      if (changes[TAG_BLOCKLIST_KEY]) void getTagBlocklist().then(setTagBlocklist);
     };
 
     chrome.storage.onChanged.addListener(syncStoredSettings);
@@ -107,6 +115,10 @@ function OptionsApp() {
 
   async function unblockUploader(id: string) {
     await removeBlockedUploader(id);
+  }
+
+  async function unblockTag(id: string) {
+    await removeBlockedTag(id);
   }
 
   async function updateSearchFilter(patch: Partial<SearchFilterSettings>) {
@@ -342,6 +354,7 @@ function OptionsApp() {
               blocklist={uploaderBlocklist}
               onRemove={id => void unblockUploader(id)}
             />
+            <TagBlockPanel blocklist={tagBlocklist} onRemove={id => void unblockTag(id)} />
             <PersonalizationPanel
               backgroundMessage={backgroundMessage}
               settings={settings.personalization}

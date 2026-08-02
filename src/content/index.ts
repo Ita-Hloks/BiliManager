@@ -1,5 +1,8 @@
 import type { ExtensionMessage } from "../shared/messaging";
 import { getSettings, SETTINGS_KEY } from "../shared/storage";
+import { loadSearchTagIndex } from "./searchTags";
+import { getTagBlocklist, TAG_BLOCKLIST_KEY } from "../shared/tagBlocklist";
+import type { BlockedTag } from "../shared/tagBlocklist";
 import { getUploaderBlocklist, UPLOADER_BLOCKLIST_KEY } from "../shared/uploaderBlocklist";
 import type { BlockedUploader } from "../shared/uploaderBlocklist";
 import type {
@@ -101,6 +104,12 @@ async function scanCurrentPage() {
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
   applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
   if (searchPage) {
+    const searchUrl = location.href;
+    const tagsByBvid = settings.tagBlockingEnabled ? loadSearchTagIndex(searchUrl) : {};
+    if (generation !== scanGeneration || location.href !== searchUrl) {
+      scheduleScan(0);
+      return unavailableSearchStats;
+    }
     const cachedRecommendationPool = getCachedFavoriteRecommendationPool(
       settings.favoriteRecommendation,
     );
@@ -109,6 +118,9 @@ async function scanCurrentPage() {
       cachedRecommendationPool ?? undefined,
       settings.uploaderBlocklist,
       settings.uploaderBlockingEnabled,
+      settings.tagBlocklist,
+      settings.tagBlockingEnabled,
+      tagsByBvid,
     );
     if (
       !settings.searchFilter.enabled ||
@@ -129,6 +141,9 @@ async function scanCurrentPage() {
       recommendationPool,
       settings.uploaderBlocklist,
       settings.uploaderBlockingEnabled,
+      settings.tagBlocklist,
+      settings.tagBlockingEnabled,
+      tagsByBvid,
     );
   }
 
@@ -150,9 +165,15 @@ async function getContentSettings(): Promise<{
   watchReminderEnabled: boolean;
   uploaderBlocklist: BlockedUploader[];
   uploaderBlockingEnabled: boolean;
+  tagBlocklist: BlockedTag[];
+  tagBlockingEnabled: boolean;
   pluginEnabled: boolean;
 }> {
-  const [settings, uploaderBlocklist] = await Promise.all([getSettings(), getUploaderBlocklist()]);
+  const [settings, uploaderBlocklist, tagBlocklist] = await Promise.all([
+    getSettings(),
+    getUploaderBlocklist(),
+    getTagBlocklist(),
+  ]);
   const pluginEnabled = settings.features.enabled;
 
   return {
@@ -169,6 +190,8 @@ async function getContentSettings(): Promise<{
     watchReminderEnabled: pluginEnabled && settings.features.watchReminder,
     uploaderBlocklist,
     uploaderBlockingEnabled: pluginEnabled,
+    tagBlocklist,
+    tagBlockingEnabled: pluginEnabled,
     pluginEnabled,
   };
 }
@@ -241,7 +264,10 @@ function watchUrlChanges() {
 
 function bindStorageChanges() {
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && (changes[SETTINGS_KEY] || changes[UPLOADER_BLOCKLIST_KEY])) {
+    if (
+      areaName === "local" &&
+      (changes[SETTINGS_KEY] || changes[UPLOADER_BLOCKLIST_KEY] || changes[TAG_BLOCKLIST_KEY])
+    ) {
       scheduleScan(0);
     }
   });

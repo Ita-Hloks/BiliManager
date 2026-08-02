@@ -1,3 +1,4 @@
+import type { SearchTagIndex } from "../../shared/searchTags";
 import type { SearchCard } from "./types";
 
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
@@ -73,7 +74,7 @@ export function isSearchPage(url = location.href): boolean {
   return parsed.hostname === "search.bilibili.com" && SUPPORTED_SEARCH_PATHS.has(pathname);
 }
 
-export function collectSearchCards(): SearchCard[] {
+export function collectSearchCards(tagsByBvid: SearchTagIndex = {}): SearchCard[] {
   const elements = new Set<HTMLElement>();
 
   for (const selector of selectors.cards) {
@@ -89,7 +90,9 @@ export function collectSearchCards(): SearchCard[] {
     });
   }
 
-  return [...elements].map(toSearchCard).filter((card): card is SearchCard => card !== null);
+  return [...elements]
+    .map(cardEl => toSearchCard(cardEl, tagsByBvid))
+    .filter((card): card is SearchCard => card !== null);
 }
 
 export function findSearchCardTitle(cardEl: HTMLElement): HTMLElement | null {
@@ -120,7 +123,7 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
   return link.parentElement?.parentElement?.parentElement ?? link.parentElement;
 }
 
-function toSearchCard(cardEl: HTMLElement): SearchCard | null {
+function toSearchCard(cardEl: HTMLElement, tagsByBvid: SearchTagIndex): SearchCard | null {
   const titleEl = findSearchCardTitle(cardEl);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
   const videoLink = queryFirst(cardEl, selectors.videoLinks);
@@ -135,15 +138,18 @@ function toSearchCard(cardEl: HTMLElement): SearchCard | null {
     cardEl.querySelector<HTMLAnchorElement>("a[href*='space.bilibili.com']");
   const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
+  const videoUrl = videoLink.getAttribute("href") ?? "";
+  const bvid = getBvid(videoUrl).toUpperCase();
 
   return {
     cardEl,
     titleEl,
     uploaderEl,
     title,
-    videoUrl: videoLink.getAttribute("href") ?? "",
+    videoUrl,
     uploader: normalizeText(uploaderEl?.textContent ?? ""),
     uploaderMid: getUploaderMid(uploaderLink?.getAttribute("href") ?? ""),
+    tags: bvid ? (tagsByBvid[bvid] ?? []) : [],
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
     danmakuCount: parseMetric(metricsText, TEXT.danmakuLabels) ?? fallbackCounts[1] ?? null,
     thumbnailEl,
