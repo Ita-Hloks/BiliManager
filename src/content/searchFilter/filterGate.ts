@@ -112,7 +112,15 @@ function getEventFilteredCard(event: Event): HTMLElement | null {
   if (!(target instanceof Element)) return null;
   if (target.closest(`[${RECOMMENDATION_LINK_ATTR}]`)) return null;
   if (target.closest(`[${BLOCK_MENU_CONTROL_ATTR}]`)) return null;
-  return target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
+  const cardEl = target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
+  if (
+    cardEl &&
+    recommendationsByCard.has(cardEl) &&
+    target.closest("a[href*='space.bilibili.com']")
+  ) {
+    return null;
+  }
+  return cardEl;
 }
 
 function stopEvent(event: Event): void {
