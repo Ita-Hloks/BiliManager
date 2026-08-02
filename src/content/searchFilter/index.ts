@@ -1,5 +1,6 @@
 import type { BlockedTag } from "../../shared/tagBlocklist";
 import { findBlockedTag } from "../../shared/tagBlocklist";
+import type { SearchTagIndex } from "../../shared/searchTags";
 import type { BlockedUploader } from "../../shared/uploaderBlocklist";
 import { findBlockedUploader } from "../../shared/uploaderBlocklist";
 import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../../shared/types";
@@ -41,6 +42,7 @@ export function applySearchFilter(
   uploaderBlockingEnabled = false,
   tagBlocklist: BlockedTag[] = [],
   tagBlockingEnabled = false,
+  tagsByBvid: SearchTagIndex = {},
 ): SearchFilterStats {
   if (!isSearchPage()) {
     clearBlockMenuControls();
@@ -48,7 +50,7 @@ export function applySearchFilter(
     return createStats(false, settings.enabled, 0, 0, []);
   }
 
-  const cards = collectSearchCards();
+  const cards = collectSearchCards(tagsByBvid);
   if (cards.length === 0) return createStats(true, settings.enabled, 0, 0, []);
 
   const evaluator = createSearchCardEvaluator(settings);

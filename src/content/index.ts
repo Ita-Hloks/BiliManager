@@ -1,5 +1,6 @@
 import type { ExtensionMessage } from "../shared/messaging";
 import { getSettings, SETTINGS_KEY } from "../shared/storage";
+import { loadSearchTagIndex } from "./searchTags";
 import { getTagBlocklist, TAG_BLOCKLIST_KEY } from "../shared/tagBlocklist";
 import type { BlockedTag } from "../shared/tagBlocklist";
 import { getUploaderBlocklist, UPLOADER_BLOCKLIST_KEY } from "../shared/uploaderBlocklist";
@@ -103,6 +104,12 @@ async function scanCurrentPage() {
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
   applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
   if (searchPage) {
+    const searchUrl = location.href;
+    const tagsByBvid = settings.tagBlockingEnabled ? loadSearchTagIndex(searchUrl) : {};
+    if (generation !== scanGeneration || location.href !== searchUrl) {
+      scheduleScan(0);
+      return unavailableSearchStats;
+    }
     const cachedRecommendationPool = getCachedFavoriteRecommendationPool(
       settings.favoriteRecommendation,
     );
@@ -113,6 +120,7 @@ async function scanCurrentPage() {
       settings.uploaderBlockingEnabled,
       settings.tagBlocklist,
       settings.tagBlockingEnabled,
+      tagsByBvid,
     );
     if (
       !settings.searchFilter.enabled ||
@@ -135,6 +143,7 @@ async function scanCurrentPage() {
       settings.uploaderBlockingEnabled,
       settings.tagBlocklist,
       settings.tagBlockingEnabled,
+      tagsByBvid,
     );
   }
 
