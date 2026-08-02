@@ -34,6 +34,7 @@ const selectors = {
     ".username",
     "a[href*='space.bilibili.com']",
   ],
+  date: [".bili-video-card__info--date", ".bili-video-card__info--time", ".date", ".time"],
   metrics: [".bili-video-card__stats", ".so-icon", ".tags", ".des"],
   metadata: [
     ".bili-video-card__info--author",
@@ -103,6 +104,10 @@ export function findSearchCardUploader(cardEl: HTMLElement): HTMLElement | null 
   return queryFirst(cardEl, selectors.uploader);
 }
 
+export function findSearchCardDate(cardEl: HTMLElement): HTMLElement | null {
+  return queryFirst(cardEl, selectors.date);
+}
+
 export function hasTitleHighlight(titleEl: HTMLElement): boolean {
   for (const selector of selectors.titleHighlight) {
     const highlight = titleEl.querySelector<HTMLElement>(selector);
@@ -133,6 +138,7 @@ function toSearchCard(cardEl: HTMLElement, tagsByBvid: SearchTagIndex): SearchCa
   if (!title || cardEl.closest("footer, .footer, .bili-footer")) return null;
 
   const uploaderEl = findSearchCardUploader(cardEl);
+  const dateEl = findSearchCardDate(cardEl);
   const uploaderLink =
     uploaderEl?.closest<HTMLAnchorElement>("a[href*='space.bilibili.com']") ??
     cardEl.querySelector<HTMLAnchorElement>("a[href*='space.bilibili.com']");
@@ -149,6 +155,7 @@ function toSearchCard(cardEl: HTMLElement, tagsByBvid: SearchTagIndex): SearchCa
     videoUrl,
     uploader: normalizeText(uploaderEl?.textContent ?? ""),
     uploaderMid: getUploaderMid(uploaderLink?.getAttribute("href") ?? ""),
+    dateEl,
     tags: bvid ? (tagsByBvid[bvid] ?? []) : [],
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
     danmakuCount: parseMetric(metricsText, TEXT.danmakuLabels) ?? fallbackCounts[1] ?? null,

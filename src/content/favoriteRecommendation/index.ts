@@ -97,6 +97,16 @@ export function normalizeFavoriteCoverUrl(value: string): string {
   return value;
 }
 
+export function formatFavoritePublishedDate(publishedAt?: number): string {
+  if (!publishedAt || !Number.isFinite(publishedAt)) return "";
+
+  const timestamp = publishedAt >= 1_000_000_000_000 ? publishedAt / 1_000 : publishedAt;
+  const date = new Date(timestamp * 1_000);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+}
+
 async function loadFavoriteVideos(folderId: string): Promise<FavoriteVideo[]> {
   const now = Date.now();
   const cache = videoCache.get(folderId) ?? {
@@ -145,4 +155,8 @@ function hashString(value: string): number {
     hash = Math.imul(hash, 0x01000193);
   }
   return hash >>> 0;
+}
+
+function padDatePart(value: number): string {
+  return value.toString().padStart(2, "0");
 }

@@ -6,6 +6,7 @@ export type SearchCard = {
   videoUrl: string;
   uploader: string;
   uploaderMid: string;
+  dateEl: HTMLElement | null;
   tags: string[];
   viewCount: number | null;
   danmakuCount: number | null;

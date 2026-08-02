@@ -5,6 +5,7 @@ export type FavoriteVideo = {
   title: string;
   coverUrl: string;
   uploader: string;
+  publishedAt?: number;
 };
 
 export type FavoriteFolderResult = {
