@@ -5,6 +5,7 @@ export type FavoriteVideo = {
   title: string;
   coverUrl: string;
   uploader: string;
+  uploaderMid: string;
   publishedAt?: number;
 };
 

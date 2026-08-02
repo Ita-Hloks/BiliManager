@@ -4,7 +4,7 @@ const FAVORITE_LIST_ENDPOINT = "https://api.bilibili.com/x/v3/fav/resource/list"
 const PAGE_SIZE = 20;
 const MAX_PAGE_COUNT = 100;
 const FAVORITE_CACHE_KEY = "biliFilter.favoriteFolderCache";
-const FAVORITE_CACHE_VERSION = 2;
+const FAVORITE_CACHE_VERSION = 3;
 const INVALID_TITLES = new Set(["已失效视频", "视频已失效"]);
 
 type FavoriteVideoCacheEntry = {
@@ -26,6 +26,7 @@ type FavoriteResourceRecord = {
   pubtime?: number | string;
   ctime?: number | string;
   upper?: {
+    mid?: number | string;
     name?: string;
   } | null;
 };
@@ -181,8 +182,14 @@ function toFavoriteVideo(resource: FavoriteResourceRecord): FavoriteVideo | null
     title,
     coverUrl: resource.cover?.trim() ?? "",
     uploader: resource.upper?.name?.trim() ?? "",
+    uploaderMid: normalizeMid(resource.upper?.mid),
     publishedAt: normalizeTimestamp(resource.pubtime) ?? normalizeTimestamp(resource.ctime),
   };
+}
+
+function normalizeMid(value: number | string | undefined): string {
+  const mid = value === undefined ? "" : String(value);
+  return /^\d+$/.test(mid) ? mid : "";
 }
 
 function normalizeTimestamp(value: number | string | undefined): number | undefined {
