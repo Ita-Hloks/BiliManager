@@ -1,4 +1,5 @@
 import type { FavoriteVideo } from "../../shared/favoriteFolder";
+import { formatFavoritePublishedDate } from "../favoriteRecommendation";
 import type { BilibiliPageThemeDetection } from "../pageTheme";
 import {
   clearFilterGate,
@@ -7,7 +8,7 @@ import {
   markFilterGateActive,
   renderFilterGate,
 } from "./filterGate";
-import { findSearchCardTitle, findSearchCardUploader } from "./pageAdapter";
+import { findSearchCardDate, findSearchCardTitle, findSearchCardUploader } from "./pageAdapter";
 import type { SearchCard } from "./types";
 
 const ORIGINAL_TITLE_ATTR = "data-bili-manager-original-title";
@@ -34,7 +35,7 @@ const CARD_FILTER_STATE_CLASSES = [
 
 const originalRecommendationText = new WeakMap<
   HTMLElement,
-  { titleHtml: string; uploaderHtml: string | null }
+  { titleHtml: string; uploaderHtml: string | null; dateHtml: string | null }
 >();
 
 export function markFiltered(
@@ -101,18 +102,25 @@ function applyFavoriteCardText(card: SearchCard, recommendation: FavoriteVideo |
     originalRecommendationText.set(card.cardEl, {
       titleHtml: card.titleEl.innerHTML,
       uploaderHtml: card.uploaderEl?.innerHTML ?? null,
+      dateHtml: card.dateEl?.innerHTML ?? null,
     });
   }
 
+  const publishedDate = formatFavoritePublishedDate(recommendation.publishedAt);
   card.titleEl.textContent = recommendation.title;
   card.titleEl.classList.remove(TITLE_CLASS);
-  if (card.uploaderEl) {
-    card.uploaderEl.textContent = recommendation.uploader || "";
-    card.uploaderEl.classList.remove(META_CLASS);
-  }
+  if (card.uploaderEl) card.uploaderEl.textContent = recommendation.uploader;
+  if (card.dateEl) card.dateEl.textContent = publishedDate ? ` · ${publishedDate}` : "";
 
+  const visibleMetadata = [card.uploaderEl, publishedDate ? card.dateEl : null].filter(
+    (root): root is HTMLElement => root !== null,
+  );
   card.metadataEls.forEach(element => {
-    if (element !== card.uploaderEl) element.classList.add(RECOMMENDATION_META_HIDDEN_CLASS);
+    const visible = visibleMetadata.some(
+      root => root === element || root.contains(element) || element.contains(root),
+    );
+    element.classList.toggle(RECOMMENDATION_META_HIDDEN_CLASS, !visible);
+    element.classList.toggle(META_CLASS, !visible);
   });
 }
 
@@ -122,8 +130,10 @@ function restoreFavoriteCardText(cardEl: HTMLElement): void {
 
   const titleEl = findSearchCardTitle(cardEl);
   const uploaderEl = findSearchCardUploader(cardEl);
+  const dateEl = findSearchCardDate(cardEl);
   if (titleEl) titleEl.innerHTML = original.titleHtml;
   if (uploaderEl && original.uploaderHtml !== null) uploaderEl.innerHTML = original.uploaderHtml;
+  if (dateEl && original.dateHtml !== null) dateEl.innerHTML = original.dateHtml;
   removeClassesFromDescendants(cardEl, [RECOMMENDATION_META_HIDDEN_CLASS]);
   originalRecommendationText.delete(cardEl);
 }

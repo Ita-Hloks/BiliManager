@@ -4,9 +4,11 @@ const FAVORITE_LIST_ENDPOINT = "https://api.bilibili.com/x/v3/fav/resource/list"
 const PAGE_SIZE = 20;
 const MAX_PAGE_COUNT = 100;
 const FAVORITE_CACHE_KEY = "biliFilter.favoriteFolderCache";
+const FAVORITE_CACHE_VERSION = 2;
 const INVALID_TITLES = new Set(["已失效视频", "视频已失效"]);
 
 type FavoriteVideoCacheEntry = {
+  version: number;
   result: FavoriteFolderResult;
   cachedAt: string;
 };
@@ -21,6 +23,8 @@ type FavoriteResourceRecord = {
   bvid?: string;
   bv_id?: string;
   link?: string;
+  pubtime?: number | string;
+  ctime?: number | string;
   upper?: {
     name?: string;
   } | null;
@@ -54,7 +58,11 @@ export async function refreshFavoriteVideos(folderId: string): Promise<FavoriteF
 
   try {
     const result = await request;
-    await writeFavoriteVideoCache({ result, cachedAt: new Date().toISOString() });
+    await writeFavoriteVideoCache({
+      version: FAVORITE_CACHE_VERSION,
+      result,
+      cachedAt: new Date().toISOString(),
+    });
     return result;
   } finally {
     if (favoriteVideoRequests.get(folderId) === request) {
@@ -68,7 +76,12 @@ async function readFavoriteVideoCache(folderId: string): Promise<FavoriteVideoCa
   const stored = await chrome.storage.local.get(FAVORITE_CACHE_KEY);
   const cache = stored[FAVORITE_CACHE_KEY] as Record<string, FavoriteVideoCacheEntry> | undefined;
   const entry = cache?.[folderId];
-  if (!entry || entry.result?.folderId !== folderId || !Array.isArray(entry.result.videos)) {
+  if (
+    !entry ||
+    entry.version !== FAVORITE_CACHE_VERSION ||
+    entry.result?.folderId !== folderId ||
+    !Array.isArray(entry.result.videos)
+  ) {
     return null;
   }
   return entry;
@@ -168,5 +181,12 @@ function toFavoriteVideo(resource: FavoriteResourceRecord): FavoriteVideo | null
     title,
     coverUrl: resource.cover?.trim() ?? "",
     uploader: resource.upper?.name?.trim() ?? "",
+    publishedAt: normalizeTimestamp(resource.pubtime) ?? normalizeTimestamp(resource.ctime),
   };
+}
+
+function normalizeTimestamp(value: number | string | undefined): number | undefined {
+  const timestamp = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return undefined;
+  return timestamp >= 1_000_000_000_000 ? Math.floor(timestamp / 1_000) : Math.floor(timestamp);
 }

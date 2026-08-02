@@ -28,9 +28,9 @@ export function extractSearchTagIndex(root: ParentNode = document): SearchTagInd
   return parseSearchState(script.textContent);
 }
 
-function parseSearchState(source: string): SearchTagIndex {
+function parseSearchState(source: string): SearchTagIndex | null {
   const marker = SEARCH_RESPONSE_MARKER.exec(source);
-  if (!marker) return {};
+  if (!marker) return null;
 
   const byBvid: SearchTagIndex = {};
   const frames: SearchRecordFrame[] = [];

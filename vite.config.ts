@@ -7,6 +7,8 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
     outDir: "dist",
+    // Chrome 扩展页面不使用 Vite 的 modulepreload，避免跨 world 预加载告警。
+    modulePreload: false,
     rollupOptions: {
       input: {
         popup: "popup.html",

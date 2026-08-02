@@ -1,4 +1,6 @@
 import type { ExtensionMessage } from "../shared/messaging";
+import { sendMessage } from "../shared/messaging";
+import { hasExtensionContext, isExtensionContextInvalidated } from "../shared/extensionContext";
 import { getSettings, SETTINGS_KEY } from "../shared/storage";
 import { loadSearchTagIndex } from "./searchTags";
 import { getTagBlocklist, TAG_BLOCKLIST_KEY } from "../shared/tagBlocklist";
@@ -65,7 +67,9 @@ let currentUrl = location.href;
 let scanQueued = false;
 let unbindPageThemeUpdates: (() => void) | undefined;
 let scanGeneration = 0;
+let scanRequest = 0;
 let managedPageActive = false;
+let extensionContextInvalidated = false;
 
 function getSnapshot(): RuntimeSnapshot {
   return {
@@ -78,9 +82,15 @@ function getSnapshot(): RuntimeSnapshot {
 }
 
 async function scanCurrentPage() {
+  if (extensionContextInvalidated || !hasExtensionContext()) {
+    invalidateExtensionContext();
+    return unavailableSearchStats;
+  }
+
   const generation = scanGeneration;
+  const request = ++scanRequest;
   const settings = await getContentSettings();
-  if (generation !== scanGeneration) return unavailableSearchStats;
+  if (generation !== scanGeneration || request !== scanRequest) return unavailableSearchStats;
 
   if (!settings.pluginEnabled) {
     stopManagedPage();
@@ -105,8 +115,10 @@ async function scanCurrentPage() {
   applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
   if (searchPage) {
     const searchUrl = location.href;
-    const tagsByBvid = settings.tagBlockingEnabled ? loadSearchTagIndex(searchUrl) : {};
-    if (generation !== scanGeneration || location.href !== searchUrl) {
+    const tagSnapshot = settings.tagBlockingEnabled
+      ? loadSearchTagIndex(searchUrl)
+      : { ready: true, index: {} };
+    if (generation !== scanGeneration || request !== scanRequest || location.href !== searchUrl) {
       scheduleScan(0);
       return unavailableSearchStats;
     }
@@ -120,7 +132,8 @@ async function scanCurrentPage() {
       settings.uploaderBlockingEnabled,
       settings.tagBlocklist,
       settings.tagBlockingEnabled,
-      tagsByBvid,
+      tagSnapshot.index,
+      tagSnapshot.ready,
     );
     if (
       !settings.searchFilter.enabled ||
@@ -134,8 +147,11 @@ async function scanCurrentPage() {
     const recommendationPool = await loadFavoriteRecommendationPool(
       settings.favoriteRecommendation,
     );
-    if (generation !== scanGeneration) return unavailableSearchStats;
+    if (generation !== scanGeneration || request !== scanRequest) return unavailableSearchStats;
     if (recommendationPool.videos.length === 0) return initialStats;
+    const latestTagSnapshot = settings.tagBlockingEnabled
+      ? loadSearchTagIndex(searchUrl)
+      : tagSnapshot;
     return applySearchFilter(
       settings.searchFilter,
       recommendationPool,
@@ -143,7 +159,8 @@ async function scanCurrentPage() {
       settings.uploaderBlockingEnabled,
       settings.tagBlocklist,
       settings.tagBlockingEnabled,
-      tagsByBvid,
+      latestTagSnapshot.index,
+      latestTagSnapshot.ready,
     );
   }
 
@@ -197,13 +214,14 @@ async function getContentSettings(): Promise<{
 }
 
 function scheduleScan(delay = 150) {
+  if (extensionContextInvalidated) return;
   window.clearTimeout(rescanTimer);
   rescanTimer = window.setTimeout(() => {
     if (scanQueued) return;
     scanQueued = true;
     window.requestAnimationFrame(() => {
       scanQueued = false;
-      void scanCurrentPage();
+      runContentTask(scanCurrentPage());
     });
   }, delay);
 }
@@ -283,28 +301,32 @@ function bindRuntimeMessages() {
   chrome.runtime.onMessage.addListener(
     (message: ExtensionMessage, _sender, sendResponse: (response: unknown) => void) => {
       if (message.type === "BILI_FILTER_GET_PAGE_STATUS") {
-        void scanCurrentPage().then(stats => {
-          sendResponse({
-            ok: true,
-            source: "content",
-            receivedAt: new Date().toISOString(),
-            snapshot: getSearchSnapshot(stats),
-            stats,
-          });
-        });
+        runContentTask(
+          scanCurrentPage().then(stats => {
+            sendResponse({
+              ok: true,
+              source: "content",
+              receivedAt: new Date().toISOString(),
+              snapshot: getSearchSnapshot(stats),
+              stats,
+            });
+          }),
+        );
         return true;
       }
 
       if (message.type === "BILI_FILTER_SETTINGS_UPDATED") {
-        void scanCurrentPage().then(stats => {
-          sendResponse({
-            ok: true,
-            source: "content",
-            receivedAt: new Date().toISOString(),
-            snapshot: getSearchSnapshot(stats),
-            stats,
-          });
-        });
+        runContentTask(
+          scanCurrentPage().then(stats => {
+            sendResponse({
+              ok: true,
+              source: "content",
+              receivedAt: new Date().toISOString(),
+              snapshot: getSearchSnapshot(stats),
+              stats,
+            });
+          }),
+        );
         return true;
       }
 
@@ -314,15 +336,37 @@ function bindRuntimeMessages() {
 }
 
 async function boot() {
+  window.addEventListener("unhandledrejection", handleUnhandledRejection);
   bindRuntimeMessages();
   bindStorageChanges();
   await scanCurrentPage();
   await sendRuntimeMessage({ type: "BILI_FILTER_HELLO", payload: getSnapshot() });
 }
 
-async function sendRuntimeMessage(message: ExtensionMessage) {
-  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return null;
-  return chrome.runtime.sendMessage(message);
+function runContentTask(task: Promise<unknown>): void {
+  void task.catch(error => {
+    if (isExtensionContextInvalidated(error)) {
+      invalidateExtensionContext();
+      return;
+    }
+    console.error("[BiliManager] 内容脚本任务失败", error);
+  });
 }
 
-void boot();
+function handleUnhandledRejection(event: PromiseRejectionEvent): void {
+  if (!isExtensionContextInvalidated(event.reason)) return;
+  event.preventDefault();
+  invalidateExtensionContext();
+}
+
+function invalidateExtensionContext(): void {
+  if (extensionContextInvalidated) return;
+  extensionContextInvalidated = true;
+  stopManagedPage();
+}
+
+async function sendRuntimeMessage(message: ExtensionMessage) {
+  return sendMessage(message);
+}
+
+runContentTask(boot());

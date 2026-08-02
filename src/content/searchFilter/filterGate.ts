@@ -1,6 +1,10 @@
 import type { FavoriteVideo } from "../../shared/favoriteFolder";
 import { BLOCK_MENU_CONTROL_ATTR } from "../blockMenu";
-import { getFavoriteVideoUrl, normalizeFavoriteCoverUrl } from "../favoriteRecommendation";
+import {
+  formatFavoritePublishedDate,
+  getFavoriteVideoUrl,
+  normalizeFavoriteCoverUrl,
+} from "../favoriteRecommendation";
 
 export const FILTER_REASON_CLASS = "bili-manager-filter-reasons";
 
@@ -108,7 +112,15 @@ function getEventFilteredCard(event: Event): HTMLElement | null {
   if (!(target instanceof Element)) return null;
   if (target.closest(`[${RECOMMENDATION_LINK_ATTR}]`)) return null;
   if (target.closest(`[${BLOCK_MENU_CONTROL_ATTR}]`)) return null;
-  return target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
+  const cardEl = target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
+  if (
+    cardEl &&
+    recommendationsByCard.has(cardEl) &&
+    target.closest("a[href*='space.bilibili.com']")
+  ) {
+    return null;
+  }
+  return cardEl;
 }
 
 function stopEvent(event: Event): void {
@@ -146,7 +158,7 @@ function updateReasonOverlay(
   reasonEl.setAttribute(
     "aria-label",
     recommendation
-      ? `来自收藏夹：${recommendation.title}；原结果过滤原因：${visibleReason}`
+      ? getFavoriteRecommendationAriaLabel(recommendation, visibleReason)
       : text || visibleReason,
   );
   reasonEl.removeAttribute("title");
@@ -200,6 +212,16 @@ function renderFavoriteRecommendation(reasonEl: HTMLElement, video: FavoriteVide
   link.append(shade, content);
   reasonEl.replaceChildren(link);
   reasonEl.setAttribute(RECOMMENDATION_ID_ATTR, recommendationId);
+}
+
+function getFavoriteRecommendationAriaLabel(video: FavoriteVideo, visibleReason: string): string {
+  const publishedDate = formatFavoritePublishedDate(video.publishedAt);
+  const metadata = [
+    video.uploader ? `作者：${video.uploader}` : "",
+    publishedDate ? `发布日期：${publishedDate}` : "",
+  ].filter(Boolean);
+  const recommendation = [video.title, ...metadata].join("；");
+  return `来自收藏夹：${recommendation}；原结果过滤原因：${visibleReason}`;
 }
 
 function setReasonText(reasonEl: HTMLElement, text: string): void {
