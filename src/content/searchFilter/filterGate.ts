@@ -1,6 +1,6 @@
 import type { FavoriteVideo } from "../../shared/favoriteFolder";
+import { BLOCK_MENU_CONTROL_ATTR } from "../blockMenu";
 import { getFavoriteVideoUrl, normalizeFavoriteCoverUrl } from "../favoriteRecommendation";
-import { UPLOADER_BLOCK_CONTROL_ATTR } from "../uploaderBlock";
 
 export const FILTER_REASON_CLASS = "bili-manager-filter-reasons";
 
@@ -107,7 +107,7 @@ function getEventFilteredCard(event: Event): HTMLElement | null {
   const target = event.target;
   if (!(target instanceof Element)) return null;
   if (target.closest(`[${RECOMMENDATION_LINK_ATTR}]`)) return null;
-  if (target.closest(`[${UPLOADER_BLOCK_CONTROL_ATTR}]`)) return null;
+  if (target.closest(`[${BLOCK_MENU_CONTROL_ATTR}]`)) return null;
   return target.closest<HTMLElement>(`.bili-manager-filtered[${STATE_ATTR}="filtered"]`);
 }
 

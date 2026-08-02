@@ -1,10 +1,12 @@
+import type { BlockedTag } from "../../shared/tagBlocklist";
+import { findBlockedTag } from "../../shared/tagBlocklist";
 import type { BlockedUploader } from "../../shared/uploaderBlocklist";
 import { findBlockedUploader } from "../../shared/uploaderBlocklist";
 import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../../shared/types";
+import { clearBlockMenuControls, syncBlockMenuControl } from "../blockMenu";
 import type { FavoriteRecommendationPool } from "../favoriteRecommendation";
 import { pickFavoriteRecommendation } from "../favoriteRecommendation";
 import { detectBilibiliPageTheme } from "../pageTheme";
-import { clearUploaderBlockControls, syncUploaderBlockControl } from "../uploaderBlock";
 import {
   applyGrayscaleState,
   clearAllFilterStates,
@@ -37,9 +39,11 @@ export function applySearchFilter(
   recommendationPool: FavoriteRecommendationPool = EMPTY_RECOMMENDATION_POOL,
   uploaderBlocklist: BlockedUploader[] = [],
   uploaderBlockingEnabled = false,
+  tagBlocklist: BlockedTag[] = [],
+  tagBlockingEnabled = false,
 ): SearchFilterStats {
   if (!isSearchPage()) {
-    clearUploaderBlockControls();
+    clearBlockMenuControls();
     clearAllFilterStates();
     return createStats(false, settings.enabled, 0, 0, []);
   }
@@ -58,17 +62,24 @@ export function applySearchFilter(
       mid: card.uploaderMid,
       name: card.uploader,
     });
-    syncUploaderBlockControl(
-      {
-        cardEl: card.cardEl,
-        mid: card.uploaderMid,
-        name: card.uploader,
-      },
-      uploaderBlockingEnabled && !blockedUploader,
-    );
+    const blockedTag = findBlockedTag(tagBlocklist, card.tags);
+    const availableTags = tagBlockingEnabled
+      ? card.tags.filter(tag => !findBlockedTag(tagBlocklist, [tag]))
+      : [];
+    syncBlockMenuControl({
+      cardEl: card.cardEl,
+      uploader:
+        uploaderBlockingEnabled && !blockedUploader
+          ? { mid: card.uploaderMid, name: card.uploader }
+          : null,
+      tags: availableTags,
+    });
     const activeReasons = settings.enabled ? [...result.reasons] : [];
     if (uploaderBlockingEnabled && blockedUploader) {
       activeReasons.unshift(`已屏蔽 UP：${blockedUploader.name}`);
+    }
+    if (tagBlockingEnabled && blockedTag) {
+      activeReasons.unshift(`已屏蔽 TAG：${blockedTag.name}`);
     }
 
     if (activeReasons.length > 0) {
@@ -99,7 +110,7 @@ export function applySearchFilter(
 
 export function clearSearchFilter(): void {
   clearAllFilterStates();
-  clearUploaderBlockControls();
+  clearBlockMenuControls();
   unbindFilterGateEvents();
 }
 

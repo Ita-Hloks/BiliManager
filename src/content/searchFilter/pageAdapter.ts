@@ -1,3 +1,4 @@
+import { displayTagName, normalizeTagName } from "../../shared/tagBlocklist";
 import type { SearchCard } from "./types";
 
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
@@ -48,6 +49,14 @@ const selectors = {
     ".des",
     ".date",
     ".time",
+  ],
+  tagContainers: [".tags", ".bili-video-card__info--tags", ".tag-list", "[data-tag-list]"],
+  tagItems: [
+    "a[href*='/tag/']",
+    "a[href*='search.bilibili.com'][href*='keyword=']",
+    "[data-tag-name]",
+    ".tag-item",
+    ".tag",
   ],
   thumbnail: [".bili-video-card__cover", ".bili-video-card__cover img", ".img", ".cover", "img"],
   preview: [
@@ -144,6 +153,7 @@ function toSearchCard(cardEl: HTMLElement): SearchCard | null {
     videoUrl: videoLink.getAttribute("href") ?? "",
     uploader: normalizeText(uploaderEl?.textContent ?? ""),
     uploaderMid: getUploaderMid(uploaderLink?.getAttribute("href") ?? ""),
+    tags: collectStructuredTags(cardEl),
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
     danmakuCount: parseMetric(metricsText, TEXT.danmakuLabels) ?? fallbackCounts[1] ?? null,
     thumbnailEl,
@@ -152,6 +162,28 @@ function toSearchCard(cardEl: HTMLElement): SearchCard | null {
       ...cardEl.querySelectorAll<HTMLElement>(selector),
     ]),
   };
+}
+
+function collectStructuredTags(cardEl: HTMLElement): string[] {
+  const tags = new Map<string, string>();
+
+  for (const containerSelector of selectors.tagContainers) {
+    cardEl.querySelectorAll<HTMLElement>(containerSelector).forEach(container => {
+      container.querySelectorAll<HTMLElement>(selectors.tagItems.join(", ")).forEach(element => {
+        const name = displayTagName(
+          element.getAttribute("data-tag-name") ??
+            element.getAttribute("title") ??
+            element.textContent ??
+            "",
+        );
+        const normalized = normalizeTagName(name);
+        if (!normalized || name.length > 80) return;
+        tags.set(normalized, name);
+      });
+    });
+  }
+
+  return [...tags.values()];
 }
 
 function collectMetadataElements(cardEl: HTMLElement, titleEl: HTMLElement): HTMLElement[] {
