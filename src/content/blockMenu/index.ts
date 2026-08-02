@@ -129,7 +129,7 @@ function renderActions(control: HTMLElement, data: BlockMenuData): void {
 
   if (data.uploader) {
     content.append(createSectionLabel("屏蔽此 UP"));
-    const uploaderButton = createActionButton(data.uploader.name, "UP");
+    const uploaderButton = createActionButton(data.uploader.name);
     uploaderButton.title = `屏蔽 UP：${data.uploader.name}`;
     uploaderButton.addEventListener("click", () => {
       void runAction(control, uploaderButton, () => blockUploader(data.uploader!));
@@ -142,7 +142,7 @@ function renderActions(control: HTMLElement, data: BlockMenuData): void {
     const tagList = document.createElement("div");
     tagList.className = "bm-space-y-1";
     data.tags.forEach(tag => {
-      const tagButton = createActionButton(`#${tag}`, "TAG");
+      const tagButton = createActionButton(`#${tag}`);
       tagButton.title = `精确屏蔽 TAG：${tag}`;
       tagButton.addEventListener("click", () => {
         void runAction(control, tagButton, () => blockTag({ name: tag }));
@@ -162,7 +162,7 @@ function createSectionLabel(text: string, separated = false): HTMLElement {
   return label;
 }
 
-function createActionButton(text: string, kind: string): HTMLButtonElement {
+function createActionButton(text: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.className = ACTION_CLASS;
   button.type = "button";
@@ -171,12 +171,7 @@ function createActionButton(text: string, kind: string): HTMLButtonElement {
   value.className = "bm-min-w-0 bm-flex-1 bm-truncate";
   value.textContent = text;
 
-  const badge = document.createElement("span");
-  badge.className =
-    "bm-shrink-0 bm-rounded bm-bg-slate-100 bm-px-1.5 bm-py-0.5 bm-text-[10px] bm-font-medium bm-text-slate-500 dark:bm-bg-white/10 dark:bm-text-slate-400";
-  badge.textContent = kind;
-
-  button.append(value, badge);
+  button.append(value);
   return button;
 }
 
