@@ -65,6 +65,7 @@ let currentUrl = location.href;
 let scanQueued = false;
 let unbindPageThemeUpdates: (() => void) | undefined;
 let scanGeneration = 0;
+let scanRequest = 0;
 let managedPageActive = false;
 
 function getSnapshot(): RuntimeSnapshot {
@@ -79,8 +80,9 @@ function getSnapshot(): RuntimeSnapshot {
 
 async function scanCurrentPage() {
   const generation = scanGeneration;
+  const request = ++scanRequest;
   const settings = await getContentSettings();
-  if (generation !== scanGeneration) return unavailableSearchStats;
+  if (generation !== scanGeneration || request !== scanRequest) return unavailableSearchStats;
 
   if (!settings.pluginEnabled) {
     stopManagedPage();
@@ -105,8 +107,10 @@ async function scanCurrentPage() {
   applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
   if (searchPage) {
     const searchUrl = location.href;
-    const tagsByBvid = settings.tagBlockingEnabled ? loadSearchTagIndex(searchUrl) : {};
-    if (generation !== scanGeneration || location.href !== searchUrl) {
+    const tagSnapshot = settings.tagBlockingEnabled
+      ? loadSearchTagIndex(searchUrl)
+      : { ready: true, index: {} };
+    if (generation !== scanGeneration || request !== scanRequest || location.href !== searchUrl) {
       scheduleScan(0);
       return unavailableSearchStats;
     }
@@ -120,7 +124,8 @@ async function scanCurrentPage() {
       settings.uploaderBlockingEnabled,
       settings.tagBlocklist,
       settings.tagBlockingEnabled,
-      tagsByBvid,
+      tagSnapshot.index,
+      tagSnapshot.ready,
     );
     if (
       !settings.searchFilter.enabled ||
@@ -134,8 +139,11 @@ async function scanCurrentPage() {
     const recommendationPool = await loadFavoriteRecommendationPool(
       settings.favoriteRecommendation,
     );
-    if (generation !== scanGeneration) return unavailableSearchStats;
+    if (generation !== scanGeneration || request !== scanRequest) return unavailableSearchStats;
     if (recommendationPool.videos.length === 0) return initialStats;
+    const latestTagSnapshot = settings.tagBlockingEnabled
+      ? loadSearchTagIndex(searchUrl)
+      : tagSnapshot;
     return applySearchFilter(
       settings.searchFilter,
       recommendationPool,
@@ -143,7 +151,8 @@ async function scanCurrentPage() {
       settings.uploaderBlockingEnabled,
       settings.tagBlocklist,
       settings.tagBlockingEnabled,
-      tagsByBvid,
+      latestTagSnapshot.index,
+      latestTagSnapshot.ready,
     );
   }
 

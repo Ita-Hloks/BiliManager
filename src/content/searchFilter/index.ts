@@ -43,6 +43,7 @@ export function applySearchFilter(
   tagBlocklist: BlockedTag[] = [],
   tagBlockingEnabled = false,
   tagsByBvid: SearchTagIndex = {},
+  tagIndexReady = true,
 ): SearchFilterStats {
   if (!isSearchPage()) {
     clearBlockMenuControls();
@@ -64,14 +65,15 @@ export function applySearchFilter(
       mid: card.uploaderMid,
       name: card.uploader,
     });
-    const blockedTag = findBlockedTag(tagBlocklist, card.tags);
-    const availableTags = tagBlockingEnabled
-      ? card.tags.filter(tag => !findBlockedTag(tagBlocklist, [tag]))
-      : [];
+    const blockedTag = tagIndexReady ? findBlockedTag(tagBlocklist, card.tags) : undefined;
+    const availableTags =
+      tagIndexReady && tagBlockingEnabled
+        ? card.tags.filter(tag => !findBlockedTag(tagBlocklist, [tag]))
+        : [];
     syncBlockMenuControl({
       cardEl: card.cardEl,
       uploader:
-        uploaderBlockingEnabled && !blockedUploader
+        tagIndexReady && uploaderBlockingEnabled && !blockedUploader
           ? { mid: card.uploaderMid, name: card.uploader }
           : null,
       tags: availableTags,
@@ -80,7 +82,7 @@ export function applySearchFilter(
     if (uploaderBlockingEnabled && blockedUploader) {
       activeReasons.unshift(`已屏蔽 UP：${blockedUploader.name}`);
     }
-    if (tagBlockingEnabled && blockedTag) {
+    if (tagIndexReady && tagBlockingEnabled && blockedTag) {
       activeReasons.unshift(`已屏蔽 TAG：${blockedTag.name}`);
     }
 
