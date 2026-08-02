@@ -109,22 +109,19 @@ function applyFavoriteCardText(card: SearchCard, recommendation: FavoriteVideo |
   const publishedDate = formatFavoritePublishedDate(recommendation.publishedAt);
   card.titleEl.textContent = recommendation.title;
   card.titleEl.classList.remove(TITLE_CLASS);
-  if (card.uploaderEl) {
-    card.uploaderEl.textContent = [recommendation.uploader, !card.dateEl ? publishedDate : ""]
-      .filter(Boolean)
-      .join(" · ");
-  }
-  if (card.dateEl && card.dateEl !== card.uploaderEl) card.dateEl.textContent = publishedDate;
+  if (card.uploaderEl) card.uploaderEl.textContent = recommendation.uploader;
+  if (card.dateEl) card.dateEl.textContent = publishedDate ? ` · ${publishedDate}` : "";
 
+  const visibleMetadata = [card.uploaderEl, publishedDate ? card.dateEl : null].filter(
+    (root): root is HTMLElement => root !== null,
+  );
   card.metadataEls.forEach(element => {
-    const visible = [card.uploaderEl, publishedDate ? card.dateEl : null]
-      .filter((root): root is HTMLElement => root !== null)
-      .some(root => root === element || root.contains(element) || element.contains(root));
+    const visible = visibleMetadata.some(
+      root => root === element || root.contains(element) || element.contains(root),
+    );
     element.classList.toggle(RECOMMENDATION_META_HIDDEN_CLASS, !visible);
+    element.classList.toggle(META_CLASS, !visible);
   });
-  [card.uploaderEl, publishedDate ? card.dateEl : null]
-    .filter((root): root is HTMLElement => root !== null)
-    .forEach(revealRecommendationMetadata);
 }
 
 function restoreFavoriteCardText(cardEl: HTMLElement): void {
@@ -139,13 +136,6 @@ function restoreFavoriteCardText(cardEl: HTMLElement): void {
   if (dateEl && original.dateHtml !== null) dateEl.innerHTML = original.dateHtml;
   removeClassesFromDescendants(cardEl, [RECOMMENDATION_META_HIDDEN_CLASS]);
   originalRecommendationText.delete(cardEl);
-}
-
-function revealRecommendationMetadata(root: HTMLElement): void {
-  root.classList.remove(META_CLASS, RECOMMENDATION_META_HIDDEN_CLASS);
-  root
-    .querySelectorAll<HTMLElement>(`.${META_CLASS}, .${RECOMMENDATION_META_HIDDEN_CLASS}`)
-    .forEach(element => element.classList.remove(META_CLASS, RECOMMENDATION_META_HIDDEN_CLASS));
 }
 
 function getCoverOverlayHost(card: SearchCard): HTMLElement {

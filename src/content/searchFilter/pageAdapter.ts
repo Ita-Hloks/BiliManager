@@ -18,13 +18,7 @@ const selectors = {
     ".search-page .video-item",
     ".bili-video-card",
   ],
-  cardRoots: [
-    ".bili-video-card",
-    ".video-item",
-    ".search-card",
-    ".video-list-item",
-    "[class*='video-card']",
-  ],
+  cardRoots: [".bili-video-card", ".video-item", ".search-card", ".video-list-item"],
   videoLinks: ["a[href*='/video/BV']", "a[href*='bilibili.com/video/']"],
   title: [".bili-video-card__info--tit", ".bili-video-card__info--title", ".title", "a[title]"],
   uploader: [
