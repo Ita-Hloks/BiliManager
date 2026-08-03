@@ -49,9 +49,9 @@ export function PersonalizationPanel(props: {
             variant="toggleGroupRow"
           >
             <span>
-              <span className="block font-medium">拦截推荐视频列表</span>
+              <span className="block font-medium">移除推荐视频列表</span>
               <span className="bm-text-muted mt-1 block text-xs">
-                隐藏播放器右侧推荐视频，并自动关闭推荐自动连播
+                移除播放器右侧推荐视频，并自动关闭推荐自动连播
               </span>
             </span>
             <Switch enabled={props.settings.blockRelatedVideos} />
@@ -69,7 +69,6 @@ export function PersonalizationPanel(props: {
           >
             <span>
               <span className="block font-medium">关闭推荐自动连播</span>
-              <span className="bm-text-muted mt-1 block text-xs">拦截推荐视频列表时自动开启</span>
             </span>
             <Switch
               disabled={props.settings.blockRelatedVideos}
@@ -99,9 +98,9 @@ export function PersonalizationPanel(props: {
           variant="toggleRow"
         >
           <span>
-            <span className="block font-medium">拦截播放器广告</span>
+            <span className="block font-medium">移除播放器广告</span>
             <span className="bm-text-muted mt-1 block text-xs">
-              隐藏播放器右侧广告、活动推广和广告位
+              移除播放器右侧广告、活动推广和广告位
             </span>
           </span>
           <Switch enabled={props.settings.blockPlayerAds} />

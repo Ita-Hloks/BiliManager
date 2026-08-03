@@ -35,7 +35,12 @@ const CARD_FILTER_STATE_CLASSES = [
 
 const originalRecommendationText = new WeakMap<
   HTMLElement,
-  { titleHtml: string; uploaderHtml: string | null; dateHtml: string | null }
+  {
+    titleHtml: string;
+    uploaderHtml: string | null;
+    uploaderLinkHref: string | null;
+    dateHtml: string | null;
+  }
 >();
 
 export function markFiltered(
@@ -99,9 +104,11 @@ function applyFavoriteCardText(card: SearchCard, recommendation: FavoriteVideo |
   }
 
   if (!originalRecommendationText.has(card.cardEl)) {
+    const uploaderLink = getUploaderLink(card.uploaderEl);
     originalRecommendationText.set(card.cardEl, {
       titleHtml: card.titleEl.innerHTML,
       uploaderHtml: card.uploaderEl?.innerHTML ?? null,
+      uploaderLinkHref: uploaderLink?.getAttribute("href") ?? null,
       dateHtml: card.dateEl?.innerHTML ?? null,
     });
   }
@@ -110,6 +117,12 @@ function applyFavoriteCardText(card: SearchCard, recommendation: FavoriteVideo |
   card.titleEl.textContent = recommendation.title;
   card.titleEl.classList.remove(TITLE_CLASS);
   if (card.uploaderEl) card.uploaderEl.textContent = recommendation.uploader;
+  const uploaderLink = getUploaderLink(card.uploaderEl);
+  if (recommendation.uploaderMid) {
+    uploaderLink?.setAttribute("href", `https://space.bilibili.com/${recommendation.uploaderMid}`);
+  } else {
+    uploaderLink?.removeAttribute("href");
+  }
   if (card.dateEl) card.dateEl.textContent = publishedDate ? ` · ${publishedDate}` : "";
 
   const visibleMetadata = [card.uploaderEl, publishedDate ? card.dateEl : null].filter(
@@ -130,12 +143,20 @@ function restoreFavoriteCardText(cardEl: HTMLElement): void {
 
   const titleEl = findSearchCardTitle(cardEl);
   const uploaderEl = findSearchCardUploader(cardEl);
+  const uploaderLink = getUploaderLink(uploaderEl);
   const dateEl = findSearchCardDate(cardEl);
   if (titleEl) titleEl.innerHTML = original.titleHtml;
   if (uploaderEl && original.uploaderHtml !== null) uploaderEl.innerHTML = original.uploaderHtml;
+  if (uploaderLink && original.uploaderLinkHref !== null) {
+    uploaderLink.setAttribute("href", original.uploaderLinkHref);
+  }
   if (dateEl && original.dateHtml !== null) dateEl.innerHTML = original.dateHtml;
   removeClassesFromDescendants(cardEl, [RECOMMENDATION_META_HIDDEN_CLASS]);
   originalRecommendationText.delete(cardEl);
+}
+
+function getUploaderLink(uploaderEl: HTMLElement | null): HTMLAnchorElement | null {
+  return uploaderEl?.closest<HTMLAnchorElement>("a") ?? null;
 }
 
 function getCoverOverlayHost(card: SearchCard): HTMLElement {

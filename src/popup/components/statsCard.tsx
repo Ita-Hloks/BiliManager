@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Clock3, Film } from "lucide-react";
-import { formatReadableDuration } from "../../shared/duration";
 import {
   getWatchDurationDataByPeriod,
   getWatchVideoCountDataByPeriod,
 } from "../../shared/watchTimerStats";
 import type {
   DurationComparison,
+  DurationDisplayMode,
   SegmentedOption,
   StatsMetric,
   StatsPeriod,
@@ -27,38 +27,84 @@ const PERIOD_OPTIONS: SegmentedOption<StatsPeriod>[] = [
   { value: "year", label: "本年" },
 ];
 
-function formatMinutes(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours <= 0) return `${minutes} 分钟`;
-  if (minutes === 0) return `${hours} 小时`;
-  return `${hours} 小时 ${minutes} 分钟`;
+function getDurationModeLabel(mode: DurationDisplayMode): string {
+  if (mode === "foreground") return "前台";
+  if (mode === "background") return "后台";
+  return "总计";
 }
 
-function formatDurationComparison(comparison: DurationComparison): string {
-  const elapsedMs = Math.max(0, comparison.elapsedMs);
-  const previousElapsedMs = Math.max(0, comparison.previousElapsedMs);
+function getDurationModeValue(
+  mode: DurationDisplayMode,
+  elapsedMs: number,
+  foregroundElapsedMs: number,
+  backgroundElapsedMs: number,
+): number {
+  if (mode === "foreground") return foregroundElapsedMs;
+  if (mode === "background") return backgroundElapsedMs;
+  return elapsedMs;
+}
+
+function formatDurationComparison(
+  comparison: DurationComparison,
+  displayMode: DurationDisplayMode,
+): string {
+  const elapsedMs = Math.max(
+    0,
+    getDurationModeValue(
+      displayMode,
+      comparison.elapsedMs,
+      comparison.foregroundElapsedMs,
+      comparison.backgroundElapsedMs,
+    ),
+  );
+  const previousElapsedMs = Math.max(
+    0,
+    getDurationModeValue(
+      displayMode,
+      comparison.previousElapsedMs,
+      comparison.previousForegroundElapsedMs,
+      comparison.previousBackgroundElapsedMs,
+    ),
+  );
+  const comparisonLabel =
+    displayMode === "total"
+      ? comparison.label
+      : `${getDurationModeLabel(displayMode)}${comparison.label}`;
   const deltaMs = elapsedMs - previousElapsedMs;
-  if (deltaMs === 0) return `${comparison.label}持平（0%）`;
+  if (deltaMs === 0) return `${comparisonLabel}持平（0%）`;
 
   const direction = deltaMs > 0 ? "增加" : "减少";
-  const duration = formatReadableDuration(Math.abs(deltaMs));
+  const duration = formatStatsDuration(Math.abs(deltaMs));
   if (previousElapsedMs === 0) {
-    return `${comparison.label}${direction} ${duration}（暂无百分比）`;
+    return `${comparisonLabel}${direction} ${duration}（暂无百分比）`;
   }
 
   const percent = (Math.abs(deltaMs) / previousElapsedMs) * 100;
   const sign = deltaMs > 0 ? "+" : "-";
   const formattedPercent = percent.toFixed(1).replace(/\.0$/, "");
-  return `${comparison.label}${direction} ${duration}（${sign}${formattedPercent}%）`;
+  return `${comparisonLabel}${direction} ${duration}（${sign}${formattedPercent}%）`;
+}
+
+function formatStatsDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h${minutes > 0 ? `${minutes}m` : ""}`;
+  if (minutes > 0) return `${minutes}m${seconds > 0 ? `${seconds}s` : ""}`;
+  return `${seconds}s`;
 }
 
 export function StatsCard({
   onDateSelect,
   selectedDateKey,
+  durationDisplayMode,
+  onDurationDisplayModeChange,
 }: {
   onDateSelect: (dateKey: string) => void;
   selectedDateKey?: string;
+  durationDisplayMode: DurationDisplayMode;
+  onDurationDisplayModeChange: (mode: DurationDisplayMode) => void;
 }) {
   const [metric, setMetric] = useState<StatsMetric>("duration");
   const [period, setPeriod] = useState<StatsPeriod>("7d");
@@ -71,13 +117,29 @@ export function StatsCard({
   const periodLabel = PERIOD_OPTIONS.find(option => option.value === period)?.label ?? "";
   const durationPoints = durationData?.points ?? [];
   const videoCountPoints = videoCountDataByPeriod?.[period] ?? [];
-  const totalMinutes = durationPoints.reduce(
-    (sum, point) => sum + Math.floor(point.elapsedMs / 60000),
+  const totalElapsedMs = durationPoints.reduce((sum, point) => sum + point.elapsedMs, 0);
+  const backgroundElapsedMs = durationPoints.reduce(
+    (sum, point) => sum + point.backgroundElapsedMs,
+    0,
+  );
+  const foregroundElapsedMs = durationPoints.reduce(
+    (sum, point) => sum + point.foregroundElapsedMs,
     0,
   );
   const totalVideoCount = videoCountPoints.reduce((sum, point) => sum + point.count, 0);
+  const durationModeLabel = getDurationModeLabel(durationDisplayMode);
+  const selectedElapsedMs = getDurationModeValue(
+    durationDisplayMode,
+    totalElapsedMs,
+    foregroundElapsedMs,
+    backgroundElapsedMs,
+  );
+  const durationSummaryLabel =
+    durationDisplayMode === "total"
+      ? `${periodLabel}观看时长`
+      : `${periodLabel}${durationModeLabel}时长`;
   const durationComparison = durationData
-    ? formatDurationComparison(durationData.comparison)
+    ? formatDurationComparison(durationData.comparison, durationDisplayMode)
     : null;
 
   useEffect(() => {
@@ -109,15 +171,41 @@ export function StatsCard({
               data={durationPoints}
               onSelect={period === "7d" ? onDateSelect : undefined}
               selectedDateKey={selectedDateKey}
+              displayMode={durationDisplayMode}
+              onDisplayModeChange={onDurationDisplayModeChange}
             />
-            <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              {periodLabel}观看时长共{" "}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {formatMinutes(totalMinutes)}
-              </span>
-            </p>
+            <div className="mt-2 border-t border-slate-100 pt-2 dark:border-[#30343c]">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                  {durationSummaryLabel}
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
+                  {formatStatsDuration(selectedElapsedMs)}
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-bili-blue" />
+                    <span>前台</span>
+                  </div>
+                  <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-bili-blue dark:text-sky-200">
+                    {formatStatsDuration(foregroundElapsedMs)}
+                  </p>
+                </div>
+                <div className="min-w-0 border-l border-slate-100 pl-3 dark:border-[#30343c]">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                    <span>后台</span>
+                  </div>
+                  <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-amber-500 dark:text-amber-300">
+                    {formatStatsDuration(backgroundElapsedMs)}
+                  </p>
+                </div>
+              </div>
+            </div>
             {durationComparison && (
-              <p className="mt-1 text-center text-[10px] text-slate-400 dark:text-slate-500">
+              <p className="mt-2 truncate text-right text-[10px] text-slate-400 dark:text-slate-500">
                 {durationComparison}
               </p>
             )}

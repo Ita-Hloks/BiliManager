@@ -1,7 +1,7 @@
 import type { RuntimeSnapshot, SearchFilterStats } from "./types";
 import type { FavoriteFolderResult } from "./favoriteFolder";
 import type { WatchTimerHistoryBackup, WatchTimerSessionStorage } from "./watchTimerHistory";
-import { hasExtensionContext, isExtensionContextInvalidated } from "./extensionContext";
+import { hasExtensionContext } from "./extensionContext";
 
 export type ExtensionMessage =
   | { type: "BILI_FILTER_HELLO"; payload: RuntimeSnapshot }
@@ -31,13 +31,23 @@ export type ExtensionResponse =
     }
   | { ok: false; error: string };
 
-export async function sendMessage(message: ExtensionMessage): Promise<ExtensionResponse | null> {
-  if (!hasExtensionContext() || !chrome.runtime?.sendMessage) return null;
-
-  try {
-    return await chrome.runtime.sendMessage(message);
-  } catch (error) {
-    if (isExtensionContextInvalidated(error)) return null;
-    throw error;
+export function sendMessage(message: ExtensionMessage): Promise<ExtensionResponse | null> {
+  if (!hasExtensionContext() || !chrome.runtime?.sendMessage) {
+    return Promise.reject(new Error("Extension context invalidated"));
   }
+
+  return new Promise((resolve, reject) => {
+    try {
+      chrome.runtime.sendMessage<ExtensionMessage, ExtensionResponse>(message, response => {
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError) {
+          reject(new Error(runtimeError.message));
+          return;
+        }
+        resolve(response ?? null);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 }

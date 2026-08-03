@@ -51,19 +51,19 @@ export function SearchFilterPanel(props: {
       <div className="space-y-5 px-4 py-5 sm:px-5">
         <RuleListEditor
           label="标题过滤词正则"
-          placeholder="输入后按回车，例如：关键词A|关键词B"
+          placeholder="输入后回车，参考：震惊 | 迷惑行为 | 的一集"
           value={props.settings.titlePattern}
           onChange={titlePattern => props.onChange({ titlePattern })}
         />
         <RuleListEditor
           label="UP 主过滤词正则"
-          placeholder="输入后按回车，例如：账号名|作者关键词"
+          placeholder="输入后回车，参考：影视 | 好剧 | 经典"
           value={props.settings.uploaderPattern}
           onChange={uploaderPattern => props.onChange({ uploaderPattern })}
         />
         <label className="block">
           <span className="bm-text-label mb-2 block text-sm font-medium">
-            最低弹幕 / 播放互动率
+            弹幕 / 播放互动率 临界值
           </span>
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
             <input
@@ -114,7 +114,7 @@ export function SearchFilterPanel(props: {
             </div>
           </div>
           <span className="bm-text-muted mt-1 block text-xs">
-            取值范围 0-1%；弹幕为 0 时不会触发互动率过低
+            取值范围 0-1%；弹幕为 0 时不会触发
           </span>
         </label>
         <div className="divide-y divide-slate-100 overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:divide-[#30343c] dark:bg-[#15181e]">
@@ -129,7 +129,7 @@ export function SearchFilterPanel(props: {
             <span>
               <span className="block font-medium">过滤互动率过低的视频</span>
               <span className="bm-text-muted mt-1 block text-xs">
-                弹幕与播放比例低于阈值时，标记为低相关结果
+                互动率低于阈值时，直接加遮罩过滤
               </span>
             </span>
             <Switch enabled={props.settings.filterLowDanmakuViewRate} />
@@ -145,9 +145,9 @@ export function SearchFilterPanel(props: {
             variant="toggleGroupRow"
           >
             <span>
-              <span className="block font-medium">黑白处理互动率过低的视频</span>
+              <span className="block font-medium">黑白处理低互动率低的视频</span>
               <span className="bm-text-muted mt-1 block text-xs">
-                不过滤卡片，仅将视频封面和标题降为黑白
+                不过滤，仅将视频封面和标题降为黑白
               </span>
             </span>
             <Switch
@@ -167,9 +167,9 @@ export function SearchFilterPanel(props: {
             variant="toggleGroupRow"
           >
             <span>
-              <span className="block font-medium">过滤无粉色命中标题</span>
+              <span className="block font-medium">过滤未命中搜索词的视频</span>
               <span className="bm-text-muted mt-1 block text-xs">
-                搜索词没有出现在标题高亮里时，标记为低相关结果
+                搜索词没有出现在标题高亮里时，过滤
               </span>
             </span>
             <Switch enabled={props.settings.filterMissingTitleHighlight} />
@@ -185,9 +185,9 @@ export function SearchFilterPanel(props: {
             variant="toggleGroupRow"
           >
             <span>
-              <span className="block font-medium">黑白处理无粉色命中的视频</span>
+              <span className="block font-medium">黑白处理未命中搜索词的视频</span>
               <span className="bm-text-muted mt-1 block text-xs">
-                不过滤卡片，仅将视频封面和标题降为黑白
+                不过滤视频，仅将视频封面和标题降为黑白
               </span>
             </span>
             <Switch
@@ -225,7 +225,6 @@ export function SearchFilterPanel(props: {
               <input
                 className="bm-text-input w-full"
                 inputMode="numeric"
-                placeholder="2045665532"
                 type="text"
                 value={props.favoriteRecommendation.folderId}
                 onChange={event =>
@@ -253,7 +252,9 @@ export function SearchFilterPanel(props: {
 
             <label className="block">
               <span className="mb-2 flex items-center justify-between gap-3">
-                <span className="bm-text-label text-sm font-medium">遮罩推荐比例</span>
+                <span className="bm-text-label text-sm font-medium">
+                  遮罩推荐比例，100%时会替换所有遮罩为收藏夹视频
+                </span>
                 <output className="bm-text-muted text-sm tabular-nums">
                   {recommendationPercent}%
                 </output>

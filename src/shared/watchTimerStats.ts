@@ -7,7 +7,7 @@ import type {
 } from "../popup/types";
 import { addDays, getLocalDateKey, parseLocalDateKey } from "./date";
 import { getWatchTimerHistory, getWatchTimerVideos } from "./watchTimerHistory";
-import type { WatchTimerHistory } from "./watchTimerHistory";
+import type { WatchTimerDurationBreakdown, WatchTimerHistory } from "./watchTimerHistory";
 
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -20,8 +20,12 @@ type DateRange = {
 type PeriodValuePoint = {
   label: string;
   value: number;
+  foregroundElapsedMs: number;
+  backgroundElapsedMs: number;
   dateKey?: string;
 };
+
+type PeriodValue = number | WatchTimerDurationBreakdown;
 
 export async function getWatchDurationData(period: StatsPeriod): Promise<WatchDurationData> {
   const dataByPeriod = await getWatchDurationDataByPeriod();
@@ -44,7 +48,7 @@ export async function getWatchVideoCountDataByPeriod(): Promise<
   Record<StatsPeriod, VideoCountPoint[]>
 > {
   const videos = await getWatchTimerVideos();
-  const videoCountsByDate = videos.reduce<WatchTimerHistory>((counts, video) => {
+  const videoCountsByDate = videos.reduce<Record<string, number>>((counts, video) => {
     counts[video.dateKey] = (counts[video.dateKey] ?? 0) + 1;
     return counts;
   }, {});
@@ -75,12 +79,14 @@ function buildDurationPoints(
   return buildPeriodValuePoints(history, period, todayKey).map(point => ({
     label: point.label,
     elapsedMs: point.value,
+    foregroundElapsedMs: point.foregroundElapsedMs,
+    backgroundElapsedMs: point.backgroundElapsedMs,
     dateKey: point.dateKey,
   }));
 }
 
 function buildVideoCountPoints(
-  videoCountsByDate: WatchTimerHistory,
+  videoCountsByDate: Record<string, number>,
   period: StatsPeriod,
   todayKey: string,
 ): VideoCountPoint[] {
@@ -91,7 +97,7 @@ function buildVideoCountPoints(
 }
 
 function buildPeriodValuePoints(
-  history: WatchTimerHistory,
+  history: Record<string, PeriodValue>,
   period: StatsPeriod,
   todayKey: string,
 ): PeriodValuePoint[] {
@@ -100,20 +106,22 @@ function buildPeriodValuePoints(
   return buildCurrentYearMonths(history, todayKey);
 }
 
-function buildLastSevenDays(history: WatchTimerHistory, todayKey: string): PeriodValuePoint[] {
+function buildLastSevenDays(
+  history: Record<string, PeriodValue>,
+  todayKey: string,
+): PeriodValuePoint[] {
   const today = parseLocalDateKey(todayKey);
   return Array.from({ length: 7 }, (_, index) => {
     const date = addDays(today, index - 6);
     const dateKey = getLocalDateKey(date);
-    return {
-      label: WEEKDAY_LABELS[date.getDay()],
-      value: history[dateKey] ?? 0,
-      dateKey,
-    };
+    return createPeriodValuePoint(WEEKDAY_LABELS[date.getDay()], history[dateKey] ?? 0, dateKey);
   });
 }
 
-function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): PeriodValuePoint[] {
+function buildCurrentMonthWeeks(
+  history: Record<string, PeriodValue>,
+  todayKey: string,
+): PeriodValuePoint[] {
   const today = parseLocalDateKey(todayKey);
   const monthRange = getMonthRange(today);
   const firstWeekStart = getWeekRange(monthRange.start).start;
@@ -127,12 +135,11 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): P
     const endDate = minDate(weekRange.end, monthRange.end);
     const hasStarted = index <= currentWeekIndex;
     const effectiveEndDate = index === currentWeekIndex ? minDate(endDate, today) : endDate;
-    const totalMs = hasStarted ? sumHistoryRange(history, startDate, effectiveEndDate) : 0;
+    const total = hasStarted
+      ? sumHistoryRange(history, startDate, effectiveEndDate)
+      : createEmptyDurationBreakdown();
 
-    return {
-      label: `${index + 1}周`,
-      value: totalMs,
-    };
+    return createPeriodValuePoint(`${index + 1}周`, total);
   });
 
   return Array.from(
@@ -141,7 +148,10 @@ function buildCurrentMonthWeeks(history: WatchTimerHistory, todayKey: string): P
   );
 }
 
-function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): PeriodValuePoint[] {
+function buildCurrentYearMonths(
+  history: Record<string, PeriodValue>,
+  todayKey: string,
+): PeriodValuePoint[] {
   const today = parseLocalDateKey(todayKey);
   const year = today.getFullYear();
   const currentMonth = today.getMonth();
@@ -150,12 +160,11 @@ function buildCurrentYearMonths(history: WatchTimerHistory, todayKey: string): P
     const monthRange = getMonthRange(new Date(year, month, 1));
     const hasStarted = month <= currentMonth;
     const endDate = month === currentMonth ? today : monthRange.end;
-    const totalMs = hasStarted ? sumHistoryRange(history, monthRange.start, endDate) : 0;
+    const total = hasStarted
+      ? sumHistoryRange(history, monthRange.start, endDate)
+      : createEmptyDurationBreakdown();
 
-    return {
-      label: `${month + 1}月`,
-      value: totalMs,
-    };
+    return createPeriodValuePoint(`${month + 1}月`, total);
   });
 
   return Array.from({ length: 12 }, (_, index) => points[(currentMonth + index + 1) % 12]);
@@ -168,10 +177,16 @@ function buildCurrentComparison(
 ): DurationComparison {
   const today = parseLocalDateKey(todayKey);
   if (period === "7d") {
+    const current = toDurationBreakdown(history[todayKey] ?? 0);
+    const previous = toDurationBreakdown(history[getLocalDateKey(addDays(today, -1))] ?? 0);
     return {
       label: "较前一日",
-      elapsedMs: history[todayKey] ?? 0,
-      previousElapsedMs: history[getLocalDateKey(addDays(today, -1))] ?? 0,
+      elapsedMs: current.elapsedMs,
+      foregroundElapsedMs: current.foregroundElapsedMs,
+      backgroundElapsedMs: current.backgroundElapsedMs,
+      previousElapsedMs: previous.elapsedMs,
+      previousForegroundElapsedMs: previous.foregroundElapsedMs,
+      previousBackgroundElapsedMs: previous.backgroundElapsedMs,
     };
   }
 
@@ -179,19 +194,31 @@ function buildCurrentComparison(
     const currentWeek = getWeekRange(today);
     const previousWeek = getWeekRange(addDays(today, -7));
     const currentMonth = getMonthRange(today);
+    const current = sumHistoryRange(history, maxDate(currentWeek.start, currentMonth.start), today);
+    const previous = sumHistoryRange(history, previousWeek.start, previousWeek.end);
     return {
       label: "较前一周",
-      elapsedMs: sumHistoryRange(history, maxDate(currentWeek.start, currentMonth.start), today),
-      previousElapsedMs: sumHistoryRange(history, previousWeek.start, previousWeek.end),
+      elapsedMs: current.elapsedMs,
+      foregroundElapsedMs: current.foregroundElapsedMs,
+      backgroundElapsedMs: current.backgroundElapsedMs,
+      previousElapsedMs: previous.elapsedMs,
+      previousForegroundElapsedMs: previous.foregroundElapsedMs,
+      previousBackgroundElapsedMs: previous.backgroundElapsedMs,
     };
   }
 
   const currentMonth = getMonthRange(today);
   const previousMonth = getMonthRange(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+  const current = sumHistoryRange(history, currentMonth.start, today);
+  const previous = sumHistoryRange(history, previousMonth.start, previousMonth.end);
   return {
     label: "较前一月",
-    elapsedMs: sumHistoryRange(history, currentMonth.start, today),
-    previousElapsedMs: sumHistoryRange(history, previousMonth.start, previousMonth.end),
+    elapsedMs: current.elapsedMs,
+    foregroundElapsedMs: current.foregroundElapsedMs,
+    backgroundElapsedMs: current.backgroundElapsedMs,
+    previousElapsedMs: previous.elapsedMs,
+    previousForegroundElapsedMs: previous.foregroundElapsedMs,
+    previousBackgroundElapsedMs: previous.backgroundElapsedMs,
   };
 }
 
@@ -218,10 +245,60 @@ function maxDate(first: Date, second: Date): Date {
   return first.getTime() >= second.getTime() ? first : second;
 }
 
-function sumHistoryRange(history: WatchTimerHistory, startDate: Date, endDate: Date): number {
-  let totalMs = 0;
+function sumHistoryRange(
+  history: Record<string, PeriodValue>,
+  startDate: Date,
+  endDate: Date,
+): WatchTimerDurationBreakdown {
+  let total = createEmptyDurationBreakdown();
   for (let date = startDate; date.getTime() <= endDate.getTime(); date = addDays(date, 1)) {
-    totalMs += history[getLocalDateKey(date)] ?? 0;
+    total = addDurationBreakdown(total, toDurationBreakdown(history[getLocalDateKey(date)] ?? 0));
   }
-  return totalMs;
+  return total;
+}
+
+function createPeriodValuePoint(
+  label: string,
+  value: PeriodValue,
+  dateKey?: string,
+): PeriodValuePoint {
+  const breakdown = toDurationBreakdown(value);
+  return {
+    label,
+    value: breakdown.elapsedMs,
+    foregroundElapsedMs: breakdown.foregroundElapsedMs,
+    backgroundElapsedMs: breakdown.backgroundElapsedMs,
+    dateKey,
+  };
+}
+
+function toDurationBreakdown(value: PeriodValue): WatchTimerDurationBreakdown {
+  if (typeof value === "number") {
+    const elapsedMs = Math.max(0, value);
+    return {
+      elapsedMs,
+      foregroundElapsedMs: elapsedMs,
+      backgroundElapsedMs: 0,
+    };
+  }
+  return value;
+}
+
+function createEmptyDurationBreakdown(): WatchTimerDurationBreakdown {
+  return {
+    elapsedMs: 0,
+    foregroundElapsedMs: 0,
+    backgroundElapsedMs: 0,
+  };
+}
+
+function addDurationBreakdown(
+  left: WatchTimerDurationBreakdown,
+  right: WatchTimerDurationBreakdown,
+): WatchTimerDurationBreakdown {
+  return {
+    elapsedMs: left.elapsedMs + right.elapsedMs,
+    foregroundElapsedMs: left.foregroundElapsedMs + right.foregroundElapsedMs,
+    backgroundElapsedMs: left.backgroundElapsedMs + right.backgroundElapsedMs,
+  };
 }
