@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Clock3, Film } from "lucide-react";
-import { formatReadableDuration } from "../../shared/duration";
 import {
   getWatchDurationDataByPeriod,
   getWatchVideoCountDataByPeriod,
@@ -34,7 +33,7 @@ function formatDurationComparison(comparison: DurationComparison): string {
   if (deltaMs === 0) return `${comparison.label}持平（0%）`;
 
   const direction = deltaMs > 0 ? "增加" : "减少";
-  const duration = formatReadableDuration(Math.abs(deltaMs));
+  const duration = formatStatsDuration(Math.abs(deltaMs));
   if (previousElapsedMs === 0) {
     return `${comparison.label}${direction} ${duration}（暂无百分比）`;
   }
@@ -43,6 +42,16 @@ function formatDurationComparison(comparison: DurationComparison): string {
   const sign = deltaMs > 0 ? "+" : "-";
   const formattedPercent = percent.toFixed(1).replace(/\.0$/, "");
   return `${comparison.label}${direction} ${duration}（${sign}${formattedPercent}%）`;
+}
+
+function formatStatsDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h${minutes > 0 ? `${minutes}m` : ""}`;
+  if (minutes > 0) return `${minutes}m${seconds > 0 ? `${seconds}s` : ""}`;
+  return `${seconds}s`;
 }
 
 export function StatsCard({
@@ -107,22 +116,38 @@ export function StatsCard({
               onSelect={period === "7d" ? onDateSelect : undefined}
               selectedDateKey={selectedDateKey}
             />
-            <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              {periodLabel}观看时长
-            </p>
-            <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] tabular-nums">
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                总计 {formatReadableDuration(totalElapsedMs)}
-              </span>
-              <span className="font-semibold text-bili-blue dark:text-sky-200">
-                前台 {formatReadableDuration(foregroundElapsedMs)}
-              </span>
-              <span className="font-semibold text-amber-500 dark:text-amber-300">
-                后台 {formatReadableDuration(backgroundElapsedMs)}
-              </span>
+            <div className="mt-2 border-t border-slate-100 pt-2 dark:border-[#30343c]">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                  {periodLabel}观看时长
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
+                  {formatStatsDuration(totalElapsedMs)}
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-bili-blue" />
+                    <span>前台</span>
+                  </div>
+                  <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-bili-blue dark:text-sky-200">
+                    {formatStatsDuration(foregroundElapsedMs)}
+                  </p>
+                </div>
+                <div className="min-w-0 border-l border-slate-100 pl-3 dark:border-[#30343c]">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                    <span>后台</span>
+                  </div>
+                  <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-amber-500 dark:text-amber-300">
+                    {formatStatsDuration(backgroundElapsedMs)}
+                  </p>
+                </div>
+              </div>
             </div>
             {durationComparison && (
-              <p className="mt-1 text-center text-[10px] text-slate-400 dark:text-slate-500">
+              <p className="mt-2 truncate text-right text-[10px] text-slate-400 dark:text-slate-500">
                 {durationComparison}
               </p>
             )}
