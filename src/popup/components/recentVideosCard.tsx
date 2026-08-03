@@ -8,13 +8,27 @@ import {
   WATCH_TIMER_SESSION_MIN_MS,
 } from "../../shared/watchTimerHistory";
 import type { WatchTimerVideoDailyItem } from "../../shared/watchTimerHistory";
+import type { DurationDisplayMode } from "../types";
 
 function formatUpdatedAt(timestamp: number) {
   const date = new Date(timestamp);
   return `${padTime(date.getHours())}:${padTime(date.getMinutes())}`;
 }
 
-function RecentVideoRow({ video }: { video: WatchTimerVideoDailyItem }) {
+function getDisplayedDuration(video: WatchTimerVideoDailyItem, displayMode: DurationDisplayMode) {
+  if (displayMode === "foreground") return video.dailyForegroundElapsedMs;
+  if (displayMode === "background") return video.dailyBackgroundElapsedMs;
+  return video.dailyElapsedMs;
+}
+
+function RecentVideoRow({
+  video,
+  displayMode,
+}: {
+  video: WatchTimerVideoDailyItem;
+  displayMode: DurationDisplayMode;
+}) {
+  const displayedDuration = getDisplayedDuration(video, displayMode);
   return (
     <li className="border-b border-slate-100 py-2 last:border-b-0 dark:border-[#30343c]">
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 text-left">
@@ -23,10 +37,21 @@ function RecentVideoRow({ video }: { video: WatchTimerVideoDailyItem }) {
           {video.title}
         </span>
         <span className="flex shrink-0 flex-col items-end text-[11px] font-medium tabular-nums">
-          <span className="text-bili-blue dark:text-sky-200">
-            {formatCompactDuration(video.dailyElapsedMs)}
+          <span
+            className={
+              displayMode === "background"
+                ? "text-amber-500 dark:text-amber-300"
+                : "text-bili-blue dark:text-sky-200"
+            }
+          >
+            {formatCompactDuration(displayedDuration)}
           </span>
-          {video.dailyBackgroundElapsedMs > 0 && (
+          {displayMode !== "total" && video.dailyElapsedMs > 0 && (
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+              总计 {formatCompactDuration(video.dailyElapsedMs)}
+            </span>
+          )}
+          {displayMode === "total" && video.dailyBackgroundElapsedMs > 0 && (
             <span className="text-[10px] text-amber-500 dark:text-amber-300">
               后台 {formatCompactDuration(video.dailyBackgroundElapsedMs)}
             </span>
@@ -40,14 +65,20 @@ function RecentVideoRow({ video }: { video: WatchTimerVideoDailyItem }) {
   );
 }
 
-export function RecentVideosCard({ selectedDateKey }: { selectedDateKey?: string }) {
+export function RecentVideosCard({
+  selectedDateKey,
+  displayMode,
+}: {
+  selectedDateKey?: string;
+  displayMode: DurationDisplayMode;
+}) {
   const [videos, setVideos] = useState<WatchTimerVideoDailyItem[]>([]);
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
     let active = true;
     const request = selectedDateKey
-      ? getTopWatchTimerVideosForDate(selectedDateKey, 3)
+      ? getTopWatchTimerVideosForDate(selectedDateKey, 3, displayMode)
       : getRecentWatchTimerVideos(3).then(recentVideos =>
           Promise.all(
             recentVideos.map(async video => {
@@ -72,9 +103,11 @@ export function RecentVideosCard({ selectedDateKey }: { selectedDateKey?: string
     return () => {
       active = false;
     };
-  }, [selectedDateKey]);
+  }, [displayMode, selectedDateKey]);
 
-  const title = selectedDateKey ? `${formatDateLabel(selectedDateKey)}观看排行` : "最近播放";
+  const title = selectedDateKey
+    ? `${formatDateLabel(selectedDateKey)}${displayMode === "total" ? "" : displayMode === "background" ? "后台" : "前台"}观看排行`
+    : "最近播放";
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
@@ -103,7 +136,11 @@ export function RecentVideosCard({ selectedDateKey }: { selectedDateKey?: string
         <div className="min-h-0 overflow-hidden">
           <ul className="mt-2 space-y-1">
             {videos.map(video => (
-              <RecentVideoRow key={`${video.dateKey}:${video.pageKey}`} video={video} />
+              <RecentVideoRow
+                key={`${video.dateKey}:${video.pageKey}`}
+                displayMode={displayMode}
+                video={video}
+              />
             ))}
           </ul>
 

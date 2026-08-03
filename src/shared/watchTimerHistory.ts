@@ -45,6 +45,8 @@ export type WatchTimerVideoDailyItem = WatchTimerVideoHistoryItem & {
   dailyBackgroundElapsedMs: number;
 };
 
+type WatchTimerVideoSortMode = "total" | "foreground" | "background";
+
 export type WatchTimerHistoryBackup = {
   history: WatchTimerHistory;
   videos: WatchTimerVideoHistoryItem[];
@@ -137,6 +139,7 @@ export async function getWatchTimerVideoDailyBreakdown(
 export async function getTopWatchTimerVideosForDate(
   dateKey: string,
   limit = 3,
+  sortMode: WatchTimerVideoSortMode = "total",
 ): Promise<WatchTimerVideoDailyItem[]> {
   if (!hasChromeLocalStorage() || !isDateKey(dateKey)) return [];
   const [videosByDate, sessions] = await Promise.all([
@@ -164,12 +167,22 @@ export async function getTopWatchTimerVideosForDate(
         dailyBackgroundElapsedMs: elapsed.backgroundElapsedMs,
       };
     })
-    .filter(video => video.dailyElapsedMs > WATCH_TIMER_SESSION_MIN_MS)
+    .filter(video => getVideoDurationForMode(video, sortMode) > WATCH_TIMER_SESSION_MIN_MS)
     .sort(
       (left, right) =>
-        right.dailyElapsedMs - left.dailyElapsedMs || right.updatedAt - left.updatedAt,
+        getVideoDurationForMode(right, sortMode) - getVideoDurationForMode(left, sortMode) ||
+        right.updatedAt - left.updatedAt,
     )
     .slice(0, Math.max(0, limit));
+}
+
+function getVideoDurationForMode(
+  video: WatchTimerVideoDailyItem,
+  sortMode: WatchTimerVideoSortMode,
+): number {
+  if (sortMode === "foreground") return video.dailyForegroundElapsedMs;
+  if (sortMode === "background") return video.dailyBackgroundElapsedMs;
+  return video.dailyElapsedMs;
 }
 
 async function getWatchTimerDailyElapsed(dateKey: string): Promise<WatchTimerDurationBreakdown> {
@@ -622,7 +635,7 @@ function deduplicateVideos(videos: WatchTimerVideoHistoryItem[]): WatchTimerVide
 function assertMutationSucceeded(
   response: Awaited<ReturnType<typeof sendMessage>>,
 ): asserts response is Exclude<typeof response, null> {
-  if (!response) throw new Error("后台服务不可用，观看历史未写入");
+  if (!response) throw new Error("后台服务未返回观看历史写入响应");
   if (!response.ok) throw new Error(response.error);
 }
 

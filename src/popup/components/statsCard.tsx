@@ -6,6 +6,7 @@ import {
 } from "../../shared/watchTimerStats";
 import type {
   DurationComparison,
+  DurationDisplayMode,
   SegmentedOption,
   StatsMetric,
   StatsPeriod,
@@ -26,22 +27,62 @@ const PERIOD_OPTIONS: SegmentedOption<StatsPeriod>[] = [
   { value: "year", label: "本年" },
 ];
 
-function formatDurationComparison(comparison: DurationComparison): string {
-  const elapsedMs = Math.max(0, comparison.elapsedMs);
-  const previousElapsedMs = Math.max(0, comparison.previousElapsedMs);
+function getDurationModeLabel(mode: DurationDisplayMode): string {
+  if (mode === "foreground") return "前台";
+  if (mode === "background") return "后台";
+  return "总计";
+}
+
+function getDurationModeValue(
+  mode: DurationDisplayMode,
+  elapsedMs: number,
+  foregroundElapsedMs: number,
+  backgroundElapsedMs: number,
+): number {
+  if (mode === "foreground") return foregroundElapsedMs;
+  if (mode === "background") return backgroundElapsedMs;
+  return elapsedMs;
+}
+
+function formatDurationComparison(
+  comparison: DurationComparison,
+  displayMode: DurationDisplayMode,
+): string {
+  const elapsedMs = Math.max(
+    0,
+    getDurationModeValue(
+      displayMode,
+      comparison.elapsedMs,
+      comparison.foregroundElapsedMs,
+      comparison.backgroundElapsedMs,
+    ),
+  );
+  const previousElapsedMs = Math.max(
+    0,
+    getDurationModeValue(
+      displayMode,
+      comparison.previousElapsedMs,
+      comparison.previousForegroundElapsedMs,
+      comparison.previousBackgroundElapsedMs,
+    ),
+  );
+  const comparisonLabel =
+    displayMode === "total"
+      ? comparison.label
+      : `${getDurationModeLabel(displayMode)}${comparison.label}`;
   const deltaMs = elapsedMs - previousElapsedMs;
-  if (deltaMs === 0) return `${comparison.label}持平（0%）`;
+  if (deltaMs === 0) return `${comparisonLabel}持平（0%）`;
 
   const direction = deltaMs > 0 ? "增加" : "减少";
   const duration = formatStatsDuration(Math.abs(deltaMs));
   if (previousElapsedMs === 0) {
-    return `${comparison.label}${direction} ${duration}（暂无百分比）`;
+    return `${comparisonLabel}${direction} ${duration}（暂无百分比）`;
   }
 
   const percent = (Math.abs(deltaMs) / previousElapsedMs) * 100;
   const sign = deltaMs > 0 ? "+" : "-";
   const formattedPercent = percent.toFixed(1).replace(/\.0$/, "");
-  return `${comparison.label}${direction} ${duration}（${sign}${formattedPercent}%）`;
+  return `${comparisonLabel}${direction} ${duration}（${sign}${formattedPercent}%）`;
 }
 
 function formatStatsDuration(ms: number): string {
@@ -57,9 +98,13 @@ function formatStatsDuration(ms: number): string {
 export function StatsCard({
   onDateSelect,
   selectedDateKey,
+  durationDisplayMode,
+  onDurationDisplayModeChange,
 }: {
   onDateSelect: (dateKey: string) => void;
   selectedDateKey?: string;
+  durationDisplayMode: DurationDisplayMode;
+  onDurationDisplayModeChange: (mode: DurationDisplayMode) => void;
 }) {
   const [metric, setMetric] = useState<StatsMetric>("duration");
   const [period, setPeriod] = useState<StatsPeriod>("7d");
@@ -82,8 +127,19 @@ export function StatsCard({
     0,
   );
   const totalVideoCount = videoCountPoints.reduce((sum, point) => sum + point.count, 0);
+  const durationModeLabel = getDurationModeLabel(durationDisplayMode);
+  const selectedElapsedMs = getDurationModeValue(
+    durationDisplayMode,
+    totalElapsedMs,
+    foregroundElapsedMs,
+    backgroundElapsedMs,
+  );
+  const durationSummaryLabel =
+    durationDisplayMode === "total"
+      ? `${periodLabel}观看时长`
+      : `${periodLabel}${durationModeLabel}时长`;
   const durationComparison = durationData
-    ? formatDurationComparison(durationData.comparison)
+    ? formatDurationComparison(durationData.comparison, durationDisplayMode)
     : null;
 
   useEffect(() => {
@@ -115,14 +171,16 @@ export function StatsCard({
               data={durationPoints}
               onSelect={period === "7d" ? onDateSelect : undefined}
               selectedDateKey={selectedDateKey}
+              displayMode={durationDisplayMode}
+              onDisplayModeChange={onDurationDisplayModeChange}
             />
             <div className="mt-2 border-t border-slate-100 pt-2 dark:border-[#30343c]">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="min-w-0 truncate text-[11px] text-slate-500 dark:text-slate-400">
-                  {periodLabel}观看时长
+                  {durationSummaryLabel}
                 </span>
                 <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
-                  {formatStatsDuration(totalElapsedMs)}
+                  {formatStatsDuration(selectedElapsedMs)}
                 </span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-3">

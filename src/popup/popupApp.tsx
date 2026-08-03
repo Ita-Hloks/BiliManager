@@ -4,6 +4,7 @@ import type { ExtensionMessage, ExtensionResponse } from "../shared/messaging";
 import { getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
 import type { ExtensionSettings, SearchFilterStats } from "../shared/types";
 import { useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
+import type { DurationDisplayMode } from "./types";
 import { RecentVideosCard } from "./components/recentVideosCard";
 import { StatsCard } from "./components/statsCard";
 
@@ -22,6 +23,7 @@ export function PopupApp(props: { initialSettings: ExtensionSettings }) {
   const [stats, setStats] = useState<SearchFilterStats>(unavailableStats);
   const [contentConnected, setContentConnected] = useState(false);
   const [selectedStatsDateKey, setSelectedStatsDateKey] = useState<string>();
+  const [durationDisplayMode, setDurationDisplayMode] = useState<DurationDisplayMode>("total");
   const isDark = useEffectiveDarkTheme(settings.theme);
   const extensionVersion = chrome.runtime.getManifest().version;
 
@@ -149,8 +151,16 @@ export function PopupApp(props: { initialSettings: ExtensionSettings }) {
           </div>
         )}
 
-        <StatsCard onDateSelect={setSelectedStatsDateKey} selectedDateKey={selectedStatsDateKey} />
-        <RecentVideosCard selectedDateKey={selectedStatsDateKey} />
+        <StatsCard
+          durationDisplayMode={durationDisplayMode}
+          onDateSelect={setSelectedStatsDateKey}
+          onDurationDisplayModeChange={setDurationDisplayMode}
+          selectedDateKey={selectedStatsDateKey}
+        />
+        <RecentVideosCard
+          displayMode={durationDisplayMode}
+          selectedDateKey={selectedStatsDateKey}
+        />
       </div>
 
       <footer className="flex shrink-0 items-center justify-between border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-400 transition-colors duration-300 dark:border-[#30343c] dark:bg-[#1c1f26] dark:text-slate-500">

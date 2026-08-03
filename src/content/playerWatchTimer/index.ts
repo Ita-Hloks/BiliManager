@@ -1,4 +1,5 @@
 import { getTodayKey } from "../../shared/date";
+import { isExtensionContextInvalidated } from "../../shared/extensionContext";
 import { getSettings, saveSettings } from "../../shared/storage";
 import type { WatchTimerSettings } from "../../shared/types";
 import {
@@ -238,20 +239,29 @@ async function saveDailyTimer(throttle: boolean): Promise<void> {
   if (state.sessionElapsedMs <= WATCH_TIMER_SESSION_MIN_MS) return;
 
   const savedSessionBreakdown = state.getSessionBreakdown();
+  try {
+    await saveWatchTimerSession({
+      id: state.sessionId,
+      pageKey: state.pageKey,
+      title: getCurrentVideoTitle(),
+      url: location.href,
+      dateKey: state.dateKey,
+      ...savedSessionBreakdown,
+      updatedAt: now,
+    });
+  } catch (error) {
+    if (isExtensionContextInvalidated(error)) throw error;
+    console.error("[BiliManager] 观看历史写入失败，将在下一次计时周期重试", error);
+    return;
+  }
   state.markSessionSaved(savedSessionBreakdown);
-  await saveWatchTimerSession({
-    id: state.sessionId,
-    pageKey: state.pageKey,
-    title: getCurrentVideoTitle(),
-    url: location.href,
-    dateKey: state.dateKey,
-    ...savedSessionBreakdown,
-    updatedAt: now,
-  });
 
   if (now - lastSessionPruneAt > SESSION_PRUNE_INTERVAL_MS) {
     lastSessionPruneAt = now;
-    void pruneWatchTimerSessions(state.dateKey);
+    void pruneWatchTimerSessions(state.dateKey).catch(error => {
+      if (isExtensionContextInvalidated(error)) return;
+      console.error("[BiliManager] 观看历史清理失败", error);
+    });
   }
 }
 

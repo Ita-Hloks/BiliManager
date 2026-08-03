@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Headphones, Layers3, Monitor } from "lucide-react";
 import { formatCompactDuration } from "../../shared/duration";
-import type { DurationPoint, VideoCountPoint } from "../types";
-
-type DurationDisplayMode = "total" | "foreground" | "background";
+import type { DurationDisplayMode, DurationPoint, VideoCountPoint } from "../types";
 
 const DURATION_DISPLAY_MODES: Array<{
   value: DurationDisplayMode;
@@ -30,15 +28,18 @@ export function DurationBarChart({
   data,
   onSelect,
   selectedDateKey,
+  displayMode,
+  onDisplayModeChange,
 }: {
   data: DurationPoint[];
   onSelect?: (dateKey: string) => void;
   selectedDateKey?: string;
+  displayMode: DurationDisplayMode;
+  onDisplayModeChange: (mode: DurationDisplayMode) => void;
 }) {
   const mounted = useMountedAnimation();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [tooltipX, setTooltipX] = useState(0);
-  const [displayMode, setDisplayMode] = useState<DurationDisplayMode>("total");
   const elapsedValues = data.map(point => Math.max(0, point.elapsedMs));
   const foregroundValues = data.map(point =>
     Math.min(Math.max(0, point.foregroundElapsedMs), Math.max(0, point.elapsedMs)),
@@ -90,7 +91,7 @@ export function DurationBarChart({
                 ].join(" ")}
                 key={value}
                 onClick={() => {
-                  setDisplayMode(value);
+                  onDisplayModeChange(value);
                   setActiveIndex(null);
                 }}
                 title={`切换到${label}视图`}

@@ -2,6 +2,7 @@ import type React from "react";
 
 export type StatsMetric = "duration" | "videoCount";
 export type StatsPeriod = "7d" | "month" | "year";
+export type DurationDisplayMode = "total" | "foreground" | "background";
 
 export interface DurationPoint {
   label: string;
@@ -14,8 +15,10 @@ export interface DurationPoint {
 export interface DurationComparison {
   label: string;
   elapsedMs: number;
-  previousElapsedMs: number;
+  foregroundElapsedMs: number;
   backgroundElapsedMs: number;
+  previousElapsedMs: number;
+  previousForegroundElapsedMs: number;
   previousBackgroundElapsedMs: number;
 }
 

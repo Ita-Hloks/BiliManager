@@ -182,8 +182,10 @@ function buildCurrentComparison(
     return {
       label: "较前一日",
       elapsedMs: current.elapsedMs,
-      previousElapsedMs: previous.elapsedMs,
+      foregroundElapsedMs: current.foregroundElapsedMs,
       backgroundElapsedMs: current.backgroundElapsedMs,
+      previousElapsedMs: previous.elapsedMs,
+      previousForegroundElapsedMs: previous.foregroundElapsedMs,
       previousBackgroundElapsedMs: previous.backgroundElapsedMs,
     };
   }
@@ -197,8 +199,10 @@ function buildCurrentComparison(
     return {
       label: "较前一周",
       elapsedMs: current.elapsedMs,
-      previousElapsedMs: previous.elapsedMs,
+      foregroundElapsedMs: current.foregroundElapsedMs,
       backgroundElapsedMs: current.backgroundElapsedMs,
+      previousElapsedMs: previous.elapsedMs,
+      previousForegroundElapsedMs: previous.foregroundElapsedMs,
       previousBackgroundElapsedMs: previous.backgroundElapsedMs,
     };
   }
@@ -210,8 +214,10 @@ function buildCurrentComparison(
   return {
     label: "较前一月",
     elapsedMs: current.elapsedMs,
-    previousElapsedMs: previous.elapsedMs,
+    foregroundElapsedMs: current.foregroundElapsedMs,
     backgroundElapsedMs: current.backgroundElapsedMs,
+    previousElapsedMs: previous.elapsedMs,
+    previousForegroundElapsedMs: previous.foregroundElapsedMs,
     previousBackgroundElapsedMs: previous.backgroundElapsedMs,
   };
 }
