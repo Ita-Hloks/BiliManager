@@ -26,6 +26,15 @@ export function DurationBarChart({
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [tooltipX, setTooltipX] = useState(0);
   const elapsedValues = data.map(point => Math.max(0, point.elapsedMs));
+  const foregroundValues = data.map(point =>
+    Math.min(Math.max(0, point.foregroundElapsedMs), Math.max(0, point.elapsedMs)),
+  );
+  const backgroundValues = data.map((point, index) =>
+    Math.min(
+      Math.max(0, point.backgroundElapsedMs),
+      Math.max(0, elapsedValues[index] - foregroundValues[index]),
+    ),
+  );
   const maxElapsed = Math.max(...elapsedValues, 1);
 
   return (
@@ -78,14 +87,33 @@ export function DurationBarChart({
               <div className="flex h-20 w-full items-end overflow-hidden rounded-t-sm bg-sky-50 dark:bg-slate-700/60">
                 <div
                   className={[
-                    "w-full rounded-t-sm bg-bili-blue transition-[height,opacity] duration-700 ease-out",
+                    "flex w-full flex-col overflow-hidden rounded-t-sm transition-[height,opacity] duration-700 ease-out",
                     selected ? "opacity-100" : "opacity-75",
                   ].join(" ")}
                   style={{
                     height: mounted ? `${pct}%` : "0%",
                     transitionDelay: `${index * 45}ms`,
                   }}
-                />
+                >
+                  {backgroundValues[index] > 0 && (
+                    <span
+                      className="w-full bg-amber-400"
+                      style={{
+                        height: `${(backgroundValues[index] / elapsed) * 100}%`,
+                      }}
+                      title={`后台 ${formatCompactDuration(backgroundValues[index])}`}
+                    />
+                  )}
+                  {foregroundValues[index] > 0 && (
+                    <span
+                      className="w-full bg-bili-blue"
+                      style={{
+                        height: `${(foregroundValues[index] / elapsed) * 100}%`,
+                      }}
+                      title={`前台 ${formatCompactDuration(foregroundValues[index])}`}
+                    />
+                  )}
+                </div>
               </div>
               <span className="whitespace-nowrap text-[9px] leading-none text-slate-500 dark:text-slate-300">
                 {point.label}

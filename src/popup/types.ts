@@ -6,6 +6,8 @@ export type StatsPeriod = "7d" | "month" | "year";
 export interface DurationPoint {
   label: string;
   elapsedMs: number;
+  foregroundElapsedMs: number;
+  backgroundElapsedMs: number;
   dateKey?: string;
 }
 
@@ -13,6 +15,8 @@ export interface DurationComparison {
   label: string;
   elapsedMs: number;
   previousElapsedMs: number;
+  backgroundElapsedMs: number;
+  previousBackgroundElapsedMs: number;
 }
 
 export interface WatchDurationData {

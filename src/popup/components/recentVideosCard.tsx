@@ -4,7 +4,7 @@ import { formatCompactDuration } from "../../shared/duration";
 import {
   getRecentWatchTimerVideos,
   getTopWatchTimerVideosForDate,
-  getWatchTimerVideoDailyElapsed,
+  getWatchTimerVideoDailyBreakdown,
 } from "../../shared/watchTimerHistory";
 import type { WatchTimerVideoDailyItem } from "../../shared/watchTimerHistory";
 
@@ -21,8 +21,15 @@ function RecentVideoRow({ video }: { video: WatchTimerVideoDailyItem }) {
         <span className="min-w-0 truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">
           {video.title}
         </span>
-        <span className="shrink-0 text-[11px] font-medium tabular-nums text-bili-blue dark:text-sky-200">
-          {formatCompactDuration(video.dailyElapsedMs)}
+        <span className="flex shrink-0 flex-col items-end text-[11px] font-medium tabular-nums">
+          <span className="text-bili-blue dark:text-sky-200">
+            {formatCompactDuration(video.dailyElapsedMs)}
+          </span>
+          {video.dailyBackgroundElapsedMs > 0 && (
+            <span className="text-[10px] text-amber-500 dark:text-amber-300">
+              后台 {formatCompactDuration(video.dailyBackgroundElapsedMs)}
+            </span>
+          )}
         </span>
         <span className="min-w-0 truncate text-[10px] text-slate-400 dark:text-slate-500">
           {video.dateKey} {formatUpdatedAt(video.updatedAt)}
@@ -42,10 +49,18 @@ export function RecentVideosCard({ selectedDateKey }: { selectedDateKey?: string
       ? getTopWatchTimerVideosForDate(selectedDateKey, 3)
       : getRecentWatchTimerVideos(3).then(recentVideos =>
           Promise.all(
-            recentVideos.map(async video => ({
-              ...video,
-              dailyElapsedMs: await getWatchTimerVideoDailyElapsed(video.pageKey, video.dateKey),
-            })),
+            recentVideos.map(async video => {
+              const breakdown = await getWatchTimerVideoDailyBreakdown(
+                video.pageKey,
+                video.dateKey,
+              );
+              return {
+                ...video,
+                dailyElapsedMs: breakdown.elapsedMs,
+                dailyForegroundElapsedMs: breakdown.foregroundElapsedMs,
+                dailyBackgroundElapsedMs: breakdown.backgroundElapsedMs,
+              };
+            }),
           ),
         );
     void request.then(nextVideos => {

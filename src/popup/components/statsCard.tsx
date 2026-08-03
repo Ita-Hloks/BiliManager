@@ -75,6 +75,10 @@ export function StatsCard({
     (sum, point) => sum + Math.floor(point.elapsedMs / 60000),
     0,
   );
+  const backgroundMinutes = durationPoints.reduce(
+    (sum, point) => sum + Math.floor(point.backgroundElapsedMs / 60000),
+    0,
+  );
   const totalVideoCount = videoCountPoints.reduce((sum, point) => sum + point.count, 0);
   const durationComparison = durationData
     ? formatDurationComparison(durationData.comparison)
@@ -115,6 +119,11 @@ export function StatsCard({
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 {formatMinutes(totalMinutes)}
               </span>
+              {backgroundMinutes > 0 && (
+                <span className="ml-2 font-semibold text-amber-500 dark:text-amber-300">
+                  后台 {formatMinutes(backgroundMinutes)}
+                </span>
+              )}
             </p>
             {durationComparison && (
               <p className="mt-1 text-center text-[10px] text-slate-400 dark:text-slate-500">

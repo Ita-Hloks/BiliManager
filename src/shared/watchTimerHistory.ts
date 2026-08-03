@@ -10,20 +10,24 @@ export const WATCH_TIMER_VIDEO_INDEX_KEY_PREFIX = "biliManager.watchTimer.videoI
 export const WATCH_TIMER_DATE_INDEX_KEY = "biliManager.watchTimer.dateIndex";
 export const WATCH_TIMER_RECENT_VIDEOS_KEY = "biliManager.watchTimer.recentVideos";
 
-export type WatchTimerHistory = Record<string, number>;
-
-export type WatchTimerDailyStorage = {
-  dateKey: string;
+export type WatchTimerDurationBreakdown = {
   elapsedMs: number;
+  foregroundElapsedMs: number;
+  backgroundElapsedMs: number;
 };
 
-export type WatchTimerSessionStorage = {
+export type WatchTimerHistory = Record<string, WatchTimerDurationBreakdown>;
+
+export type WatchTimerDailyStorage = WatchTimerDurationBreakdown & {
+  dateKey: string;
+};
+
+export type WatchTimerSessionStorage = WatchTimerDurationBreakdown & {
   id: string;
   pageKey: string;
   title: string;
   url: string;
   dateKey: string;
-  elapsedMs: number;
   updatedAt: number;
 };
 
@@ -37,6 +41,8 @@ export type WatchTimerVideoHistoryItem = {
 
 export type WatchTimerVideoDailyItem = WatchTimerVideoHistoryItem & {
   dailyElapsedMs: number;
+  dailyForegroundElapsedMs: number;
+  dailyBackgroundElapsedMs: number;
 };
 
 export type WatchTimerHistoryBackup = {
@@ -51,7 +57,7 @@ const WATCH_TIMER_SESSION_MIN_MS = 1000;
 
 export async function loadWatchTimerDaily(): Promise<WatchTimerDailyStorage> {
   const dateKey = getTodayKey();
-  return { dateKey, elapsedMs: await getWatchTimerDailyElapsed(dateKey) };
+  return { dateKey, ...(await getWatchTimerDailyElapsed(dateKey)) };
 }
 
 export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
@@ -66,7 +72,9 @@ export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
   return Object.fromEntries(
     dateKeys.map(dateKey => [
       dateKey,
-      dailyTotals[dateKey] > 0 ? dailyTotals[dateKey] : sumElapsed(sessionsByDate[dateKey] ?? []),
+      dailyTotals[dateKey].elapsedMs > 0
+        ? dailyTotals[dateKey]
+        : sumDurationBreakdown(sessionsByDate[dateKey] ?? []),
     ]),
   );
 }
@@ -99,9 +107,18 @@ export async function getWatchTimerVideoDailyElapsed(
   pageKey: string,
   dateKey = getTodayKey(),
 ): Promise<number> {
-  if (!hasChromeLocalStorage() || !pageKey || !isDateKey(dateKey)) return 0;
+  return (await getWatchTimerVideoDailyBreakdown(pageKey, dateKey)).elapsedMs;
+}
+
+export async function getWatchTimerVideoDailyBreakdown(
+  pageKey: string,
+  dateKey = getTodayKey(),
+): Promise<WatchTimerDurationBreakdown> {
+  if (!hasChromeLocalStorage() || !pageKey || !isDateKey(dateKey)) {
+    return createEmptyDurationBreakdown();
+  }
   const sessions = await loadSessionsForDate(dateKey);
-  return sumElapsed(sessions.filter(session => session.pageKey === pageKey));
+  return sumDurationBreakdown(sessions.filter(session => session.pageKey === pageKey));
 }
 
 export async function getTopWatchTimerVideosForDate(
@@ -113,19 +130,27 @@ export async function getTopWatchTimerVideosForDate(
     loadVideosByDate([dateKey]),
     loadSessionsForDate(dateKey),
   ]);
-  const elapsedByPageKey = new Map<string, number>();
+  const elapsedByPageKey = new Map<string, WatchTimerDurationBreakdown>();
   sessions.forEach(session => {
     elapsedByPageKey.set(
       session.pageKey,
-      (elapsedByPageKey.get(session.pageKey) ?? 0) + session.elapsedMs,
+      addDurationBreakdown(
+        elapsedByPageKey.get(session.pageKey) ?? createEmptyDurationBreakdown(),
+        session,
+      ),
     );
   });
 
   return (videosByDate[dateKey] ?? [])
-    .map(video => ({
-      ...video,
-      dailyElapsedMs: elapsedByPageKey.get(video.pageKey) ?? 0,
-    }))
+    .map(video => {
+      const elapsed = elapsedByPageKey.get(video.pageKey) ?? createEmptyDurationBreakdown();
+      return {
+        ...video,
+        dailyElapsedMs: elapsed.elapsedMs,
+        dailyForegroundElapsedMs: elapsed.foregroundElapsedMs,
+        dailyBackgroundElapsedMs: elapsed.backgroundElapsedMs,
+      };
+    })
     .sort(
       (left, right) =>
         right.dailyElapsedMs - left.dailyElapsedMs || right.updatedAt - left.updatedAt,
@@ -133,15 +158,15 @@ export async function getTopWatchTimerVideosForDate(
     .slice(0, Math.max(0, limit));
 }
 
-async function getWatchTimerDailyElapsed(dateKey: string): Promise<number> {
-  if (!hasChromeLocalStorage() || !isDateKey(dateKey)) return 0;
+async function getWatchTimerDailyElapsed(dateKey: string): Promise<WatchTimerDurationBreakdown> {
+  if (!hasChromeLocalStorage() || !isDateKey(dateKey)) return createEmptyDurationBreakdown();
   const dailyTotalKey = getDailyTotalKey(dateKey);
   const [total, sessions] = await Promise.all([
     chrome.storage.local.get(dailyTotalKey),
     loadSessionsForDate(dateKey),
   ]);
-  const dailyTotal = normalizeElapsed(total[dailyTotalKey]);
-  return dailyTotal > 0 ? dailyTotal : sumElapsed(sessions);
+  const dailyTotal = normalizeDurationBreakdown(total[dailyTotalKey]);
+  return dailyTotal.elapsedMs > 0 ? dailyTotal : sumDurationBreakdown(sessions);
 }
 
 export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
@@ -187,13 +212,18 @@ export async function writeWatchTimerSession(session: WatchTimerSessionStorage):
   ]);
   const video = toVideoRecord(normalized);
   const previousSession = normalizeSession(saved[sessionKey]);
-  const previousDailyTotal = normalizeElapsed(saved[getDailyTotalKey(normalized.dateKey)]);
-  const sessionDelta = Math.max(0, normalized.elapsedMs - (previousSession?.elapsedMs ?? 0));
+  const previousDailyTotal = normalizeDurationBreakdown(
+    saved[getDailyTotalKey(normalized.dateKey)],
+  );
+  const sessionDelta = subtractDurationBreakdown(
+    normalized,
+    previousSession ?? createEmptyDurationBreakdown(),
+  );
 
   await chrome.storage.local.set({
     [sessionKey]: normalized,
     [videoKey]: video,
-    [getDailyTotalKey(normalized.dateKey)]: previousDailyTotal + sessionDelta,
+    [getDailyTotalKey(normalized.dateKey)]: addDurationBreakdown(previousDailyTotal, sessionDelta),
   });
   await chrome.storage.local.set({
     [sessionIndexKey]: appendUnique(normalizeKeyList(saved[sessionIndexKey]), sessionKey),
@@ -225,8 +255,8 @@ export async function replaceWatchTimerHistory(backup: WatchTimerHistoryBackup):
       .slice(0, MAX_RECENT_VIDEOS),
   };
 
-  Object.entries(history).forEach(([dateKey, elapsedMs]) => {
-    nextStorage[getDailyTotalKey(dateKey)] = elapsedMs;
+  Object.entries(history).forEach(([dateKey, breakdown]) => {
+    nextStorage[getDailyTotalKey(dateKey)] = breakdown;
   });
   dateKeys.forEach(dateKey => {
     const dateVideos = deduplicateVideos(videos.filter(video => video.dateKey === dateKey));
@@ -336,7 +366,10 @@ async function loadDailyTotals(dateKeys: string[]): Promise<WatchTimerHistory> {
   const keys = dateKeys.map(getDailyTotalKey);
   const saved = keys.length > 0 ? await chrome.storage.local.get(keys) : {};
   return Object.fromEntries(
-    dateKeys.map(dateKey => [dateKey, normalizeElapsed(saved[getDailyTotalKey(dateKey)])]),
+    dateKeys.map(dateKey => [
+      dateKey,
+      normalizeDurationBreakdown(saved[getDailyTotalKey(dateKey)]),
+    ]),
   );
 }
 
@@ -379,13 +412,16 @@ function normalizeSession(value: unknown): WatchTimerSessionStorage | undefined 
   if (typeof record.pageKey !== "string" || !record.pageKey) return undefined;
   if (typeof record.dateKey !== "string" || !isDateKey(record.dateKey)) return undefined;
   if (typeof record.updatedAt !== "number" || !Number.isFinite(record.updatedAt)) return undefined;
+  const breakdown = normalizeDurationBreakdown(record);
   return {
     id: record.id,
     pageKey: record.pageKey,
     title: normalizeTitle(record.title, record.pageKey),
     url: typeof record.url === "string" ? record.url : "",
     dateKey: record.dateKey,
-    elapsedMs: normalizeElapsed(record.elapsedMs),
+    elapsedMs: breakdown.elapsedMs,
+    foregroundElapsedMs: breakdown.foregroundElapsedMs,
+    backgroundElapsedMs: breakdown.backgroundElapsedMs,
     updatedAt: Math.max(0, Math.floor(record.updatedAt)),
   };
 }
@@ -419,7 +455,7 @@ function normalizeHistory(value: unknown): WatchTimerHistory {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
       .filter(([dateKey]) => isDateKey(dateKey))
-      .map(([dateKey, elapsedMs]) => [dateKey, normalizeElapsed(elapsedMs)]),
+      .map(([dateKey, elapsedMs]) => [dateKey, normalizeDurationBreakdown(elapsedMs)]),
   );
 }
 
@@ -435,6 +471,98 @@ function normalizeKeyList(value: unknown): string[] {
 
 function normalizeElapsed(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function normalizeDurationBreakdown(value: unknown): WatchTimerDurationBreakdown {
+  if (typeof value === "number") {
+    const elapsedMs = normalizeElapsed(value);
+    return {
+      elapsedMs,
+      foregroundElapsedMs: elapsedMs,
+      backgroundElapsedMs: 0,
+    };
+  }
+
+  if (!value || typeof value !== "object") return createEmptyDurationBreakdown();
+
+  const record = value as Partial<WatchTimerDurationBreakdown>;
+  const elapsedMs = normalizeElapsed(record.elapsedMs);
+  const hasForeground = typeof record.foregroundElapsedMs === "number";
+  const hasBackground = typeof record.backgroundElapsedMs === "number";
+  let foregroundElapsedMs = hasForeground
+    ? normalizeElapsed(record.foregroundElapsedMs)
+    : undefined;
+  let backgroundElapsedMs = hasBackground
+    ? normalizeElapsed(record.backgroundElapsedMs)
+    : undefined;
+
+  if (foregroundElapsedMs === undefined && backgroundElapsedMs === undefined) {
+    foregroundElapsedMs = elapsedMs;
+    backgroundElapsedMs = 0;
+  } else if (foregroundElapsedMs === undefined) {
+    backgroundElapsedMs = Math.min(backgroundElapsedMs ?? 0, elapsedMs);
+    foregroundElapsedMs = elapsedMs - backgroundElapsedMs;
+  } else if (backgroundElapsedMs === undefined) {
+    foregroundElapsedMs = Math.min(foregroundElapsedMs, elapsedMs);
+    backgroundElapsedMs = elapsedMs - foregroundElapsedMs;
+  }
+
+  foregroundElapsedMs = Math.min(foregroundElapsedMs ?? 0, elapsedMs);
+  backgroundElapsedMs = Math.min(backgroundElapsedMs ?? 0, elapsedMs);
+  const componentTotal = foregroundElapsedMs + backgroundElapsedMs;
+
+  if (componentTotal > elapsedMs) {
+    const overflow = componentTotal - elapsedMs;
+    const foregroundReduction = Math.min(foregroundElapsedMs, overflow);
+    foregroundElapsedMs -= foregroundReduction;
+    backgroundElapsedMs = Math.max(0, backgroundElapsedMs - (overflow - foregroundReduction));
+  } else if (componentTotal < elapsedMs) {
+    foregroundElapsedMs += elapsedMs - componentTotal;
+  }
+
+  return {
+    elapsedMs,
+    foregroundElapsedMs,
+    backgroundElapsedMs,
+  };
+}
+
+export function normalizeWatchTimerDurationBreakdown(value: unknown): WatchTimerDurationBreakdown {
+  return normalizeDurationBreakdown(value);
+}
+
+function createEmptyDurationBreakdown(): WatchTimerDurationBreakdown {
+  return {
+    elapsedMs: 0,
+    foregroundElapsedMs: 0,
+    backgroundElapsedMs: 0,
+  };
+}
+
+export function createEmptyWatchTimerDurationBreakdown(): WatchTimerDurationBreakdown {
+  return createEmptyDurationBreakdown();
+}
+
+function addDurationBreakdown(
+  left: WatchTimerDurationBreakdown,
+  right: WatchTimerDurationBreakdown,
+): WatchTimerDurationBreakdown {
+  return normalizeDurationBreakdown({
+    elapsedMs: left.elapsedMs + right.elapsedMs,
+    foregroundElapsedMs: left.foregroundElapsedMs + right.foregroundElapsedMs,
+    backgroundElapsedMs: left.backgroundElapsedMs + right.backgroundElapsedMs,
+  });
+}
+
+function subtractDurationBreakdown(
+  next: WatchTimerDurationBreakdown,
+  previous: WatchTimerDurationBreakdown,
+): WatchTimerDurationBreakdown {
+  return normalizeDurationBreakdown({
+    elapsedMs: Math.max(0, next.elapsedMs - previous.elapsedMs),
+    foregroundElapsedMs: Math.max(0, next.foregroundElapsedMs - previous.foregroundElapsedMs),
+    backgroundElapsedMs: Math.max(0, next.backgroundElapsedMs - previous.backgroundElapsedMs),
+  });
 }
 
 function normalizeTitle(value: unknown, fallback: string): string {
@@ -485,8 +613,8 @@ function sortDateKeys(values: string[]): string[] {
   return [...new Set(values.filter(isDateKey))].sort();
 }
 
-function sumElapsed(sessions: WatchTimerSessionStorage[]): number {
-  return sessions.reduce((total, session) => total + session.elapsedMs, 0);
+function sumDurationBreakdown(sessions: WatchTimerSessionStorage[]): WatchTimerDurationBreakdown {
+  return sessions.reduce(addDurationBreakdown, createEmptyDurationBreakdown());
 }
 
 function getSessionKey(dateKey: string, id: string): string {

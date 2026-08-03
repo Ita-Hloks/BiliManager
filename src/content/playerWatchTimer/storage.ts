@@ -1,5 +1,6 @@
 import { isDateKey } from "../../shared/date";
 import { hasChromeLocalStorage } from "../../shared/chromeStorage";
+import { normalizeWatchTimerDurationBreakdown } from "../../shared/watchTimerHistory";
 
 const TIMER_ACTIVE_SESSION_KEY = "biliManager.playerWatchTimerActiveSession";
 const TIMER_POSITION_KEY = "biliManager.playerWatchTimer";
@@ -16,7 +17,11 @@ export type PlayerWatchTimerActiveSessionStorage = {
   pageKey: string;
   dateKey: string;
   elapsedMs: number;
+  foregroundElapsedMs: number;
+  backgroundElapsedMs: number;
   todayElapsedMs: number;
+  todayForegroundElapsedMs: number;
+  todayBackgroundElapsedMs: number;
   updatedAt: number;
 };
 
@@ -34,12 +39,23 @@ export async function saveActiveSession(
 ): Promise<void> {
   if (!hasChromeLocalStorage()) return;
 
+  const elapsed = normalizeWatchTimerDurationBreakdown(session);
+  const todayElapsed = normalizeWatchTimerDurationBreakdown({
+    elapsedMs: session.todayElapsedMs,
+    foregroundElapsedMs: session.todayForegroundElapsedMs,
+    backgroundElapsedMs: session.todayBackgroundElapsedMs,
+  });
+
   await chrome.storage.local.set({
     [TIMER_ACTIVE_SESSION_KEY]: {
       pageKey: session.pageKey,
       dateKey: session.dateKey,
-      elapsedMs: Math.max(0, Math.floor(session.elapsedMs)),
-      todayElapsedMs: Math.max(0, Math.floor(session.todayElapsedMs)),
+      elapsedMs: elapsed.elapsedMs,
+      foregroundElapsedMs: elapsed.foregroundElapsedMs,
+      backgroundElapsedMs: elapsed.backgroundElapsedMs,
+      todayElapsedMs: todayElapsed.elapsedMs,
+      todayForegroundElapsedMs: todayElapsed.foregroundElapsedMs,
+      todayBackgroundElapsedMs: todayElapsed.backgroundElapsedMs,
       updatedAt: Math.max(0, Math.floor(session.updatedAt)),
     },
   });
@@ -70,11 +86,22 @@ function normalizeActiveSession(value: unknown): PlayerWatchTimerActiveSessionSt
   if (typeof record.updatedAt !== "number" || !Number.isFinite(record.updatedAt)) return undefined;
   if (Date.now() - record.updatedAt > ACTIVE_SESSION_MAX_AGE_MS) return undefined;
 
+  const elapsed = normalizeWatchTimerDurationBreakdown(record);
+  const todayElapsed = normalizeWatchTimerDurationBreakdown({
+    elapsedMs: record.todayElapsedMs,
+    foregroundElapsedMs: record.todayForegroundElapsedMs,
+    backgroundElapsedMs: record.todayBackgroundElapsedMs,
+  });
+
   return {
     pageKey: record.pageKey,
     dateKey: record.dateKey,
-    elapsedMs: clampNumber(record.elapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
-    todayElapsedMs: clampNumber(record.todayElapsedMs, 0, Number.MAX_SAFE_INTEGER, 0),
+    elapsedMs: elapsed.elapsedMs,
+    foregroundElapsedMs: elapsed.foregroundElapsedMs,
+    backgroundElapsedMs: elapsed.backgroundElapsedMs,
+    todayElapsedMs: todayElapsed.elapsedMs,
+    todayForegroundElapsedMs: todayElapsed.foregroundElapsedMs,
+    todayBackgroundElapsedMs: todayElapsed.backgroundElapsedMs,
     updatedAt: Math.max(0, Math.floor(record.updatedAt)),
   };
 }
