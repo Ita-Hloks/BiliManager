@@ -53,7 +53,7 @@ export type WatchTimerHistoryBackup = {
 const MAX_HISTORY_DAYS = 370;
 const MAX_RECORDS = 5000;
 const MAX_RECENT_VIDEOS = 100;
-const WATCH_TIMER_SESSION_MIN_MS = 1000;
+export const WATCH_TIMER_SESSION_MIN_MS = 3_000;
 
 export async function loadWatchTimerDaily(): Promise<WatchTimerDailyStorage> {
   const dateKey = getTodayKey();
@@ -70,12 +70,14 @@ export async function getWatchTimerHistory(): Promise<WatchTimerHistory> {
   ]);
 
   return Object.fromEntries(
-    dateKeys.map(dateKey => [
-      dateKey,
-      dailyTotals[dateKey].elapsedMs > 0
-        ? dailyTotals[dateKey]
-        : sumDurationBreakdown(sessionsByDate[dateKey] ?? []),
-    ]),
+    dateKeys.map(dateKey => {
+      const sessions = sessionsByDate[dateKey] ?? [];
+      const elapsed =
+        sessions.length > 0
+          ? sumDurationBreakdown(sessions)
+          : getRecordableDurationBreakdown(dailyTotals[dateKey]);
+      return [dateKey, elapsed];
+    }),
   );
 }
 
@@ -88,14 +90,25 @@ export async function getRecentWatchTimerVideos(limit = 5): Promise<WatchTimerVi
 export async function getWatchTimerVideos(): Promise<WatchTimerVideoHistoryItem[]> {
   if (!hasChromeLocalStorage()) return [];
   const dateKeys = await loadDateIndex();
-  const videosByDate = await loadVideosByDate(dateKeys);
-  return dateKeys.flatMap(dateKey => videosByDate[dateKey] ?? []);
+  const [videosByDate, sessionsByDate] = await Promise.all([
+    loadVideosByDate(dateKeys),
+    loadSessionsByDate(dateKeys),
+  ]);
+  return dateKeys.flatMap(dateKey => {
+    const videos = videosByDate[dateKey] ?? [];
+    const sessions = sessionsByDate[dateKey] ?? [];
+    if (sessions.length === 0) return videos;
+    const recordablePageKeys = new Set(
+      sessions.filter(isRecordableSession).map(session => session.pageKey),
+    );
+    return videos.filter(video => recordablePageKeys.has(video.pageKey));
+  });
 }
 
 export async function saveWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
   if (!hasChromeLocalStorage()) return;
   const normalized = normalizeSession(session);
-  if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
+  if (!normalized || normalized.elapsedMs <= WATCH_TIMER_SESSION_MIN_MS) return;
   const response = await sendMessage({
     type: "BILI_FILTER_SAVE_WATCH_SESSION",
     payload: normalized,
@@ -131,7 +144,7 @@ export async function getTopWatchTimerVideosForDate(
     loadSessionsForDate(dateKey),
   ]);
   const elapsedByPageKey = new Map<string, WatchTimerDurationBreakdown>();
-  sessions.forEach(session => {
+  sessions.filter(isRecordableSession).forEach(session => {
     elapsedByPageKey.set(
       session.pageKey,
       addDurationBreakdown(
@@ -151,6 +164,7 @@ export async function getTopWatchTimerVideosForDate(
         dailyBackgroundElapsedMs: elapsed.backgroundElapsedMs,
       };
     })
+    .filter(video => video.dailyElapsedMs > WATCH_TIMER_SESSION_MIN_MS)
     .sort(
       (left, right) =>
         right.dailyElapsedMs - left.dailyElapsedMs || right.updatedAt - left.updatedAt,
@@ -166,7 +180,9 @@ async function getWatchTimerDailyElapsed(dateKey: string): Promise<WatchTimerDur
     loadSessionsForDate(dateKey),
   ]);
   const dailyTotal = normalizeDurationBreakdown(total[dailyTotalKey]);
-  return dailyTotal.elapsedMs > 0 ? dailyTotal : sumDurationBreakdown(sessions);
+  return sessions.length > 0
+    ? sumDurationBreakdown(sessions)
+    : getRecordableDurationBreakdown(dailyTotal);
 }
 
 export async function exportWatchTimerHistory(): Promise<WatchTimerHistoryBackup> {
@@ -196,7 +212,7 @@ export async function pruneWatchTimerSessions(todayKey = getTodayKey()): Promise
 export async function writeWatchTimerSession(session: WatchTimerSessionStorage): Promise<void> {
   if (!hasChromeLocalStorage()) return;
   const normalized = normalizeSession(session);
-  if (!normalized || normalized.elapsedMs < WATCH_TIMER_SESSION_MIN_MS) return;
+  if (!normalized || normalized.elapsedMs <= WATCH_TIMER_SESSION_MIN_MS) return;
 
   const sessionKey = getSessionKey(normalized.dateKey, normalized.id);
   const sessionIndexKey = getSessionIndexKey(normalized.dateKey);
@@ -455,7 +471,12 @@ function normalizeHistory(value: unknown): WatchTimerHistory {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
       .filter(([dateKey]) => isDateKey(dateKey))
-      .map(([dateKey, elapsedMs]) => [dateKey, normalizeDurationBreakdown(elapsedMs)]),
+      .map(([dateKey, elapsedMs]) => ({
+        dateKey,
+        breakdown: normalizeDurationBreakdown(elapsedMs),
+      }))
+      .filter(({ breakdown }) => breakdown.elapsedMs > WATCH_TIMER_SESSION_MIN_MS)
+      .map(({ dateKey, breakdown }) => [dateKey, breakdown] as const),
   );
 }
 
@@ -614,7 +635,21 @@ function sortDateKeys(values: string[]): string[] {
 }
 
 function sumDurationBreakdown(sessions: WatchTimerSessionStorage[]): WatchTimerDurationBreakdown {
-  return sessions.reduce(addDurationBreakdown, createEmptyDurationBreakdown());
+  return sessions
+    .filter(isRecordableSession)
+    .reduce(addDurationBreakdown, createEmptyDurationBreakdown());
+}
+
+function isRecordableSession(session: WatchTimerSessionStorage): boolean {
+  return session.elapsedMs > WATCH_TIMER_SESSION_MIN_MS;
+}
+
+function getRecordableDurationBreakdown(
+  breakdown: WatchTimerDurationBreakdown,
+): WatchTimerDurationBreakdown {
+  return breakdown.elapsedMs > WATCH_TIMER_SESSION_MIN_MS
+    ? breakdown
+    : createEmptyDurationBreakdown();
 }
 
 function getSessionKey(dateKey: string, id: string): string {

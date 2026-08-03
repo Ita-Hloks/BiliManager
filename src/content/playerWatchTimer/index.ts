@@ -9,6 +9,7 @@ import {
   WATCH_TIMER_DAILY_TOTAL_KEY_PREFIX,
   WATCH_TIMER_DATE_INDEX_KEY,
   WATCH_TIMER_SESSION_KEY_PREFIX,
+  WATCH_TIMER_SESSION_MIN_MS,
 } from "../../shared/watchTimerHistory";
 import {
   loadActiveSession,
@@ -22,7 +23,6 @@ import { WatchTimerView } from "./view";
 
 const ACTIVE_SESSION_SAVE_INTERVAL_MS = 1000;
 const SESSION_SAVE_INTERVAL_MS = 1000;
-const SESSION_RECORD_MIN_MS = 1000;
 const STORED_TOTALS_SYNC_DELAY_MS = 300;
 const SESSION_PRUNE_INTERVAL_MS = 60_000;
 
@@ -235,7 +235,7 @@ async function saveDailyTimer(throttle: boolean): Promise<void> {
 
   state.commit(now);
   lastDailySaveAt = now;
-  if (state.sessionElapsedMs < SESSION_RECORD_MIN_MS) return;
+  if (state.sessionElapsedMs <= WATCH_TIMER_SESSION_MIN_MS) return;
 
   const savedSessionBreakdown = state.getSessionBreakdown();
   state.markSessionSaved(savedSessionBreakdown);

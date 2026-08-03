@@ -27,14 +27,6 @@ const PERIOD_OPTIONS: SegmentedOption<StatsPeriod>[] = [
   { value: "year", label: "本年" },
 ];
 
-function formatMinutes(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours <= 0) return `${minutes} 分钟`;
-  if (minutes === 0) return `${hours} 小时`;
-  return `${hours} 小时 ${minutes} 分钟`;
-}
-
 function formatDurationComparison(comparison: DurationComparison): string {
   const elapsedMs = Math.max(0, comparison.elapsedMs);
   const previousElapsedMs = Math.max(0, comparison.previousElapsedMs);
@@ -71,12 +63,13 @@ export function StatsCard({
   const periodLabel = PERIOD_OPTIONS.find(option => option.value === period)?.label ?? "";
   const durationPoints = durationData?.points ?? [];
   const videoCountPoints = videoCountDataByPeriod?.[period] ?? [];
-  const totalMinutes = durationPoints.reduce(
-    (sum, point) => sum + Math.floor(point.elapsedMs / 60000),
+  const totalElapsedMs = durationPoints.reduce((sum, point) => sum + point.elapsedMs, 0);
+  const backgroundElapsedMs = durationPoints.reduce(
+    (sum, point) => sum + point.backgroundElapsedMs,
     0,
   );
-  const backgroundMinutes = durationPoints.reduce(
-    (sum, point) => sum + Math.floor(point.backgroundElapsedMs / 60000),
+  const foregroundElapsedMs = durationPoints.reduce(
+    (sum, point) => sum + point.foregroundElapsedMs,
     0,
   );
   const totalVideoCount = videoCountPoints.reduce((sum, point) => sum + point.count, 0);
@@ -115,16 +108,19 @@ export function StatsCard({
               selectedDateKey={selectedDateKey}
             />
             <p className="mt-2.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-              {periodLabel}观看时长共{" "}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {formatMinutes(totalMinutes)}
-              </span>
-              {backgroundMinutes > 0 && (
-                <span className="ml-2 font-semibold text-amber-500 dark:text-amber-300">
-                  后台 {formatMinutes(backgroundMinutes)}
-                </span>
-              )}
+              {periodLabel}观看时长
             </p>
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] tabular-nums">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                总计 {formatReadableDuration(totalElapsedMs)}
+              </span>
+              <span className="font-semibold text-bili-blue dark:text-sky-200">
+                前台 {formatReadableDuration(foregroundElapsedMs)}
+              </span>
+              <span className="font-semibold text-amber-500 dark:text-amber-300">
+                后台 {formatReadableDuration(backgroundElapsedMs)}
+              </span>
+            </div>
             {durationComparison && (
               <p className="mt-1 text-center text-[10px] text-slate-400 dark:text-slate-500">
                 {durationComparison}

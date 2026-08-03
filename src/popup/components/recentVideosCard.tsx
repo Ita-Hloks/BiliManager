@@ -5,6 +5,7 @@ import {
   getRecentWatchTimerVideos,
   getTopWatchTimerVideosForDate,
   getWatchTimerVideoDailyBreakdown,
+  WATCH_TIMER_SESSION_MIN_MS,
 } from "../../shared/watchTimerHistory";
 import type { WatchTimerVideoDailyItem } from "../../shared/watchTimerHistory";
 
@@ -64,7 +65,9 @@ export function RecentVideosCard({ selectedDateKey }: { selectedDateKey?: string
           ),
         );
     void request.then(nextVideos => {
-      if (active) setVideos(nextVideos);
+      if (active) {
+        setVideos(nextVideos.filter(video => video.dailyElapsedMs > WATCH_TIMER_SESSION_MIN_MS));
+      }
     });
     return () => {
       active = false;
