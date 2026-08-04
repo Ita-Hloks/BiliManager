@@ -138,7 +138,7 @@ async function scanCurrentPage() {
     if (
       !settings.searchFilter.enabled ||
       !settings.favoriteRecommendation.enabled ||
-      !settings.favoriteRecommendation.folderId ||
+      settings.favoriteRecommendation.folderIds.length === 0 ||
       settings.favoriteRecommendation.recommendationRate <= 0
     ) {
       return initialStats;

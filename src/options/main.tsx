@@ -18,6 +18,7 @@ import { PersonalizationPanel } from "./panels/personalizationPanel";
 import { SearchFilterPanel } from "./panels/searchFilterPanel";
 import { WatchTimerPanel } from "./panels/watchTimerPanel";
 import { WatchReminderPanel } from "./panels/watchReminderPanel";
+import type { FavoriteFolderRefreshResult } from "./components/favoriteFolderManager";
 import type { DataExportKind } from "./dataTransfer";
 import {
   createDataExportPayload,
@@ -65,7 +66,6 @@ function OptionsApp() {
   const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
   const [importMessage, setImportMessage] = useState("");
   const [backgroundMessage, setBackgroundMessage] = useState("");
-  const [favoriteRecommendationMessage, setFavoriteRecommendationMessage] = useState("");
   const [uploaderBlocklist, setUploaderBlocklist] = useState<BlockedUploader[]>([]);
   const [tagBlocklist, setTagBlocklist] = useState<BlockedTag[]>([]);
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
@@ -187,24 +187,45 @@ function OptionsApp() {
     });
   }
 
-  async function refreshFavoriteRecommendation() {
-    const folderId = settings.favoriteRecommendation.folderId;
-    if (!/^\d+$/.test(folderId)) return;
-
-    setFavoriteRecommendationMessage("更新中…");
-    const response = await sendMessage({
-      type: "BILI_FILTER_REFRESH_FAVORITE_VIDEOS",
-      payload: { folderId },
-    });
-    if (!response || !response.ok) {
-      setFavoriteRecommendationMessage(response?.error ?? "更新失败");
-      return;
-    }
-    if (!("favoriteFolder" in response)) {
-      setFavoriteRecommendationMessage("更新失败");
-      return;
-    }
-    setFavoriteRecommendationMessage(`已更新 ${response.favoriteFolder.videos.length} 个视频`);
+  async function refreshFavoriteRecommendation(
+    folderIds: string[],
+  ): Promise<FavoriteFolderRefreshResult[]> {
+    const uniqueFolderIds = [...new Set(folderIds.filter(folderId => /^\d+$/.test(folderId)))];
+    return Promise.all(
+      uniqueFolderIds.map(async folderId => {
+        try {
+          const response = await sendMessage({
+            type: "BILI_FILTER_REFRESH_FAVORITE_VIDEOS",
+            payload: { folderId },
+          });
+          if (!response || !response.ok) {
+            return {
+              folderId,
+              ok: false,
+              error: response?.error ?? `收藏夹 ID ${folderId} 获取失败`,
+            } satisfies FavoriteFolderRefreshResult;
+          }
+          if (!("favoriteFolder" in response)) {
+            return {
+              folderId,
+              ok: false,
+              error: `收藏夹 ID ${folderId} 响应格式无效`,
+            } satisfies FavoriteFolderRefreshResult;
+          }
+          return {
+            folderId,
+            ok: true,
+            videoCount: response.favoriteFolder.videos.length,
+          } satisfies FavoriteFolderRefreshResult;
+        } catch (error) {
+          return {
+            folderId,
+            ok: false,
+            error: error instanceof Error ? error.message : `收藏夹 ID ${folderId} 获取失败`,
+          } satisfies FavoriteFolderRefreshResult;
+        }
+      }),
+    );
   }
 
   async function updatePersonalization(patch: Partial<PlayerPersonalizationSettings>) {
@@ -382,7 +403,6 @@ function OptionsApp() {
 
           <div className="space-y-4">
             <SearchFilterPanel
-              favoriteRecommendationMessage={favoriteRecommendationMessage}
               favoriteRecommendation={settings.favoriteRecommendation}
               filterTrending={settings.personalization.filterTrending}
               settings={settings.searchFilter}
@@ -390,7 +410,7 @@ function OptionsApp() {
               onFilterTrendingChange={enabled =>
                 void updatePersonalization({ filterTrending: enabled })
               }
-              onRefreshFavoriteRecommendation={() => void refreshFavoriteRecommendation()}
+              onRefreshFavoriteRecommendation={refreshFavoriteRecommendation}
               onChange={patch => void updateSearchFilter(patch)}
             />
 

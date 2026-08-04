@@ -28,7 +28,7 @@ export const defaultSettings: ExtensionSettings = {
   },
   favoriteRecommendation: {
     enabled: true,
-    folderId: "2045665532",
+    folderIds: [],
     recommendationRate: 0.35,
   },
   personalization: {
@@ -105,22 +105,43 @@ export function normalizeSettings(
 }
 
 export function normalizeFavoriteRecommendation(
-  value: Partial<FavoriteRecommendationSettings> | undefined,
+  value: FavoriteRecommendationInput | undefined,
   currentRecommendation: FavoriteRecommendationSettings,
 ): FavoriteRecommendationSettings {
-  const folderId = typeof value?.folderId === "string" ? value.folderId.trim() : undefined;
+  const rawFolderIds = Array.isArray(value?.folderIds)
+    ? value.folderIds
+    : value?.folderId === undefined
+      ? undefined
+      : [value.folderId];
+  const folderIds =
+    rawFolderIds === undefined ? currentRecommendation.folderIds : normalizeFolderIds(rawFolderIds);
 
   return {
     enabled: typeof value?.enabled === "boolean" ? value.enabled : currentRecommendation.enabled,
-    folderId:
-      folderId === undefined || (!/^\d+$/.test(folderId) && folderId !== "")
-        ? currentRecommendation.folderId
-        : folderId,
+    folderIds,
     recommendationRate:
       typeof value?.recommendationRate === "number"
         ? clamp(value.recommendationRate, 0, 1)
         : currentRecommendation.recommendationRate,
   };
+}
+
+type FavoriteRecommendationInput = Partial<FavoriteRecommendationSettings> & {
+  folderId?: unknown;
+};
+
+function normalizeFolderIds(value: unknown[]): string[] {
+  return [
+    ...new Set(value.map(normalizeFolderId).filter((folderId): folderId is string => !!folderId)),
+  ];
+}
+
+function normalizeFolderId(value: unknown): string | null {
+  const folderId = typeof value === "number" ? String(value) : value;
+  if (typeof folderId !== "string") return null;
+
+  const normalized = folderId.trim();
+  return /^\d+$/.test(normalized) ? normalized : null;
 }
 
 // 搜索过滤设置需要保留 regex 字符串、限制互动率范围，并保持 enabled 的布尔语义稳定。
