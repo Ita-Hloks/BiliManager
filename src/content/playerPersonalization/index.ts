@@ -32,7 +32,7 @@ const PLAYER_AD_SELECTOR = [
   ".right-container .slide-ad-exp",
   // 视频页下方活动推广模块
   ".activity-m-v1",
-  // 占位：播放器右侧容器内带 _ad_ 片段
+  // 播放器右侧容器内带广告标记的模块
   '.right-container [class*="_ad_"]',
 ].join(", ");
 let latestSettings: PlayerPersonalizationSettings = {

@@ -13,7 +13,7 @@ export type SearchFilterSettings = {
 
 export type FavoriteRecommendationSettings = {
   enabled: boolean;
-  folderId: string;
+  folderIds: string[];
   recommendationRate: number;
 };
 

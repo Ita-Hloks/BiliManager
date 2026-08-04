@@ -138,13 +138,29 @@ async function fetchFavoritePage(
     credentials: "include",
     headers: { Accept: "application/json" },
   });
-  if (!response.ok) throw new Error(`收藏夹请求失败：HTTP ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`收藏夹 ID ${folderId} 不存在或无权访问`);
+    }
+    throw new Error(`收藏夹 ID ${folderId} 请求失败：HTTP ${response.status}`);
+  }
 
   const payload = await response.json();
   if (!isFavoriteListResponse(payload)) throw new Error("收藏夹响应格式无效");
   if (payload.code !== 0) {
-    throw new Error(payload.message || `收藏夹请求失败：${payload.code ?? "未知错误"}`);
+    const message = payload.message?.trim() ?? "";
+    if (
+      payload.code === -400 ||
+      payload.code === -404 ||
+      payload.code === -101 ||
+      /不存在|无效|权限|not found|invalid|permission/i.test(message)
+    ) {
+      throw new Error(`收藏夹 ID ${folderId} 不存在或无权访问`);
+    }
+    throw new Error(`收藏夹 ID ${folderId} 获取失败：${message || payload.code || "未知错误"}`);
   }
+
+  if (!payload.data) throw new Error(`收藏夹 ID ${folderId} 不存在或无权访问`);
 
   return payload;
 }

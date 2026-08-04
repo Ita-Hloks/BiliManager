@@ -24,7 +24,9 @@ export function getCachedFavoriteRecommendationPool(
 ): FavoriteRecommendationPool | null {
   if (!isRecommendationEnabled(settings)) return null;
 
-  const videos = videoCache.get(settings.folderId)?.videos;
+  const videos = mergeFavoriteVideos(
+    settings.folderIds.flatMap(folderId => videoCache.get(folderId)?.videos ?? []),
+  );
   if (!videos || videos.length === 0) return null;
   return { videos, recommendationRate: settings.recommendationRate };
 }
@@ -36,14 +38,30 @@ export async function loadFavoriteRecommendationPool(
     return { videos: [], recommendationRate: 0 };
   }
 
+  const videosByFolder = await Promise.all(
+    settings.folderIds.map(folderId => loadFavoriteVideos(folderId)),
+  );
+
   return {
-    videos: await loadFavoriteVideos(settings.folderId),
+    videos: mergeFavoriteVideos(videosByFolder.flat()),
     recommendationRate: settings.recommendationRate,
   };
 }
 
 function isRecommendationEnabled(settings: FavoriteRecommendationSettings): boolean {
-  return settings.enabled && /^\d+$/.test(settings.folderId) && settings.recommendationRate > 0;
+  return (
+    settings.enabled &&
+    settings.folderIds.some(folderId => /^\d+$/.test(folderId)) &&
+    settings.recommendationRate > 0
+  );
+}
+
+function mergeFavoriteVideos(videos: FavoriteVideo[]): FavoriteVideo[] {
+  const uniqueVideos = new Map<string, FavoriteVideo>();
+  for (const video of videos) {
+    uniqueVideos.set(video.bvid || video.id, video);
+  }
+  return [...uniqueVideos.values()];
 }
 
 export function pickFavoriteRecommendation(
