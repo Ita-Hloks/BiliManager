@@ -8,8 +8,10 @@ import { clamp, fromRatePercent, getRangeProgressStyle, toRatePercent } from "..
 // 搜索过滤面板只编辑 SearchFilterSettings patch，enabled 同步到 features 的规则留给 main.tsx 统一处理。
 export function SearchFilterPanel(props: {
   favoriteRecommendation: FavoriteRecommendationSettings;
+  filterTrending: boolean;
   settings: SearchFilterSettings;
   onFavoriteRecommendationChange: (patch: Partial<FavoriteRecommendationSettings>) => void;
+  onFilterTrendingChange: (enabled: boolean) => void;
   favoriteRecommendationMessage: string;
   onRefreshFavoriteRecommendation: () => void;
   onChange: (patch: Partial<SearchFilterSettings>) => void;
@@ -49,6 +51,19 @@ export function SearchFilterPanel(props: {
       </div>
 
       <div className="space-y-5 px-4 py-5 sm:px-5">
+        <Button
+          onClick={() => props.onFilterTrendingChange(!props.filterTrending)}
+          variant="toggleRow"
+        >
+          <span>
+            <span className="block font-medium">过滤搜索热榜</span>
+            <span className="bm-text-muted mt-1 block text-xs">
+              移除搜索页顶部的热榜内容，减少无关干扰
+            </span>
+          </span>
+          <Switch enabled={props.filterTrending} />
+        </Button>
+
         <RuleListEditor
           label="标题过滤词正则"
           placeholder="输入后回车，参考：震惊 | 迷惑行为 | 的一集"
