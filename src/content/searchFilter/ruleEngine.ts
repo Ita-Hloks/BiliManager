@@ -21,7 +21,7 @@ export function createSearchCardEvaluator(settings: SearchFilterSettings) {
 
   return {
     regexErrors,
-    evaluate(card: SearchCard, titleHighlighted: boolean): FilterResult {
+    evaluate(card: SearchCard, searchTermMatched: boolean): FilterResult {
       const reasons: string[] = [];
 
       if (titlePattern.regex?.test(card.title)) {
@@ -29,7 +29,7 @@ export function createSearchCardEvaluator(settings: SearchFilterSettings) {
       }
       if (uploaderPattern.regex?.test(card.uploader)) reasons.push(TEXT.uploaderMatched);
 
-      if (settings.filterMissingTitleHighlight && !titleHighlighted) {
+      if (settings.filterMissingTitleHighlight && !searchTermMatched) {
         reasons.push(TEXT.missingSearchTerm);
       }
 

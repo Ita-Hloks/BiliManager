@@ -18,6 +18,7 @@ const selectors = {
     ".search-page .video-item",
     ".bili-video-card",
   ],
+  uploaderVideoRecommendation: [".b-user-video-card", ".user-video-info"],
   cardRoots: [".bili-video-card", ".video-item", ".search-card", ".video-list-item"],
   videoLinks: ["a[href*='/video/BV']", "a[href*='bilibili.com/video/']"],
   title: [".bili-video-card__info--tit", ".bili-video-card__info--title", ".title", "a[title]"],
@@ -71,6 +72,7 @@ export function isSearchPage(url = location.href): boolean {
 
 export function collectSearchCards(tagsByBvid: SearchTagIndex = {}): SearchCard[] {
   const elements = new Set<HTMLElement>();
+  const searchKeyword = getSearchKeyword();
 
   for (const selector of selectors.cards) {
     document.querySelectorAll<HTMLElement>(selector).forEach(element => {
@@ -86,7 +88,7 @@ export function collectSearchCards(tagsByBvid: SearchTagIndex = {}): SearchCard[
   }
 
   return [...elements]
-    .map(cardEl => toSearchCard(cardEl, tagsByBvid))
+    .map(cardEl => toSearchCard(cardEl, tagsByBvid, searchKeyword))
     .filter((card): card is SearchCard => card !== null);
 }
 
@@ -122,7 +124,11 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
   return link.parentElement?.parentElement?.parentElement ?? link.parentElement;
 }
 
-function toSearchCard(cardEl: HTMLElement, tagsByBvid: SearchTagIndex): SearchCard | null {
+function toSearchCard(
+  cardEl: HTMLElement,
+  tagsByBvid: SearchTagIndex,
+  searchKeyword: string,
+): SearchCard | null {
   const titleEl = findSearchCardTitle(cardEl);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
   const videoLink = queryFirst(cardEl, selectors.videoLinks);
@@ -140,6 +146,7 @@ function toSearchCard(cardEl: HTMLElement, tagsByBvid: SearchTagIndex): SearchCa
   const fallbackCounts = parseOrderedStatCounts(cardEl);
   const videoUrl = videoLink.getAttribute("href") ?? "";
   const bvid = getBvid(videoUrl).toUpperCase();
+  const uploader = normalizeText(uploaderEl?.textContent ?? "");
 
   return {
     cardEl,
@@ -147,8 +154,10 @@ function toSearchCard(cardEl: HTMLElement, tagsByBvid: SearchTagIndex): SearchCa
     uploaderEl,
     title,
     videoUrl,
-    uploader: normalizeText(uploaderEl?.textContent ?? ""),
+    uploader,
     uploaderMid: getUploaderMid(uploaderLink?.getAttribute("href") ?? ""),
+    uploaderMatchesSearchKeyword: isExactSearchKeywordMatch(uploader, searchKeyword),
+    isUploaderVideoRecommendation: isUploaderVideoRecommendation(cardEl),
     dateEl,
     tags: bvid ? (tagsByBvid[bvid] ?? []) : [],
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
@@ -159,6 +168,19 @@ function toSearchCard(cardEl: HTMLElement, tagsByBvid: SearchTagIndex): SearchCa
       ...cardEl.querySelectorAll<HTMLElement>(selector),
     ]),
   };
+}
+
+function getSearchKeyword(): string {
+  return new URL(location.href).searchParams.get("keyword") ?? "";
+}
+
+function isExactSearchKeywordMatch(value: string, searchKeyword: string): boolean {
+  const normalizedKeyword = normalizeComparableText(searchKeyword);
+  return normalizedKeyword !== "" && normalizeComparableText(value) === normalizedKeyword;
+}
+
+function isUploaderVideoRecommendation(cardEl: HTMLElement): boolean {
+  return selectors.uploaderVideoRecommendation.some(selector => cardEl.closest(selector) !== null);
 }
 
 function collectMetadataElements(cardEl: HTMLElement, titleEl: HTMLElement): HTMLElement[] {
@@ -266,4 +288,8 @@ function parseChineseNumber(value: string): number | null {
 
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
+}
+
+function normalizeComparableText(text: string): string {
+  return normalizeText(text.normalize("NFKC")).toLowerCase();
 }
