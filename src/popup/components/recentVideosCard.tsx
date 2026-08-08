@@ -31,7 +31,7 @@ function RecentVideoRow({
   const displayedDuration = getDisplayedDuration(video, displayMode);
   return (
     <li className="border-b border-slate-100 py-2 last:border-b-0 dark:border-[#30343c]">
-      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 text-left">
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-0.5 text-left">
         {/* if (video.url) void chrome.tabs?.create?.({ url: video.url }); */}
         <span className="min-w-0 truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">
           {video.title}
@@ -78,8 +78,8 @@ export function RecentVideosCard({
   useEffect(() => {
     let active = true;
     const request = selectedDateKey
-      ? getTopWatchTimerVideosForDate(selectedDateKey, 3, displayMode)
-      : getRecentWatchTimerVideos(3).then(recentVideos =>
+      ? getTopWatchTimerVideosForDate(selectedDateKey, 5, displayMode)
+      : getRecentWatchTimerVideos(5).then(recentVideos =>
           Promise.all(
             recentVideos.map(async video => {
               const breakdown = await getWatchTimerVideoDailyBreakdown(
