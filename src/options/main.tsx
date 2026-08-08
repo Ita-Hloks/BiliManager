@@ -35,8 +35,6 @@ import {
   UPLOADER_BLOCKLIST_KEY,
 } from "../shared/uploaderBlocklist";
 import type { BlockedUploader } from "../shared/uploaderBlocklist";
-import { getTagBlocklist, removeBlockedTag, TAG_BLOCKLIST_KEY } from "../shared/tagBlocklist";
-import type { BlockedTag } from "../shared/tagBlocklist";
 import { BlocklistSettingsPanel } from "./panels/blocklistSettingsPanel";
 
 type SectionId =
@@ -67,17 +65,15 @@ function OptionsApp() {
   const [importMessage, setImportMessage] = useState("");
   const [backgroundMessage, setBackgroundMessage] = useState("");
   const [uploaderBlocklist, setUploaderBlocklist] = useState<BlockedUploader[]>([]);
-  const [tagBlocklist, setTagBlocklist] = useState<BlockedTag[]>([]);
   const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
   const importInputRef = useRef<HTMLInputElement>(null);
   const isDark = useEffectiveDarkTheme(settings.theme);
 
   useEffect(() => {
-    void Promise.all([getSettings(), getUploaderBlocklist(), getTagBlocklist()]).then(
-      ([nextSettings, nextUploaderBlocklist, nextTagBlocklist]) => {
+    void Promise.all([getSettings(), getUploaderBlocklist()]).then(
+      ([nextSettings, nextUploaderBlocklist]) => {
         setSettings(nextSettings);
         setUploaderBlocklist(nextUploaderBlocklist);
-        setTagBlocklist(nextTagBlocklist);
       },
     );
   }, []);
@@ -94,7 +90,6 @@ function OptionsApp() {
       if (changes[UPLOADER_BLOCKLIST_KEY]) {
         void getUploaderBlocklist().then(setUploaderBlocklist);
       }
-      if (changes[TAG_BLOCKLIST_KEY]) void getTagBlocklist().then(setTagBlocklist);
     };
 
     chrome.storage.onChanged.addListener(syncStoredSettings);
@@ -154,10 +149,6 @@ function OptionsApp() {
 
   async function unblockUploader(id: string) {
     await removeBlockedUploader(id);
-  }
-
-  async function unblockTag(id: string) {
-    await removeBlockedTag(id);
   }
 
   async function updateSearchFilter(patch: Partial<SearchFilterSettings>) {
@@ -415,9 +406,7 @@ function OptionsApp() {
             />
 
             <BlocklistSettingsPanel
-              tagBlocklist={tagBlocklist}
               uploaderBlocklist={uploaderBlocklist}
-              onTagRemove={id => void unblockTag(id)}
               onUploaderRemove={id => void unblockUploader(id)}
             />
 

@@ -1,6 +1,4 @@
-import { displayTagName, normalizeTagName } from "../../shared/tagBlocklist";
 import type { UploaderIdentity } from "../../shared/uploaderBlocklist";
-import { blockTag } from "../tagBlock";
 import { blockUploader } from "../uploaderBlock";
 
 export const BLOCK_MENU_CONTROL_ATTR = "data-bili-manager-block-menu-control";
@@ -18,12 +16,10 @@ const ACTION_CLASS =
 type CardBlockMenuTarget = {
   cardEl: HTMLElement;
   uploader?: UploaderIdentity | null;
-  tags: string[];
 };
 
 type BlockMenuData = {
   uploader: UploaderIdentity | null;
-  tags: string[];
   signature: string;
 };
 
@@ -35,7 +31,7 @@ export function syncBlockMenuControl(target: CardBlockMenuTarget): void {
   const existing = target.cardEl.querySelector<HTMLElement>(`[${BLOCK_MENU_CONTROL_ATTR}]`);
   const data = normalizeTarget(target);
 
-  if (!data.uploader && data.tags.length === 0) {
+  if (!data.uploader) {
     removeControl(existing, target.cardEl);
     return;
   }
@@ -67,18 +63,9 @@ function normalizeTarget(target: CardBlockMenuTarget): BlockMenuData {
     uploaderName || uploaderMid
       ? { mid: uploaderMid, name: uploaderName || `UID ${uploaderMid}` }
       : null;
-  const tags = new Map<string, string>();
-  target.tags.forEach(value => {
-    const name = displayTagName(value);
-    const normalized = normalizeTagName(name);
-    if (normalized) tags.set(normalized, name);
-  });
-  const normalizedTags = [...tags.values()];
-
   return {
     uploader,
-    tags: normalizedTags,
-    signature: JSON.stringify([uploader?.mid ?? "", uploader?.name ?? "", normalizedTags]),
+    signature: JSON.stringify([uploader?.mid ?? "", uploader?.name ?? ""]),
   };
 }
 
@@ -93,7 +80,7 @@ function createControl(): HTMLElement {
   trigger.className = TRIGGER_CLASS;
   trigger.type = "button";
   trigger.textContent = "屏蔽";
-  trigger.title = "屏蔽此 UP 或 TAG";
+  trigger.title = "屏蔽此 UP";
   trigger.setAttribute("aria-expanded", "false");
   trigger.setAttribute("aria-label", "打开屏蔽菜单");
   trigger.addEventListener("click", () => toggleControl(control));
@@ -137,27 +124,12 @@ function renderActions(control: HTMLElement, data: BlockMenuData): void {
     content.append(uploaderButton);
   }
 
-  if (data.tags.length > 0) {
-    content.append(createSectionLabel("精确屏蔽 TAG", !!data.uploader));
-    const tagList = document.createElement("div");
-    tagList.className = "bm-space-y-1";
-    data.tags.forEach(tag => {
-      const tagButton = createActionButton(`#${tag}`);
-      tagButton.title = `精确屏蔽 TAG：${tag}`;
-      tagButton.addEventListener("click", () => {
-        void runAction(control, tagButton, () => blockTag({ name: tag }));
-      });
-      tagList.append(tagButton);
-    });
-    content.append(tagList);
-  }
-
   body.replaceChildren(content);
 }
 
-function createSectionLabel(text: string, separated = false): HTMLElement {
+function createSectionLabel(text: string): HTMLElement {
   const label = document.createElement("p");
-  label.className = `${separated ? "bm-mt-2 bm-border-t bm-border-slate-100 bm-pt-2 dark:bm-border-[#3a3e47] " : ""}bm-mb-1 bm-px-2 bm-text-[11px] bm-text-slate-500 dark:bm-text-slate-400`;
+  label.className = "bm-mb-1 bm-px-2 bm-text-[11px] bm-text-slate-500 dark:bm-text-slate-400";
   label.textContent = text;
   return label;
 }
