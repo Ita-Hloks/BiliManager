@@ -6,6 +6,8 @@ export type SearchCard = {
   videoUrl: string;
   uploader: string;
   uploaderMid: string;
+  uploaderMatchesSearchKeyword: boolean;
+  isUploaderVideoRecommendation: boolean;
   dateEl: HTMLElement | null;
   tags: string[];
   viewCount: number | null;

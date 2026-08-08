@@ -59,8 +59,11 @@ export function applySearchFilter(
   let filtered = 0;
 
   for (const card of cards) {
-    const titleHighlighted = hasTitleHighlight(card.titleEl);
-    const result = evaluator.evaluate(card, titleHighlighted);
+    const searchTermMatched =
+      card.isUploaderVideoRecommendation ||
+      card.uploaderMatchesSearchKeyword ||
+      hasTitleHighlight(card.titleEl);
+    const result = evaluator.evaluate(card, searchTermMatched);
     const blockedUploader = findBlockedUploader(uploaderBlocklist, {
       mid: card.uploaderMid,
       name: card.uploader,
@@ -101,7 +104,7 @@ export function applySearchFilter(
         settings.enabled &&
           ((settings.grayscaleMissingTitleHighlight &&
             !settings.filterMissingTitleHighlight &&
-            !titleHighlighted) ||
+            !searchTermMatched) ||
             (settings.grayscaleLowDanmakuViewRate &&
               !settings.filterLowDanmakuViewRate &&
               result.lowInteractionRate !== null)),

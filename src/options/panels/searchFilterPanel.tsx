@@ -185,7 +185,7 @@ export function SearchFilterPanel(props: {
             <span>
               <span className="block font-medium">过滤未命中搜索词的视频</span>
               <span className="bm-text-muted mt-1 block text-xs">
-                搜索词没有出现在标题高亮里时，过滤
+                搜索词没有出现在标题高亮或完整 UP 名中时，过滤
               </span>
             </span>
             <Switch enabled={props.settings.filterMissingTitleHighlight} />
