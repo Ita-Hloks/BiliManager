@@ -1,4 +1,3 @@
-import type { SearchTagIndex } from "../../shared/searchTags";
 import type { SearchCard } from "./types";
 
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
@@ -70,7 +69,7 @@ export function isSearchPage(url = location.href): boolean {
   return parsed.hostname === "search.bilibili.com" && SUPPORTED_SEARCH_PATHS.has(pathname);
 }
 
-export function collectSearchCards(tagsByBvid: SearchTagIndex = {}): SearchCard[] {
+export function collectSearchCards(): SearchCard[] {
   const elements = new Set<HTMLElement>();
   const searchKeyword = getSearchKeyword();
 
@@ -88,7 +87,7 @@ export function collectSearchCards(tagsByBvid: SearchTagIndex = {}): SearchCard[
   }
 
   return [...elements]
-    .map(cardEl => toSearchCard(cardEl, tagsByBvid, searchKeyword))
+    .map(cardEl => toSearchCard(cardEl, searchKeyword))
     .filter((card): card is SearchCard => card !== null);
 }
 
@@ -124,11 +123,7 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
   return link.parentElement?.parentElement?.parentElement ?? link.parentElement;
 }
 
-function toSearchCard(
-  cardEl: HTMLElement,
-  tagsByBvid: SearchTagIndex,
-  searchKeyword: string,
-): SearchCard | null {
+function toSearchCard(cardEl: HTMLElement, searchKeyword: string): SearchCard | null {
   const titleEl = findSearchCardTitle(cardEl);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
   const videoLink = queryFirst(cardEl, selectors.videoLinks);
@@ -145,7 +140,6 @@ function toSearchCard(
   const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
   const videoUrl = videoLink.getAttribute("href") ?? "";
-  const bvid = getBvid(videoUrl).toUpperCase();
   const uploader = normalizeText(uploaderEl?.textContent ?? "");
 
   return {
@@ -159,7 +153,6 @@ function toSearchCard(
     uploaderMatchesSearchKeyword: isExactSearchKeywordMatch(uploader, searchKeyword),
     isUploaderVideoRecommendation: isUploaderVideoRecommendation(cardEl),
     dateEl,
-    tags: bvid ? (tagsByBvid[bvid] ?? []) : [],
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
     danmakuCount: parseMetric(metricsText, TEXT.danmakuLabels) ?? fallbackCounts[1] ?? null,
     thumbnailEl,

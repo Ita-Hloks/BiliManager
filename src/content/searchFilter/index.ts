@@ -1,6 +1,3 @@
-import type { BlockedTag } from "../../shared/tagBlocklist";
-import { findBlockedTag } from "../../shared/tagBlocklist";
-import type { SearchTagIndex } from "../../shared/searchTags";
 import type { BlockedUploader } from "../../shared/uploaderBlocklist";
 import { findBlockedUploader } from "../../shared/uploaderBlocklist";
 import type { RuntimeSnapshot, SearchFilterSettings, SearchFilterStats } from "../../shared/types";
@@ -40,10 +37,6 @@ export function applySearchFilter(
   recommendationPool: FavoriteRecommendationPool = EMPTY_RECOMMENDATION_POOL,
   uploaderBlocklist: BlockedUploader[] = [],
   uploaderBlockingEnabled = false,
-  tagBlocklist: BlockedTag[] = [],
-  tagBlockingEnabled = false,
-  tagsByBvid: SearchTagIndex = {},
-  tagIndexReady = true,
 ): SearchFilterStats {
   if (!isSearchPage()) {
     clearBlockMenuControls();
@@ -51,7 +44,7 @@ export function applySearchFilter(
     return createStats(false, settings.enabled, 0, 0, []);
   }
 
-  const cards = collectSearchCards(tagsByBvid);
+  const cards = collectSearchCards();
   if (cards.length === 0) return createStats(true, settings.enabled, 0, 0, []);
 
   const evaluator = createSearchCardEvaluator(settings);
@@ -68,25 +61,16 @@ export function applySearchFilter(
       mid: card.uploaderMid,
       name: card.uploader,
     });
-    const blockedTag = tagIndexReady ? findBlockedTag(tagBlocklist, card.tags) : undefined;
-    const availableTags =
-      tagIndexReady && tagBlockingEnabled
-        ? card.tags.filter(tag => !findBlockedTag(tagBlocklist, [tag]))
-        : [];
     syncBlockMenuControl({
       cardEl: card.cardEl,
       uploader:
-        tagIndexReady && uploaderBlockingEnabled && !blockedUploader
+        uploaderBlockingEnabled && !blockedUploader
           ? { mid: card.uploaderMid, name: card.uploader }
           : null,
-      tags: availableTags,
     });
     const activeReasons = settings.enabled ? [...result.reasons] : [];
     if (uploaderBlockingEnabled && blockedUploader) {
       activeReasons.unshift(`已屏蔽 UP：${blockedUploader.name}`);
-    }
-    if (tagIndexReady && tagBlockingEnabled && blockedTag) {
-      activeReasons.unshift(`已屏蔽 TAG：${blockedTag.name}`);
     }
 
     if (activeReasons.length > 0) {

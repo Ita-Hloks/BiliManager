@@ -2,9 +2,6 @@ import type { ExtensionMessage } from "../shared/messaging";
 import { sendMessage } from "../shared/messaging";
 import { hasExtensionContext, isExtensionContextInvalidated } from "../shared/extensionContext";
 import { getSettings, SETTINGS_KEY } from "../shared/storage";
-import { loadSearchTagIndex } from "./searchTags";
-import { getTagBlocklist, TAG_BLOCKLIST_KEY } from "../shared/tagBlocklist";
-import type { BlockedTag } from "../shared/tagBlocklist";
 import { getUploaderBlocklist, UPLOADER_BLOCKLIST_KEY } from "../shared/uploaderBlocklist";
 import type { BlockedUploader } from "../shared/uploaderBlocklist";
 import type {
@@ -114,14 +111,6 @@ async function scanCurrentPage() {
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
   applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
   if (searchPage) {
-    const searchUrl = location.href;
-    const tagSnapshot = settings.tagBlockingEnabled
-      ? loadSearchTagIndex(searchUrl)
-      : { ready: true, index: {} };
-    if (generation !== scanGeneration || request !== scanRequest || location.href !== searchUrl) {
-      scheduleScan(0);
-      return unavailableSearchStats;
-    }
     const cachedRecommendationPool = getCachedFavoriteRecommendationPool(
       settings.favoriteRecommendation,
     );
@@ -130,10 +119,6 @@ async function scanCurrentPage() {
       cachedRecommendationPool ?? undefined,
       settings.uploaderBlocklist,
       settings.uploaderBlockingEnabled,
-      settings.tagBlocklist,
-      settings.tagBlockingEnabled,
-      tagSnapshot.index,
-      tagSnapshot.ready,
     );
     if (
       !settings.searchFilter.enabled ||
@@ -149,18 +134,11 @@ async function scanCurrentPage() {
     );
     if (generation !== scanGeneration || request !== scanRequest) return unavailableSearchStats;
     if (recommendationPool.videos.length === 0) return initialStats;
-    const latestTagSnapshot = settings.tagBlockingEnabled
-      ? loadSearchTagIndex(searchUrl)
-      : tagSnapshot;
     return applySearchFilter(
       settings.searchFilter,
       recommendationPool,
       settings.uploaderBlocklist,
       settings.uploaderBlockingEnabled,
-      settings.tagBlocklist,
-      settings.tagBlockingEnabled,
-      latestTagSnapshot.index,
-      latestTagSnapshot.ready,
     );
   }
 
@@ -182,15 +160,9 @@ async function getContentSettings(): Promise<{
   watchReminderEnabled: boolean;
   uploaderBlocklist: BlockedUploader[];
   uploaderBlockingEnabled: boolean;
-  tagBlocklist: BlockedTag[];
-  tagBlockingEnabled: boolean;
   pluginEnabled: boolean;
 }> {
-  const [settings, uploaderBlocklist, tagBlocklist] = await Promise.all([
-    getSettings(),
-    getUploaderBlocklist(),
-    getTagBlocklist(),
-  ]);
+  const [settings, uploaderBlocklist] = await Promise.all([getSettings(), getUploaderBlocklist()]);
   const pluginEnabled = settings.features.enabled;
 
   return {
@@ -207,8 +179,6 @@ async function getContentSettings(): Promise<{
     watchReminderEnabled: pluginEnabled && settings.features.watchReminder,
     uploaderBlocklist,
     uploaderBlockingEnabled: pluginEnabled,
-    tagBlocklist,
-    tagBlockingEnabled: pluginEnabled,
     pluginEnabled,
   };
 }
@@ -282,10 +252,7 @@ function watchUrlChanges() {
 
 function bindStorageChanges() {
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (
-      areaName === "local" &&
-      (changes[SETTINGS_KEY] || changes[UPLOADER_BLOCKLIST_KEY] || changes[TAG_BLOCKLIST_KEY])
-    ) {
+    if (areaName === "local" && (changes[SETTINGS_KEY] || changes[UPLOADER_BLOCKLIST_KEY])) {
       scheduleScan(0);
     }
   });

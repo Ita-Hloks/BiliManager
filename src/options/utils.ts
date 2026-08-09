@@ -16,7 +16,7 @@ export function formatDateForFile(date: Date) {
 }
 
 export function toRatePercent(rate: number) {
-  return Number(clamp(rate * 100, 0, 1).toFixed(2));
+  return Number(clamp(rate * 100, 0, 1).toFixed(3));
 }
 
 export function fromRatePercent(value: string) {

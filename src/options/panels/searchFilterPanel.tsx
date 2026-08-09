@@ -25,7 +25,7 @@ export function SearchFilterPanel(props: {
   const recommendationRangeStyle = getRangeProgressStyle(recommendationPercent);
 
   function stepRatePercent(delta: number) {
-    const nextPercent = clamp(Number((ratePercent + delta).toFixed(2)), 0, 1);
+    const nextPercent = clamp(Number((ratePercent + delta).toFixed(3)), 0, 1);
     props.onChange({
       minDanmakuViewRate: fromRatePercent(nextPercent.toString()),
     });
@@ -86,7 +86,7 @@ export function SearchFilterPanel(props: {
               className="bm-range flex-1"
               max="1"
               min="0"
-              step="0.01"
+              step="0.001"
               style={rangeStyle}
               type="range"
               value={ratePercent.toString()}
@@ -101,7 +101,7 @@ export function SearchFilterPanel(props: {
                 className="bm-number-input bm-number-input-field"
                 max="1"
                 min="0"
-                step="0.01"
+                step="0.001"
                 type="number"
                 value={ratePercent.toString()}
                 onChange={event =>
@@ -115,14 +115,14 @@ export function SearchFilterPanel(props: {
                 <Button
                   aria-label="增加互动率阈值"
                   icon={<ChevronUp className="h-3 w-3" />}
-                  onClick={() => stepRatePercent(0.01)}
+                  onClick={() => stepRatePercent(0.001)}
                   size="sm"
                   variant="numberStep"
                 />
                 <Button
                   aria-label="减少互动率阈值"
                   icon={<ChevronDown className="h-3 w-3" />}
-                  onClick={() => stepRatePercent(-0.01)}
+                  onClick={() => stepRatePercent(-0.001)}
                   size="sm"
                   variant="numberStep"
                 />

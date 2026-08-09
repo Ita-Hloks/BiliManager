@@ -16,7 +16,7 @@ export function applyCustomBackground(settings: CustomBackgroundSettings): void 
   root.style.backgroundImage = `url("${settings.imageDataUrl}")`;
   root.style.setProperty(
     "--bili-manager-custom-background-mask-opacity",
-    clamp(settings.maskOpacity, 0, 0.7).toString(),
+    clamp(settings.maskOpacity, 0, 1).toString(),
   );
   root.style.backgroundPosition = `${clamp(settings.positionX, 0, 100)}% ${clamp(
     settings.positionY,

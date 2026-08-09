@@ -9,7 +9,6 @@ export type SearchCard = {
   uploaderMatchesSearchKeyword: boolean;
   isUploaderVideoRecommendation: boolean;
   dateEl: HTMLElement | null;
-  tags: string[];
   viewCount: number | null;
   danmakuCount: number | null;
   thumbnailEl: HTMLElement;

@@ -1,5 +1,5 @@
 import { ImagePlus, Trash2, Upload } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { CustomBackgroundSettings } from "../../shared/types";
 
 import { clamp, getRangeProgressStyle } from "../utils";
@@ -14,11 +14,24 @@ export function CustomBackgroundPanel(props: {
   onUpload: (file: File) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [imageDimensions, setImageDimensions] = useState<{
+    src: string;
+    width: number;
+    height: number;
+  } | null>(null);
   const hasImage = !!props.background.imageDataUrl;
   const maskOpacityPercent = Math.round(props.background.maskOpacity * 100);
-  const maskOpacityStyle = getRangeProgressStyle((props.background.maskOpacity / 0.7) * 100);
+  const maskOpacityStyle = getRangeProgressStyle(props.background.maskOpacity * 100);
   const rangeXStyle = getRangeProgressStyle(props.background.positionX);
   const rangeYStyle = getRangeProgressStyle(props.background.positionY);
+  const loadedDimensions =
+    imageDimensions?.src === props.background.imageDataUrl ? imageDimensions : null;
+  const imageAspectRatio = loadedDimensions
+    ? loadedDimensions.width / loadedDimensions.height
+    : null;
+  const previewAspectRatio = 16 / 9;
+  const canAdjustHorizontal = imageAspectRatio !== null && imageAspectRatio > previewAspectRatio;
+  const canAdjustVertical = imageAspectRatio !== null && imageAspectRatio < previewAspectRatio;
 
   const fileInput = (
     <input
@@ -70,6 +83,14 @@ export function CustomBackgroundPanel(props: {
           style={{
             objectPosition: `${props.background.positionX}% ${props.background.positionY}%`,
           }}
+          onLoad={event => {
+            const image = event.currentTarget;
+            setImageDimensions({
+              src: image.currentSrc,
+              width: image.naturalWidth,
+              height: image.naturalHeight,
+            });
+          }}
         />
         <span
           className="pointer-events-none absolute inset-0 bg-white dark:bg-slate-950"
@@ -109,14 +130,14 @@ export function CustomBackgroundPanel(props: {
           </span>
           <input
             className="bm-range w-full"
-            max="0.7"
+            max="1"
             min="0"
             step="0.01"
             style={maskOpacityStyle}
             type="range"
             value={props.background.maskOpacity.toString()}
             onChange={event =>
-              props.onChange({ maskOpacity: clamp(Number(event.target.value), 0, 0.7) })
+              props.onChange({ maskOpacity: clamp(Number(event.target.value), 0, 1) })
             }
           />
         </label>
@@ -126,6 +147,7 @@ export function CustomBackgroundPanel(props: {
             <span className="bm-text-muted mb-2 block text-xs font-medium">横向位置</span>
             <input
               className="bm-range w-full"
+              disabled={!canAdjustHorizontal}
               max="100"
               min="0"
               step="1"
@@ -139,6 +161,7 @@ export function CustomBackgroundPanel(props: {
             <span className="bm-text-muted mb-2 block text-xs font-medium">纵向位置</span>
             <input
               className="bm-range w-full"
+              disabled={!canAdjustVertical}
               max="100"
               min="0"
               step="1"

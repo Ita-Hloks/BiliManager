@@ -1,18 +1,15 @@
-import { ListFilter, Tag, UserX } from "lucide-react";
+import { ListFilter, UserX } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 import type { BlockedUploader } from "../../shared/uploaderBlocklist";
-import type { BlockedTag } from "../../shared/tagBlocklist";
 import { BlocklistManagerDialog } from "../components/blocklistManagerDialog";
 import type { BlocklistPanelItem } from "../components/blocklistManagerDialog";
 
-type ManagerId = "uploader" | "tag";
+type ManagerId = "uploader";
 
 export function BlocklistSettingsPanel(props: {
   uploaderBlocklist: BlockedUploader[];
-  tagBlocklist: BlockedTag[];
   onUploaderRemove: (id: string) => void;
-  onTagRemove: (id: string) => void;
 }) {
   const [activeManager, setActiveManager] = useState<ManagerId | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -24,13 +21,6 @@ export function BlocklistSettingsPanel(props: {
     searchText: `${uploader.name} ${uploader.mid}`,
     removeLabel: uploader.name,
   }));
-  const tagItems: BlocklistPanelItem[] = props.tagBlocklist.map(tag => ({
-    id: tag.id,
-    primary: `#${tag.name}`,
-    searchText: tag.name,
-    removeLabel: tag.name,
-  }));
-
   const activeDialog =
     activeManager === "uploader"
       ? {
@@ -43,18 +33,7 @@ export function BlocklistSettingsPanel(props: {
           searchPlaceholder: "搜索 UP 名称或 UID",
           onRemove: props.onUploaderRemove,
         }
-      : activeManager === "tag"
-        ? {
-            closeLabel: "关闭 TAG 拦截管理",
-            countUnit: "个 TAG",
-            dialogTitle: "已拦截 TAG",
-            emptyText: "没有匹配的 TAG",
-            items: tagItems,
-            searchLabel: "搜索已拦截 TAG",
-            searchPlaceholder: "搜索 TAG 名称",
-            onRemove: props.onTagRemove,
-          }
-        : null;
+      : null;
 
   function openManager(manager: ManagerId, event: MouseEvent<HTMLButtonElement>) {
     previousFocusRef.current = event.currentTarget;
@@ -69,9 +48,7 @@ export function BlocklistSettingsPanel(props: {
             <UserX className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
               <h2 className="bm-text-heading text-base font-medium">屏蔽列表</h2>
-              <p className="bm-text-muted mt-1 text-sm">
-                {props.uploaderBlocklist.length} 个 UP · {props.tagBlocklist.length} 个 TAG
-              </p>
+              <p className="bm-text-muted mt-1 text-sm">{props.uploaderBlocklist.length} 个 UP</p>
             </div>
           </div>
         </div>
@@ -84,14 +61,6 @@ export function BlocklistSettingsPanel(props: {
             label="UP 拦截"
             unit="个 UP"
             onClick={event => openManager("uploader", event)}
-          />
-          <BlocklistEntry
-            count={props.tagBlocklist.length}
-            disabled={tagItems.length === 0}
-            icon={<Tag className="h-4 w-4" />}
-            label="TAG 拦截"
-            unit="个 TAG"
-            onClick={event => openManager("tag", event)}
           />
         </div>
       </section>
