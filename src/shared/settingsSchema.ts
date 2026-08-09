@@ -229,7 +229,7 @@ export function normalizeCustomBackground(
       typeof value?.imageDataUrl === "string" ? value.imageDataUrl : currentBackground.imageDataUrl,
     maskOpacity:
       typeof value?.maskOpacity === "number"
-        ? clamp(value.maskOpacity, 0, 0.7)
+        ? clamp(value.maskOpacity, 0, 1)
         : currentBackground.maskOpacity,
     positionX:
       typeof value?.positionX === "number"

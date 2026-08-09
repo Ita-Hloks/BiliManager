@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { AlertCircle, Power, Settings } from "lucide-react";
+import { Power, Settings } from "lucide-react";
 import type { ExtensionMessage, ExtensionResponse } from "../shared/messaging";
 import { getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
 import type { ExtensionSettings, SearchFilterStats } from "../shared/types";
@@ -21,7 +21,6 @@ const GITHUB_REPOSITORY_URL = "https://github.com/Ita-Hloks/BiliManager";
 export function PopupApp(props: { initialSettings: ExtensionSettings }) {
   const [settings, setSettings] = useState<ExtensionSettings>(props.initialSettings);
   const [stats, setStats] = useState<SearchFilterStats>(unavailableStats);
-  const [contentConnected, setContentConnected] = useState(false);
   const [selectedStatsDateKey, setSelectedStatsDateKey] = useState<string>();
   const [durationDisplayMode, setDurationDisplayMode] = useState<DurationDisplayMode>("total");
   const isDark = useEffectiveDarkTheme(settings.theme);
@@ -56,12 +55,10 @@ export function PopupApp(props: { initialSettings: ExtensionSettings }) {
 
     if (response?.ok && response.source === "content") {
       setStats(response.stats);
-      setContentConnected(true);
       return;
     }
 
     setStats(unavailableStats);
-    setContentConnected(false);
   }
 
   function openGithubRepository() {
@@ -83,11 +80,7 @@ export function PopupApp(props: { initialSettings: ExtensionSettings }) {
     const response = await sendActiveTabMessage({ type: "BILI_FILTER_SETTINGS_UPDATED" });
     if (response?.ok && response.source === "content") {
       setStats(response.stats);
-      setContentConnected(true);
-      return;
     }
-
-    setContentConnected(false);
   }
 
   const pluginEnabled = settings.features.enabled;
@@ -138,13 +131,6 @@ export function PopupApp(props: { initialSettings: ExtensionSettings }) {
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-track]:bg-transparent">
-        {!contentConnected && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-            <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
-            <span>当前页面暂不支持</span>
-          </div>
-        )}
-
         {stats.regexErrors.length > 0 && (
           <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">
             {stats.regexErrors.join("；")}

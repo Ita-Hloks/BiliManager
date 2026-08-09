@@ -16,7 +16,7 @@ export function CustomBackgroundPanel(props: {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasImage = !!props.background.imageDataUrl;
   const maskOpacityPercent = Math.round(props.background.maskOpacity * 100);
-  const maskOpacityStyle = getRangeProgressStyle((props.background.maskOpacity / 0.7) * 100);
+  const maskOpacityStyle = getRangeProgressStyle(props.background.maskOpacity * 100);
   const rangeXStyle = getRangeProgressStyle(props.background.positionX);
   const rangeYStyle = getRangeProgressStyle(props.background.positionY);
 
@@ -109,14 +109,14 @@ export function CustomBackgroundPanel(props: {
           </span>
           <input
             className="bm-range w-full"
-            max="0.7"
+            max="1"
             min="0"
             step="0.01"
             style={maskOpacityStyle}
             type="range"
             value={props.background.maskOpacity.toString()}
             onChange={event =>
-              props.onChange({ maskOpacity: clamp(Number(event.target.value), 0, 0.7) })
+              props.onChange({ maskOpacity: clamp(Number(event.target.value), 0, 1) })
             }
           />
         </label>
