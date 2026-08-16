@@ -14,6 +14,8 @@ const REASON_TEXT_ATTR = "data-bili-manager-filter-reason-text";
 const RECOMMENDATION_HOST_CLASS = "bili-manager-filter-reasons--recommendation";
 const RECOMMENDATION_LINK_ATTR = "data-bili-manager-favorite-recommendation-link";
 const RECOMMENDATION_ID_ATTR = "data-bili-manager-favorite-recommendation-id";
+const VIDEO_TARGET_SELECTOR =
+  "a[href*='/video/'], a[href*='bilibili.com/video/'], .bili-video-card, .video-item, .search-card, .video-list-item";
 
 type FilterGateState = "locked" | "peek" | "unlocked";
 
@@ -83,8 +85,17 @@ function bindFilterGateEvents(): void {
 
 function stopLockedCardEvent(event: Event): void {
   const cardEl = getEventFilteredCard(event);
-  if (!cardEl || getGateState(cardEl) === "unlocked") return;
+  if (!cardEl) {
+    if (isNavigationEvent(event) && getEventVideoTarget(event)) relockFilteredCards();
+    return;
+  }
 
+  if (getGateState(cardEl) === "unlocked") {
+    relockOtherFilteredCards(cardEl);
+    return;
+  }
+
+  relockOtherFilteredCards(cardEl);
   stopEvent(event);
 }
 
@@ -96,15 +107,18 @@ function stopLockedKeyboardNavigation(event: KeyboardEvent): void {
 
 function handleFilteredContextMenu(event: MouseEvent): void {
   const cardEl = getEventFilteredCard(event);
-  if (!cardEl) return;
+  if (!cardEl) {
+    if (getEventVideoTarget(event)) relockFilteredCards();
+    return;
+  }
 
   stopEvent(event);
+  relockOtherFilteredCards(cardEl);
 
   const currentState = getGateState(cardEl);
   const nextState: FilterGateState =
     currentState === "locked" ? "peek" : currentState === "peek" ? "unlocked" : "locked";
-  cardEl.setAttribute(GATE_ATTR, nextState);
-  refreshReasonOverlay(cardEl);
+  setGateState(cardEl, nextState);
 }
 
 function getEventFilteredCard(event: Event): HTMLElement | null {
@@ -121,6 +135,32 @@ function getEventFilteredCard(event: Event): HTMLElement | null {
     return null;
   }
   return cardEl;
+}
+
+function getEventVideoTarget(event: Event): Element | null {
+  const target = event.target;
+  if (!(target instanceof Element)) return null;
+  return target.closest(VIDEO_TARGET_SELECTOR);
+}
+
+function isNavigationEvent(event: Event): boolean {
+  return event.type === "click" || event.type === "auxclick" || event.type === "keydown";
+}
+
+function relockFilteredCards(): void {
+  getFilteredCards().forEach(cardEl => setGateState(cardEl, "locked"));
+}
+
+function relockOtherFilteredCards(activeCardEl: HTMLElement): void {
+  getFilteredCards().forEach(cardEl => {
+    if (cardEl !== activeCardEl) setGateState(cardEl, "locked");
+  });
+}
+
+function setGateState(cardEl: HTMLElement, state: FilterGateState): void {
+  if (getGateState(cardEl) === state) return;
+  cardEl.setAttribute(GATE_ATTR, state);
+  refreshReasonOverlay(cardEl);
 }
 
 function stopEvent(event: Event): void {
