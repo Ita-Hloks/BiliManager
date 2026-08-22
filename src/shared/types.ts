@@ -4,6 +4,7 @@ export type SearchFilterSettings = {
   enabled: boolean;
   titlePattern: string;
   uploaderPattern: string;
+  minViewCount: number;
   minDanmakuViewRate: number;
   filterLowDanmakuViewRate: boolean;
   grayscaleLowDanmakuViewRate: boolean;

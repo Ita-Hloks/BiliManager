@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, Filter, Folder } from "lucide-react";
+import { MAX_VIEW_COUNT_THRESHOLD } from "../../shared/settingsSchema";
 import type { FavoriteRecommendationSettings, SearchFilterSettings } from "../../shared/types";
 import { Button } from "../components/button";
 import { FavoriteFolderManager } from "../components/favoriteFolderManager";
@@ -77,6 +78,37 @@ export function SearchFilterPanel(props: {
           value={props.settings.uploaderPattern}
           onChange={uploaderPattern => props.onChange({ uploaderPattern })}
         />
+        <div className="rounded-lg bg-bili-canvas px-3 py-3 transition-colors duration-300 ease-out dark:bg-[#15181e]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <span className="bm-text-label block text-sm font-medium">播放量下限</span>
+              <span className="bm-text-muted mt-1 block text-xs">
+                低于下限的视频会设置遮罩，设为 0 时关闭
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <div className="bm-number-input-group w-36">
+                <input
+                  aria-label="播放量下限"
+                  className="bm-number-input bm-number-input-field"
+                  max={MAX_VIEW_COUNT_THRESHOLD}
+                  min="0"
+                  step="1000"
+                  type="number"
+                  value={props.settings.minViewCount.toString()}
+                  onChange={event =>
+                    props.onChange({
+                      minViewCount: Math.round(
+                        clamp(Number(event.target.value), 0, MAX_VIEW_COUNT_THRESHOLD),
+                      ),
+                    })
+                  }
+                />
+                <span className="bm-number-suffix">次</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <label className="block">
           <span className="bm-text-label mb-2 block text-sm font-medium">
             弹幕 / 播放互动率 临界值

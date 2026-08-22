@@ -68,7 +68,11 @@ export function applySearchFilter(
           ? { mid: card.uploaderMid, name: card.uploader }
           : null,
     });
-    const activeReasons = settings.enabled ? [...result.reasons] : [];
+    const activeReasons = settings.enabled
+      ? [...result.reasons]
+      : result.lowViewCountReason
+        ? [result.lowViewCountReason]
+        : [];
     if (uploaderBlockingEnabled && blockedUploader) {
       activeReasons.unshift(`已屏蔽 UP：${blockedUploader.name}`);
     }

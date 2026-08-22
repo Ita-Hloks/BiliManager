@@ -3,7 +3,7 @@ import type { SearchCard } from "./types";
 const SUPPORTED_SEARCH_PATHS = new Set(["/all", "/video"]);
 
 const TEXT = {
-  playLabels: ["播放", "观看"],
+  playLabels: ["播放量", "播放", "观看"],
   danmakuLabels: ["弹幕"],
   tenThousand: "万",
   hundredMillion: "亿",
