@@ -9,6 +9,8 @@ import type {
   WatchTimerSettings,
 } from "./types";
 
+export const MAX_VIEW_COUNT_THRESHOLD = 1_000_000_000;
+
 export const defaultSettings: ExtensionSettings = {
   features: {
     enabled: true,
@@ -20,6 +22,7 @@ export const defaultSettings: ExtensionSettings = {
     enabled: true,
     titlePattern: "",
     uploaderPattern: "",
+    minViewCount: 0,
     minDanmakuViewRate: 0.005,
     filterLowDanmakuViewRate: true,
     grayscaleLowDanmakuViewRate: true,
@@ -151,11 +154,14 @@ export function normalizeSearchFilter(
 ): SearchFilterSettings {
   return {
     ...currentSearchFilter,
-    ...value,
     enabled: typeof value?.enabled === "boolean" ? value.enabled : currentSearchFilter.enabled,
     titlePattern: getStringPattern(value?.titlePattern) || currentSearchFilter.titlePattern,
     uploaderPattern:
       getStringPattern(value?.uploaderPattern) || currentSearchFilter.uploaderPattern,
+    minViewCount:
+      typeof value?.minViewCount === "number"
+        ? Math.round(clamp(value.minViewCount, 0, MAX_VIEW_COUNT_THRESHOLD))
+        : currentSearchFilter.minViewCount,
     minDanmakuViewRate:
       typeof value?.minDanmakuViewRate === "number"
         ? clamp(value.minDanmakuViewRate, 0, 0.01)

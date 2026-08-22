@@ -18,5 +18,6 @@ export type SearchCard = {
 
 export type FilterResult = {
   reasons: string[];
+  lowViewCountReason: string | null;
   lowInteractionRate: number | null;
 };

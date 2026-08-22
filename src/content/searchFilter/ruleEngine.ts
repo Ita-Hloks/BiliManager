@@ -7,6 +7,7 @@ const TEXT = {
   titleMatched: "过滤词命中",
   uploaderMatched: "UP过滤词命中",
   missingSearchTerm: "未命中搜索词",
+  lowViewCount: "播放量过低",
   lowInteraction: "互动率过低",
   invalidRegex: "正则无效",
   unknownError: "未知错误",
@@ -23,6 +24,7 @@ export function createSearchCardEvaluator(settings: SearchFilterSettings) {
     regexErrors,
     evaluate(card: SearchCard, searchTermMatched: boolean): FilterResult {
       const reasons: string[] = [];
+      let lowViewCountReason: string | null = null;
 
       if (titlePattern.regex?.test(card.title)) {
         reasons.push(`${TEXT.titleMatched}：${settings.titlePattern}`);
@@ -31,6 +33,15 @@ export function createSearchCardEvaluator(settings: SearchFilterSettings) {
 
       if (settings.filterMissingTitleHighlight && !searchTermMatched) {
         reasons.push(TEXT.missingSearchTerm);
+      }
+
+      if (
+        settings.minViewCount > 0 &&
+        typeof card.viewCount === "number" &&
+        card.viewCount < settings.minViewCount
+      ) {
+        lowViewCountReason = `${TEXT.lowViewCount}：${formatViewCount(card.viewCount)}`;
+        reasons.push(lowViewCountReason);
       }
 
       let lowInteractionRate: number | null = null;
@@ -49,7 +60,7 @@ export function createSearchCardEvaluator(settings: SearchFilterSettings) {
         }
       }
 
-      return { reasons, lowInteractionRate };
+      return { reasons, lowViewCountReason, lowInteractionRate };
     },
   };
 }
@@ -71,4 +82,8 @@ function compilePattern(
 
 function formatRate(rate: number): string {
   return `${(rate * 100).toFixed(2)}%`;
+}
+
+function formatViewCount(viewCount: number): string {
+  return Math.round(viewCount).toLocaleString("zh-CN");
 }
