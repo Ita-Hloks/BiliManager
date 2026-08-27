@@ -93,7 +93,7 @@ npm run build
 
 1. 打开 [BiliManager Releases](https://github.com/Ita-Hloks/BiliManager/releases)，进入最新版本页面
 2. 在 **Assets** 中下载 `BiliManager_v版本号.zip`
-3. 将下载的压缩包解压到一个固定目录，例如 `D:\Extensions\BiliManager\v0.2.0`。
+3. 将下载的压缩包解压到一个固定目录，例如 `D:\Extensions\BiliManager\v0.2.1`。
 
 ### 在 Chrome, Edge 中加载
 
