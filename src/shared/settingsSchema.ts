@@ -29,6 +29,7 @@ export const defaultSettings: ExtensionSettings = {
     filterMissingTitleHighlight: true,
     grayscaleMissingTitleHighlight: true,
     filterCourseTag: true,
+    strictInterception: false,
   },
   favoriteRecommendation: {
     enabled: true,
@@ -191,6 +192,10 @@ export function normalizeSearchFilter(
       typeof value?.filterCourseTag === "boolean"
         ? value.filterCourseTag
         : currentSearchFilter.filterCourseTag,
+    strictInterception:
+      typeof value?.strictInterception === "boolean"
+        ? value.strictInterception
+        : currentSearchFilter.strictInterception,
   };
 }
 

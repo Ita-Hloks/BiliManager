@@ -253,6 +253,14 @@ export function SearchFilterPanel(props: {
           <Switch enabled={props.settings.filterCourseTag} />
         </Button>
 
+        <Button
+          onClick={() => props.onChange({ strictInterception: !props.settings.strictInterception })}
+          variant="toggleRow"
+        >
+          <span className="font-medium">严格拦截</span>
+          <Switch enabled={props.settings.strictInterception} />
+        </Button>
+
         <div className="overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:bg-[#15181e]">
           <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-3 py-3 dark:border-[#30343c]">
             <div className="flex items-center gap-2">
