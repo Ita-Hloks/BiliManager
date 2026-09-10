@@ -19,7 +19,13 @@ const selectors = {
   ],
   uploaderVideoRecommendation: [".b-user-video-card", ".user-video-info"],
   cardRoots: [".bili-video-card", ".video-item", ".search-card", ".video-list-item"],
-  videoLinks: ["a[href*='/video/BV']", "a[href*='bilibili.com/video/']"],
+  contentLinks: [
+    "a[href*='/video/BV']",
+    "a[href*='bilibili.com/video/']",
+    "a[href*='/cheese/play/']",
+    "a[href*='bilibili.com/cheese/play/']",
+  ],
+  courseBadge: ".bili-video-card__info--cheese",
   title: [".bili-video-card__info--tit", ".bili-video-card__info--title", ".title", "a[title]"],
   uploader: [
     ".bili-video-card__info--author",
@@ -75,11 +81,11 @@ export function collectSearchCards(): SearchCard[] {
 
   for (const selector of selectors.cards) {
     document.querySelectorAll<HTMLElement>(selector).forEach(element => {
-      if (element.querySelector("a[href*='/video/']")) elements.add(element);
+      if (hasSearchCardLink(element)) elements.add(element);
     });
   }
 
-  for (const selector of selectors.videoLinks) {
+  for (const selector of selectors.contentLinks) {
     document.querySelectorAll<HTMLElement>(selector).forEach(link => {
       const cardRoot = findCardRoot(link);
       if (cardRoot) elements.add(cardRoot);
@@ -126,8 +132,8 @@ function findCardRoot(link: HTMLElement): HTMLElement | null {
 function toSearchCard(cardEl: HTMLElement, searchKeyword: string): SearchCard | null {
   const titleEl = findSearchCardTitle(cardEl);
   const thumbnailEl = queryFirst(cardEl, selectors.thumbnail);
-  const videoLink = queryFirst(cardEl, selectors.videoLinks);
-  if (!titleEl || !thumbnailEl || !videoLink) return null;
+  const contentLink = queryFirst(cardEl, selectors.contentLinks);
+  if (!titleEl || !thumbnailEl || !contentLink) return null;
 
   const title = normalizeText(titleEl.textContent || titleEl.getAttribute("title") || "");
   if (!title || cardEl.closest("footer, .footer, .bili-footer")) return null;
@@ -139,7 +145,7 @@ function toSearchCard(cardEl: HTMLElement, searchKeyword: string): SearchCard | 
     cardEl.querySelector<HTMLAnchorElement>("a[href*='space.bilibili.com']");
   const metricsText = collectMetricText(cardEl);
   const fallbackCounts = parseOrderedStatCounts(cardEl);
-  const videoUrl = videoLink.getAttribute("href") ?? "";
+  const videoUrl = contentLink.getAttribute("href") ?? "";
   const uploader = normalizeText(uploaderEl?.textContent ?? "");
 
   return {
@@ -152,6 +158,7 @@ function toSearchCard(cardEl: HTMLElement, searchKeyword: string): SearchCard | 
     uploaderMid: getUploaderMid(uploaderLink?.getAttribute("href") ?? ""),
     uploaderMatchesSearchKeyword: isExactSearchKeywordMatch(uploader, searchKeyword),
     isUploaderVideoRecommendation: isUploaderVideoRecommendation(cardEl),
+    isCourse: cardEl.querySelector(selectors.courseBadge) !== null,
     dateEl,
     viewCount: parseMetric(metricsText, TEXT.playLabels) ?? fallbackCounts[0] ?? null,
     danmakuCount: parseMetric(metricsText, TEXT.danmakuLabels) ?? fallbackCounts[1] ?? null,
@@ -161,6 +168,10 @@ function toSearchCard(cardEl: HTMLElement, searchKeyword: string): SearchCard | 
       ...cardEl.querySelectorAll<HTMLElement>(selector),
     ]),
   };
+}
+
+function hasSearchCardLink(cardEl: HTMLElement): boolean {
+  return queryFirst(cardEl, selectors.contentLinks) !== null;
 }
 
 function getSearchKeyword(): string {

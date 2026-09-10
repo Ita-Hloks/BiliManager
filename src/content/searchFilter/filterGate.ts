@@ -15,7 +15,7 @@ const RECOMMENDATION_HOST_CLASS = "bili-manager-filter-reasons--recommendation";
 const RECOMMENDATION_LINK_ATTR = "data-bili-manager-favorite-recommendation-link";
 const RECOMMENDATION_ID_ATTR = "data-bili-manager-favorite-recommendation-id";
 const VIDEO_TARGET_SELECTOR =
-  "a[href*='/video/'], a[href*='bilibili.com/video/'], .bili-video-card, .video-item, .search-card, .video-list-item";
+  "a[href*='/video/'], a[href*='bilibili.com/video/'], a[href*='/cheese/play/'], a[href*='bilibili.com/cheese/play/'], .bili-video-card, .video-item, .search-card, .video-list-item";
 
 type FilterGateState = "locked" | "peek" | "unlocked";
 

@@ -28,6 +28,7 @@ export const defaultSettings: ExtensionSettings = {
     grayscaleLowDanmakuViewRate: true,
     filterMissingTitleHighlight: true,
     grayscaleMissingTitleHighlight: true,
+    filterCourseTag: true,
   },
   favoriteRecommendation: {
     enabled: true,
@@ -186,6 +187,10 @@ export function normalizeSearchFilter(
         : typeof value?.grayscaleMissingTitleHighlight === "boolean"
           ? value.grayscaleMissingTitleHighlight
           : currentSearchFilter.grayscaleMissingTitleHighlight,
+    filterCourseTag:
+      typeof value?.filterCourseTag === "boolean"
+        ? value.filterCourseTag
+        : currentSearchFilter.filterCourseTag,
   };
 }
 

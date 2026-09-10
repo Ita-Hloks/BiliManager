@@ -245,6 +245,14 @@ export function SearchFilterPanel(props: {
           </Button>
         </div>
 
+        <Button
+          onClick={() => props.onChange({ filterCourseTag: !props.settings.filterCourseTag })}
+          variant="toggleRow"
+        >
+          <span className="font-medium">过滤课程标签</span>
+          <Switch enabled={props.settings.filterCourseTag} />
+        </Button>
+
         <div className="overflow-hidden rounded-lg bg-bili-canvas transition-colors duration-300 ease-out dark:bg-[#15181e]">
           <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-3 py-3 dark:border-[#30343c]">
             <div className="flex items-center gap-2">

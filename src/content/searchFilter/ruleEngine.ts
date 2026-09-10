@@ -9,6 +9,7 @@ const TEXT = {
   missingSearchTerm: "未命中搜索词",
   lowViewCount: "播放量过低",
   lowInteraction: "互动率过低",
+  courseTag: "课程标签",
   invalidRegex: "正则无效",
   unknownError: "未知错误",
 };
@@ -30,6 +31,8 @@ export function createSearchCardEvaluator(settings: SearchFilterSettings) {
         reasons.push(`${TEXT.titleMatched}：${settings.titlePattern}`);
       }
       if (uploaderPattern.regex?.test(card.uploader)) reasons.push(TEXT.uploaderMatched);
+
+      if (settings.filterCourseTag && card.isCourse) reasons.push(TEXT.courseTag);
 
       if (settings.filterMissingTitleHighlight && !searchTermMatched) {
         reasons.push(TEXT.missingSearchTerm);

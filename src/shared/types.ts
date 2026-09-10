@@ -10,6 +10,7 @@ export type SearchFilterSettings = {
   grayscaleLowDanmakuViewRate: boolean;
   filterMissingTitleHighlight: boolean;
   grayscaleMissingTitleHighlight: boolean;
+  filterCourseTag: boolean;
 };
 
 export type FavoriteRecommendationSettings = {
