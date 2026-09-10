@@ -19,6 +19,7 @@ const selectors = {
   ],
   uploaderVideoRecommendation: [".b-user-video-card", ".user-video-info"],
   cardRoots: [".bili-video-card", ".video-item", ".search-card", ".video-list-item"],
+  layoutRoots: [".video-item", ".search-card", ".video-list-item"],
   contentLinks: [
     "a[href*='/video/BV']",
     "a[href*='bilibili.com/video/']",
@@ -150,6 +151,7 @@ function toSearchCard(cardEl: HTMLElement, searchKeyword: string): SearchCard | 
 
   return {
     cardEl,
+    layoutEl: findLayoutElement(cardEl),
     titleEl,
     uploaderEl,
     title,
@@ -172,6 +174,19 @@ function toSearchCard(cardEl: HTMLElement, searchKeyword: string): SearchCard | 
 
 function hasSearchCardLink(cardEl: HTMLElement): boolean {
   return queryFirst(cardEl, selectors.contentLinks) !== null;
+}
+
+function findLayoutElement(cardEl: HTMLElement): HTMLElement {
+  let current = cardEl.parentElement;
+  while (current) {
+    const layoutElement = current;
+    if (selectors.layoutRoots.some(selector => layoutElement.matches(selector))) {
+      return layoutElement;
+    }
+    current = current.parentElement;
+  }
+
+  return cardEl;
 }
 
 function getSearchKeyword(): string {

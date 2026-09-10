@@ -45,6 +45,7 @@ const originalRecommendationText = new WeakMap<
 
 type StrictRemoval = {
   card: SearchCard;
+  removedEl: HTMLElement;
   placeholder: Comment;
 };
 
@@ -68,8 +69,8 @@ export function removeStrictlyFilteredCard(card: SearchCard): void {
 
   clearFilterState(card.cardEl);
   const placeholder = document.createComment("bili-manager-strict-interception");
-  card.cardEl.replaceWith(placeholder);
-  strictlyRemovedCards.set(card.cardEl, { card, placeholder });
+  card.layoutEl.replaceWith(placeholder);
+  strictlyRemovedCards.set(card.cardEl, { card, placeholder, removedEl: card.layoutEl });
 }
 
 export function restoreStrictlyRemovedCard(cardEl: HTMLElement): void {
@@ -78,8 +79,8 @@ export function restoreStrictlyRemovedCard(cardEl: HTMLElement): void {
 
   clearFilterState(cardEl);
   if (removal.placeholder.isConnected) {
-    if (cardEl.isConnected) removal.placeholder.remove();
-    else removal.placeholder.replaceWith(cardEl);
+    if (removal.removedEl.isConnected) removal.placeholder.remove();
+    else removal.placeholder.replaceWith(removal.removedEl);
   }
   strictlyRemovedCards.delete(cardEl);
 }

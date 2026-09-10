@@ -1,5 +1,6 @@
 export type SearchCard = {
   cardEl: HTMLElement;
+  layoutEl: HTMLElement;
   titleEl: HTMLElement;
   uploaderEl: HTMLElement | null;
   title: string;
