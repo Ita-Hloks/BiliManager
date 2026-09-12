@@ -4,7 +4,6 @@ import type { FavoriteRecommendationSettings, SearchFilterSettings } from "../..
 import { Button } from "../components/button";
 import { FavoriteFolderManager } from "../components/favoriteFolderManager";
 import type { FavoriteFolderRefreshResult } from "../components/favoriteFolderManager";
-import { RuleListEditor } from "../components/ruleListEditor";
 import { Switch } from "../components/switch";
 import { clamp, fromRatePercent, getRangeProgressStyle, toRatePercent } from "../utils";
 
@@ -66,18 +65,6 @@ export function SearchFilterPanel(props: {
           <Switch enabled={props.filterTrending} />
         </Button>
 
-        <RuleListEditor
-          label="标题过滤词正则"
-          placeholder="输入后回车，参考：震惊 | 迷惑行为 | 的一集"
-          value={props.settings.titlePattern}
-          onChange={titlePattern => props.onChange({ titlePattern })}
-        />
-        <RuleListEditor
-          label="UP 主过滤词正则"
-          placeholder="输入后回车，参考：影视 | 好剧 | 经典"
-          value={props.settings.uploaderPattern}
-          onChange={uploaderPattern => props.onChange({ uploaderPattern })}
-        />
         <div className="rounded-lg bg-bili-canvas px-3 py-3 transition-colors duration-300 ease-out dark:bg-[#15181e]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">

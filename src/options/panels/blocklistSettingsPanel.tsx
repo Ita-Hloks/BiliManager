@@ -1,14 +1,19 @@
 import { ListFilter, UserX } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
+import type { SearchFilterSettings } from "../../shared/types";
 import type { BlockedUploader } from "../../shared/uploaderBlocklist";
 import { BlocklistManagerDialog } from "../components/blocklistManagerDialog";
 import type { BlocklistPanelItem } from "../components/blocklistManagerDialog";
+import { RuleListEditor } from "../components/ruleListEditor";
 
 type ManagerId = "uploader";
+type BlocklistPatternSettings = Pick<SearchFilterSettings, "titlePattern" | "uploaderPattern">;
 
 export function BlocklistSettingsPanel(props: {
+  searchFilter: BlocklistPatternSettings;
   uploaderBlocklist: BlockedUploader[];
+  onSearchFilterChange: (patch: Partial<BlocklistPatternSettings>) => void;
   onUploaderRemove: (id: string) => void;
 }) {
   const [activeManager, setActiveManager] = useState<ManagerId | null>(null);
@@ -48,9 +53,23 @@ export function BlocklistSettingsPanel(props: {
             <UserX className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
             <div>
               <h2 className="bm-text-heading text-base font-medium">屏蔽列表</h2>
-              <p className="bm-text-muted mt-1 text-sm">{props.uploaderBlocklist.length} 个 UP</p>
             </div>
           </div>
+        </div>
+
+        <div className="space-y-5 px-4 py-5 sm:px-5">
+          <RuleListEditor
+            label="标题过滤词正则"
+            placeholder="输入后回车，参考：震惊 | 迷惑行为 | 的一集"
+            value={props.searchFilter.titlePattern}
+            onChange={titlePattern => props.onSearchFilterChange({ titlePattern })}
+          />
+          <RuleListEditor
+            label="UP 主过滤词正则"
+            placeholder="输入后回车，参考：影视 | 好剧 | 经典"
+            value={props.searchFilter.uploaderPattern}
+            onChange={uploaderPattern => props.onSearchFilterChange({ uploaderPattern })}
+          />
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-[#30343c]">

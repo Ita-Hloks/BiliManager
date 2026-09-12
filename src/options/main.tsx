@@ -406,7 +406,9 @@ function OptionsApp() {
             />
 
             <BlocklistSettingsPanel
+              searchFilter={settings.searchFilter}
               uploaderBlocklist={uploaderBlocklist}
+              onSearchFilterChange={patch => void updateSearchFilter(patch)}
               onUploaderRemove={id => void unblockUploader(id)}
             />
 
