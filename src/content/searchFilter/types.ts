@@ -1,5 +1,6 @@
 export type SearchCard = {
   cardEl: HTMLElement;
+  layoutEl: HTMLElement;
   titleEl: HTMLElement;
   uploaderEl: HTMLElement | null;
   title: string;
@@ -8,6 +9,7 @@ export type SearchCard = {
   uploaderMid: string;
   uploaderMatchesSearchKeyword: boolean;
   isUploaderVideoRecommendation: boolean;
+  isCourse: boolean;
   dateEl: HTMLElement | null;
   viewCount: number | null;
   danmakuCount: number | null;

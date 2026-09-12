@@ -43,6 +43,52 @@ const originalRecommendationText = new WeakMap<
   }
 >();
 
+type StrictRemoval = {
+  card: SearchCard;
+  removedEl: HTMLElement;
+  placeholder: Comment;
+};
+
+const strictlyRemovedCards = new Map<HTMLElement, StrictRemoval>();
+let strictRemovalPageKey: string | null = null;
+
+export function prepareStrictInterceptionPage(pageKey: string): void {
+  if (strictRemovalPageKey !== null && strictRemovalPageKey !== pageKey) {
+    restoreStrictlyRemovedCards();
+  }
+  strictRemovalPageKey = pageKey;
+}
+
+export function getStrictlyRemovedCards(): SearchCard[] {
+  discardDisconnectedStrictRemovals();
+  return [...strictlyRemovedCards.values()].map(record => record.card);
+}
+
+export function removeStrictlyFilteredCard(card: SearchCard): void {
+  if (strictlyRemovedCards.has(card.cardEl) || !card.cardEl.isConnected) return;
+
+  clearFilterState(card.cardEl);
+  const placeholder = document.createComment("bili-manager-strict-interception");
+  card.layoutEl.replaceWith(placeholder);
+  strictlyRemovedCards.set(card.cardEl, { card, placeholder, removedEl: card.layoutEl });
+}
+
+export function restoreStrictlyRemovedCard(cardEl: HTMLElement): void {
+  const removal = strictlyRemovedCards.get(cardEl);
+  if (!removal) return;
+
+  clearFilterState(cardEl);
+  if (removal.placeholder.isConnected) {
+    if (removal.removedEl.isConnected) removal.placeholder.remove();
+    else removal.placeholder.replaceWith(removal.removedEl);
+  }
+  strictlyRemovedCards.delete(cardEl);
+}
+
+export function restoreStrictlyRemovedCards(): void {
+  [...strictlyRemovedCards.keys()].forEach(restoreStrictlyRemovedCard);
+}
+
 export function markFiltered(
   card: SearchCard,
   reasons: string[],
@@ -79,6 +125,7 @@ export function markFiltered(
 }
 
 export function clearAllFilterStates(): void {
+  restoreStrictlyRemovedCards();
   getFilteredCards().forEach(clearFilterState);
   removeClassesFromDescendants(document, GLOBAL_FILTER_STATE_CLASSES);
 }
@@ -201,6 +248,15 @@ function removeClassesFromDescendants(root: ParentNode, classNames: readonly str
     root.querySelectorAll<HTMLElement>(`.${className}`).forEach(element => {
       element.classList.remove(className);
     });
+  });
+}
+
+function discardDisconnectedStrictRemovals(): void {
+  [...strictlyRemovedCards.values()].forEach(removal => {
+    if (removal.placeholder.isConnected) return;
+
+    clearFilterState(removal.card.cardEl);
+    strictlyRemovedCards.delete(removal.card.cardEl);
   });
 }
 
