@@ -1,67 +1,64 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 
-type ButtonVariant =
-  "primary" | "secondary" | "icon" | "numberStep" | "toggleRow" | "toggleGroupRow";
+type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "icon" | "numberStep";
 
 type ButtonSize = "sm" | "md" | "full";
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  active?: boolean;
+type ButtonProps = ComponentPropsWithRef<"button"> & {
   icon?: ReactNode;
   size?: ButtonSize;
   variant?: ButtonVariant;
 };
 
 const baseButtonClass =
-  "inline-flex items-center justify-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 enabled:active:scale-[0.98] disabled:cursor-not-allowed";
 
 const variantClassMap: Record<ButtonVariant, string> = {
   primary:
-    "gap-1.5 rounded-lg bg-bili-blue text-sm font-medium text-white hover:bg-[#009bd3] disabled:bg-slate-200 disabled:text-slate-500 dark:disabled:bg-slate-700 dark:disabled:text-slate-400",
+    "gap-1.5 rounded-lg bg-[var(--bm-accent)] font-medium text-white shadow-[0_1px_2px_rgb(0_174_236/0.25),inset_0_1px_0_rgb(255_255_255/0.18)] hover:bg-[var(--bm-accent-hover)] disabled:opacity-45 disabled:shadow-none",
   secondary:
-    "gap-1.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-bili-blue disabled:opacity-50 dark:border-[#3a3e47] dark:bg-[#242830] dark:text-slate-100 dark:hover:border-bili-blue/40 dark:hover:bg-bili-blue/10",
-  icon: "rounded text-slate-400 hover:text-rose-500 dark:text-slate-500 dark:hover:text-rose-300",
+    "gap-1.5 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] font-medium text-[var(--bm-text-primary)] shadow-[0_1px_2px_rgb(15_23_42/0.04)] hover:border-[var(--bm-border-strong)] hover:bg-[var(--bm-surface-hover)] disabled:opacity-50 disabled:shadow-none dark:shadow-none",
+  danger:
+    "gap-1.5 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface)] font-medium text-rose-600 shadow-[0_1px_2px_rgb(15_23_42/0.04)] hover:border-rose-300 hover:bg-rose-50 disabled:opacity-50 disabled:shadow-none dark:text-rose-400 dark:shadow-none dark:hover:border-rose-500/40 dark:hover:bg-rose-500/10",
+  ghost:
+    "gap-1.5 rounded-lg font-medium text-[var(--bm-text-secondary)] hover:bg-[var(--bm-surface-hover)] hover:text-[var(--bm-text-primary)] disabled:opacity-50",
+  icon: "rounded-md text-[var(--bm-text-tertiary)] hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-40",
   numberStep:
-    "flex-1 text-slate-500 hover:bg-sky-50 hover:text-bili-blue dark:text-slate-400 dark:hover:bg-bili-blue/10 dark:hover:text-sky-200",
-  toggleRow:
-    "w-full justify-between gap-4 rounded-lg bg-bili-canvas px-3 py-3 text-left text-sm text-slate-800 hover:bg-sky-50 dark:bg-[#15181e] dark:text-slate-100 dark:hover:bg-bili-blue/10",
-  toggleGroupRow:
-    "w-full justify-between gap-4 px-3 py-3 text-left text-sm text-slate-800 hover:bg-sky-50 dark:text-slate-100 dark:hover:bg-bili-blue/10",
+    "flex-1 text-[var(--bm-text-tertiary)] hover:bg-[var(--bm-surface-hover)] hover:text-[var(--bm-text-primary)] disabled:opacity-40",
 };
 
-const sizeClassMap: Record<ButtonSize, string> = {
-  sm: "px-2 py-1",
-  md: "px-3 py-2",
-  full: "w-full px-3 py-2 sm:w-auto",
+const standardSizeClassMap: Record<ButtonSize, string> = {
+  sm: "h-8 px-2.5 text-xs",
+  md: "h-9 px-3.5 text-sm",
+  full: "h-9 w-full px-3.5 text-sm sm:w-auto",
 };
 
-const activeClassMap: Partial<Record<ButtonVariant, string>> = {
-  toggleRow:
-    "bg-slate-100 text-slate-500 hover:bg-slate-100 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
-  toggleGroupRow:
-    "bg-slate-100 text-slate-500 hover:bg-slate-100 dark:bg-white/[0.03] dark:text-slate-500 dark:opacity-75 dark:hover:bg-white/[0.03]",
+const compactSizeClassMap: Record<ButtonSize, string> = {
+  sm: "p-1",
+  md: "p-1.5",
+  full: "p-1.5",
 };
 
-// 设置页按钮的唯一样式入口：业务组件只传 variant/size/active，避免到处散落不可读 className。
+// 设置页按钮的唯一样式入口：业务组件只传 variant/size，避免到处散落重复 className。
 export function Button({
-  active = false,
   children,
   className = "",
   icon,
+  ref,
   size = "md",
   type = "button",
   variant = "secondary",
   ...buttonProps
 }: ButtonProps) {
+  const sizeClass =
+    variant === "icon" || variant === "numberStep"
+      ? compactSizeClassMap[size]
+      : standardSizeClassMap[size];
+
   return (
     <button
-      className={[
-        baseButtonClass,
-        variantClassMap[variant],
-        sizeClassMap[size],
-        active ? (activeClassMap[variant] ?? "") : "",
-        className,
-      ]
+      ref={ref}
+      className={[baseButtonClass, variantClassMap[variant], sizeClass, className]
         .filter(Boolean)
         .join(" ")}
       type={type}

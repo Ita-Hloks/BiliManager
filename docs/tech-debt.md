@@ -22,10 +22,9 @@
 - **现状问题**：`src/options/dataTransfer.ts` 仅导入/导出 `settings` 与 `watchHistory`，遗漏了 `biliFilter.uploaderBlocklist`。
 - **目标修复**：`all` 与 `settings` 两种导出类型均纳入 `uploaderBlocklist`，并在导入时合并或替换屏蔽列表。
 
-### 3. 搜索过滤面板 UI 互斥提示与文案修正
+### 3. 搜索过滤面板 UI 互斥提示与文案修正（已解决）
 
-- **现状问题**：`src/options/panels/searchFilterPanel.tsx` 开启“严格拦截”时与“收藏夹推荐”互斥（不展示替换视频），但 UI 无提示；第 183 行文案 `"黑白处理低互动率低的视频"` 存在错别字（多了一个“低”）。
-- **目标修复**：补充互斥提示（或禁用/折叠收藏夹推荐子区域提示），并修正文案。
+- 已在 `src/options/panels/searchFilterPanel.tsx` 修正错别字（`"黑白处理互动率过低的视频"`），并在开启“严格拦截”时禁用收藏夹推荐编辑区且展示互斥说明（保留已配置收藏夹）。
 
 ---
 
@@ -33,7 +32,7 @@
 
 ### 1. 删除废弃死代码与冗余封装
 
-- 删除未被任何模块引用的 `src/options/settingsImport.ts`，并同步更新 `src/options/main.tsx#L318` 的过时注释（实际已切换为 `dataTransfer.ts`）。
+- ~~删除未被任何模块引用的 `src/options/settingsImport.ts`，并同步更新 `src/options/main.tsx` 的过时注释~~（已清理）。
 - 移除从未被 UI 或业务逻辑消费的 `FeatureKey` 值 `"dailyStats"`（`src/shared/types.ts`、`src/shared/settingsSchema.ts`）。
 - 移除无人发送的扩展消息 `BILI_FILTER_GET_STATUS`（`src/shared/messaging.ts`、`src/background/index.ts`）。
 - 评估内联或简化仅 6 行的透传模块 `src/content/uploaderBlock/index.ts`。
@@ -66,24 +65,21 @@
 
 ## P2：运行期性能、配额与安全加固
 
-### 1. 降低观看计时器存储写入频率与消除自我回环
+### 1. 观看计时器存储写入频率与自我回环（已优化）
 
-- **现状问题**：`src/content/playerWatchTimer/index.ts` 中 `ACTIVE_SESSION_SAVE_INTERVAL_MS = 1000`、`SESSION_SAVE_INTERVAL_MS = 1000`，视频播放期间每秒向 `chrome.storage.local` 与 Background 写队列发请求，且写入会触发当前页的 `chrome.storage.onChanged` 并在 300ms 后重读 storage。
-- **优化方向**：将常规节流写入间隔放宽至 `5_000ms ~ 10_000ms`（配合 `pagehide` / `visibilitychange` / `pause` 事件立即强刷），并优化同页 `storage.onChanged` 避免无意义的自我回读。
+- 已将 `src/content/playerWatchTimer/index.ts` 常规节流写入间隔放宽至 `5_000ms`（保留生命周期强刷），合并 `writeWatchTimerSession` 为单次 `storage.local.set`，并过滤同页自写回环触发的冗余重读。
 
-### 2. 解除自定义背景图的 10MB 存储配额风险
+### 2. 自定义背景图独立存储与配额防护（已优化）
 
-- **现状问题**：`manifest.json` 未申请 `unlimitedStorage`（默认 `chrome.storage.local` 仅 10MB），而上传背景图直接以 JPEG data URL（最高 4.5MB）写入 `biliFilter.settings`，叠加观看历史与多个收藏夹缓存后存在触顶报错风险。
-- **优化方向**：将大体积图片二进制/Blob 迁移至 IndexedDB 存储（或在前端更严格压缩并捕获 `QUOTA_BYTES` 写入异常给用户清晰提示）。
+- 已将背景图从 `biliFilter.settings` 剥离至独立键 `biliManager.customBackgroundImage`，前端优先压缩为 WebP（0.84 / 上限 ~2MB），并在 `src/shared/customBackgroundStorage.ts` 捕获 `QUOTA_BYTES` 异常给出中文提示。
 
-### 3. 收敛页面观察与重复读设置开销
+### 3. 页面观察收敛与设置缓存（已优化）
 
-- **现状问题**：`src/content/index.ts` 在搜索页对整个 `document.body` 挂子树 `MutationObserver` + `500ms` URL 轮询，每次重扫均并发读取 `getSettings()` 与 `getUploaderBlocklist()`。
-- **优化方向**：缓存当前设置并在 `chrome.storage.onChanged` 增量失效；优先使用 `navigation` API（存在时）或拦截 `history.pushState`/`replaceState` 辅以低频兜底，缩小搜索页监听容器范围。
+- `src/content/index.ts` 已对设置与 UP 黑名单做内存缓存与 `storage.onChanged` 失效刷新，URL 变化结合 `navigation` / `popstate` / `hashchange` + `1500ms` 兜底，播放页监听忽略弹幕层变动，`pageThemeEvents.ts` 收敛为按需挂载的根元素非子树属性监听。
 
 ### 4. 安全与异常边界加固
 
-- **自定义背景 URL 校验**：`src/content/customBackground.ts` 直接拼接 `url("${settings.imageDataUrl}")`，应在渲染前校验 `^data:image\/(png|jpeg|webp|gif);base64,` 白名单。
+- ~~**自定义背景 URL 校验**~~（已通过 `isValidBackgroundImageDataUrl` 完成白名单校验）。
 - **减少 `innerHTML` 依赖**：`src/content/searchFilter/cardPresenter.ts` 保存/还原卡片时使用 `innerHTML`，可逐步替换为结构化 DOM 节点恢复或保留原节点隐显切换。
 - **正则复杂度提示**：`ruleEngine.ts` 支持用户自由输入正则，可增加长度/嵌套量词校验或执行保护，避免极端输入造成页面卡顿（ReDoS）。
 

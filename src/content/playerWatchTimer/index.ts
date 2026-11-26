@@ -22,8 +22,8 @@ import { WatchTimerState } from "./state";
 import type { WatchTimerCountingMode } from "./state";
 import { WatchTimerView } from "./view";
 
-const ACTIVE_SESSION_SAVE_INTERVAL_MS = 1000;
-const SESSION_SAVE_INTERVAL_MS = 1000;
+const ACTIVE_SESSION_SAVE_INTERVAL_MS = 5000;
+const SESSION_SAVE_INTERVAL_MS = 5000;
 const STORED_TOTALS_SYNC_DELAY_MS = 300;
 const SESSION_PRUNE_INTERVAL_MS = 60_000;
 
@@ -41,6 +41,7 @@ let storedTotalsLoadId = 0;
 let lastDailySaveAt = 0;
 let lastActiveSessionSaveAt = 0;
 let lastSessionPruneAt = 0;
+let selfSavedSession: { key: string; updatedAt: number } | null = null;
 
 async function disableWatchTimer(): Promise<void> {
   const settings = await getSettings();
@@ -105,6 +106,7 @@ async function loadPersistentState(): Promise<void> {
 
     view.applyPosition(position);
     state.hydrate(pageKey, daily.dateKey, videoBreakdown, daily, activeSession);
+    selfSavedSession = null;
     persistentReady = true;
     lastDailySaveAt = 0;
     lastActiveSessionSaveAt = 0;
@@ -239,6 +241,9 @@ async function saveDailyTimer(throttle: boolean): Promise<void> {
   if (state.sessionElapsedMs <= WATCH_TIMER_SESSION_MIN_MS) return;
 
   const savedSessionBreakdown = state.getSessionBreakdown();
+  const sessionKey = `${WATCH_TIMER_SESSION_KEY_PREFIX}${state.dateKey}:${encodeURIComponent(state.sessionId)}`;
+  const saveAttempt = { key: sessionKey, updatedAt: Math.max(0, Math.floor(now)) };
+  selfSavedSession = saveAttempt;
   try {
     await saveWatchTimerSession({
       id: state.sessionId,
@@ -250,6 +255,7 @@ async function saveDailyTimer(throttle: boolean): Promise<void> {
       updatedAt: now,
     });
   } catch (error) {
+    if (selfSavedSession === saveAttempt) selfSavedSession = null;
     if (isExtensionContextInvalidated(error)) throw error;
     console.error("[BiliManager] 观看历史写入失败，将在下一次计时周期重试", error);
     return;
@@ -306,13 +312,27 @@ function syncTimerStorageChange(
 ): void {
   if (areaName !== "local" || !persistentReady) return;
 
-  const hasWatchTimerChange = Object.keys(changes).some(
-    key =>
-      key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX) ||
-      key.startsWith(WATCH_TIMER_DAILY_TOTAL_KEY_PREFIX) ||
-      key === WATCH_TIMER_DATE_INDEX_KEY,
-  );
-  if (hasWatchTimerChange) scheduleStoredTimerSync();
+  const changedKeys = Object.keys(changes);
+  const sessionKeys = changedKeys.filter(key => key.startsWith(WATCH_TIMER_SESSION_KEY_PREFIX));
+  const hasWatchTimerChange =
+    sessionKeys.length > 0 ||
+    changedKeys.some(
+      key =>
+        key.startsWith(WATCH_TIMER_DAILY_TOTAL_KEY_PREFIX) || key === WATCH_TIMER_DATE_INDEX_KEY,
+    );
+  if (!hasWatchTimerChange) return;
+
+  if (selfSavedSession && sessionKeys.length === 1 && sessionKeys[0] === selfSavedSession.key) {
+    const newUpdatedAt = (
+      changes[selfSavedSession.key]?.newValue as { updatedAt?: unknown } | undefined
+    )?.updatedAt;
+    if (newUpdatedAt === selfSavedSession.updatedAt) {
+      selfSavedSession = null;
+      return;
+    }
+  }
+
+  scheduleStoredTimerSync();
 }
 
 function getCurrentPageKey(): string {

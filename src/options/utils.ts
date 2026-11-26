@@ -30,8 +30,10 @@ export function getRangeProgressStyle(progressPercent: number) {
   } as CSSProperties;
 }
 
-// 将用户上传图片压缩为 storage 友好的 JPEG data URL，并在过大时提前失败给 UI 提示。
-export async function createBackgroundDataUrl(file: File) {
+// 将用户上传图片压缩为 storage 友好的 WebP/JPEG data URL，并在过大时提前失败给 UI 提示。
+export async function createBackgroundImageAsset(
+  file: File,
+): Promise<{ dataUrl: string; width: number; height: number }> {
   if (!file.type.startsWith("image/")) throw new Error("请选择图片文件");
 
   const bitmap = await createImageBitmap(file);
@@ -49,10 +51,20 @@ export async function createBackgroundDataUrl(file: File) {
     throw new Error("无法处理图片");
   }
 
-  context.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
+  try {
+    context.drawImage(bitmap, 0, 0, width, height);
+  } finally {
+    bitmap.close();
+  }
 
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-  if (dataUrl.length > 4_500_000) throw new Error("图片过大，请换一张更小的图");
-  return dataUrl;
+  const webpDataUrl = canvas.toDataURL("image/webp", 0.84);
+  const dataUrl = webpDataUrl.startsWith("data:image/webp")
+    ? webpDataUrl
+    : canvas.toDataURL("image/jpeg", 0.82);
+
+  if (dataUrl.length > 2_000_000) {
+    throw new Error("压缩后图片仍超过 2MB 限制，请选择分辨率更低或色彩更简单的图片");
+  }
+
+  return { dataUrl, width, height };
 }

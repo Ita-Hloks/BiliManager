@@ -1,17 +1,15 @@
+import { detectBilibiliPageTheme } from "./pageTheme";
+import type { BilibiliPageThemeDetection } from "./pageTheme";
+
 type ThemeUpdateHandler = () => void;
 
 const THEME_UPDATE_DELAYS = [80, 260, 520];
 const THEME_ATTRIBUTE_FILTER = [
   "class",
-  "style",
   "data-theme",
   "data-color-mode",
   "data-mode",
   "color-scheme",
-  "aria-checked",
-  "aria-selected",
-  "checked",
-  "value",
 ];
 const THEME_CONTROL_SELECTOR =
   ".single-link-item, .links-item, [data-theme], [data-color-mode], [data-mode], [role='menuitem'], [role='option'], button, a, label, li, input[type='radio']";
@@ -22,12 +20,35 @@ const THEME_TEXT_PATTERN = /主题|暗色|深色|亮色|浅色|theme|dark|light/
 
 export function bindBilibiliPageThemeUpdates(handler: ThemeUpdateHandler): () => void {
   let disposed = false;
+  let lastTheme: BilibiliPageThemeDetection = detectBilibiliPageTheme();
+  const pendingTimers = new Set<number>();
+
+  const clearPendingTimers = () => {
+    for (const timerId of pendingTimers) {
+      window.clearTimeout(timerId);
+    }
+    pendingTimers.clear();
+  };
+
+  const checkThemeChange = () => {
+    if (disposed) return;
+    const nextTheme = detectBilibiliPageTheme();
+    if (nextTheme === lastTheme) return;
+
+    lastTheme = nextTheme;
+    handler();
+  };
 
   const schedule = () => {
     if (disposed) return;
-    scheduleThemeUpdate(() => {
-      if (!disposed) handler();
-    });
+    clearPendingTimers();
+    for (const delay of THEME_UPDATE_DELAYS) {
+      const timerId = window.setTimeout(() => {
+        pendingTimers.delete(timerId);
+        checkThemeChange();
+      }, delay);
+      pendingTimers.add(timerId);
+    }
   };
 
   const handleClick = (event: MouseEvent) => {
@@ -42,21 +63,24 @@ export function bindBilibiliPageThemeUpdates(handler: ThemeUpdateHandler): () =>
   document.addEventListener("click", handleClick, true);
   document.addEventListener("keydown", handleKeydown, true);
 
-  const observer = new MutationObserver(records => {
-    if (!records.some(isThemeMutation)) return;
+  const observer = new MutationObserver(() => {
+    checkThemeChange();
     schedule();
   });
 
-  observer.observe(document.documentElement, {
-    subtree: true,
-    childList: true,
-    characterData: true,
+  const observerOptions: MutationObserverInit = {
+    subtree: false,
     attributes: true,
     attributeFilter: THEME_ATTRIBUTE_FILTER,
-  });
+  };
+  observer.observe(document.documentElement, observerOptions);
+  if (document.body) {
+    observer.observe(document.body, observerOptions);
+  }
 
   return () => {
     disposed = true;
+    clearPendingTimers();
     document.removeEventListener("click", handleClick, true);
     document.removeEventListener("keydown", handleKeydown, true);
     observer.disconnect();
@@ -73,36 +97,6 @@ function isThemeUpdateTrigger(target: EventTarget | null): boolean {
   const container = candidate.closest<HTMLElement>(THEME_CONTAINER_SELECTOR);
   const text = normalizeText(`${candidate.textContent ?? ""} ${container?.textContent ?? ""}`);
   return THEME_TEXT_PATTERN.test(text);
-}
-
-function scheduleThemeUpdate(handler: ThemeUpdateHandler) {
-  for (const delay of THEME_UPDATE_DELAYS) {
-    window.setTimeout(handler, delay);
-  }
-}
-
-function isThemeMutation(record: MutationRecord): boolean {
-  if (record.type === "attributes") return isThemeMutationTarget(record.target);
-  if (record.type === "characterData") return isThemeMutationTarget(record.target.parentElement);
-
-  return [...record.addedNodes, ...record.removedNodes].some(node => isThemeMutationTarget(node));
-}
-
-function isThemeMutationTarget(target: EventTarget | Node | null): boolean {
-  if (!(target instanceof Element)) return false;
-
-  if (
-    target === document.documentElement ||
-    target === document.body ||
-    target.matches(`${THEME_STATE_SELECTOR}, [aria-checked], [aria-selected]`)
-  ) {
-    return true;
-  }
-
-  const themedAncestor = target.closest(`${THEME_CONTAINER_SELECTOR}, ${THEME_STATE_SELECTOR}`);
-  if (!themedAncestor) return false;
-
-  return THEME_TEXT_PATTERN.test(normalizeText(themedAncestor.textContent ?? ""));
 }
 
 function normalizeText(text: string): string {

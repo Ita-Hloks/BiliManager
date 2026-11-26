@@ -1,4 +1,4 @@
-import { Folder, Link2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Folder, Link2, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./button";
 
@@ -44,11 +44,11 @@ export function FavoriteFolderManager(props: {
   function addFolder() {
     const folderId = parseFavoriteFolderId(draft);
     if (!folderId) {
-      setInputError("请输入数字 ID，或粘贴包含 fid 参数的收藏夹链接");
+      setInputError("没识别到收藏夹，请粘贴完整的 B 站收藏夹链接，或直接输入纯数字 ID");
       return;
     }
     if (props.folderIds.includes(folderId)) {
-      setInputError(`收藏夹 ID ${folderId} 已添加`);
+      setInputError(`这个收藏夹（ID ${folderId}）已经添加过了`);
       return;
     }
 
@@ -71,7 +71,7 @@ export function FavoriteFolderManager(props: {
   async function refreshFolders() {
     if (isRefreshing) return;
     if (props.folderIds.length === 0) {
-      setRefreshMessage("请先添加至少一个收藏夹 ID");
+      setRefreshMessage("请先添加至少一个收藏夹");
       return;
     }
 
@@ -86,9 +86,9 @@ export function FavoriteFolderManager(props: {
         }, {}),
       );
       const successCount = results.filter(result => result.ok).length;
-      setRefreshMessage(`已获取 ${successCount}/${results.length} 个收藏夹的视频`);
+      setRefreshMessage(`已同步 ${successCount}/${results.length} 个收藏夹`);
     } catch (error) {
-      setRefreshMessage(error instanceof Error ? error.message : "收藏夹获取失败");
+      setRefreshMessage(error instanceof Error ? error.message : "收藏夹同步失败");
     } finally {
       setIsRefreshing(false);
     }
@@ -100,14 +100,13 @@ export function FavoriteFolderManager(props: {
         <label className="sr-only" htmlFor="favorite-folder-input">
           收藏夹 ID 或链接
         </label>
-        <div className="relative min-w-0 flex-1">
-          <Link2 className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        <div className="relative flex min-w-0 flex-1 items-center">
+          <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--bm-text-tertiary)]" />
           <input
             id="favorite-folder-input"
             aria-describedby={inputError ? "favorite-folder-input-error" : undefined}
-            className="bm-text-input w-full pl-9"
-            inputMode="numeric"
-            placeholder="输入收藏夹 ID 或粘贴链接"
+            className="bm-text-input w-full pl-9 pr-8"
+            placeholder="粘贴 B 站收藏夹链接，或直接输入数字 ID"
             type="text"
             value={draft}
             onChange={event => {
@@ -120,6 +119,19 @@ export function FavoriteFolderManager(props: {
               addFolder();
             }}
           />
+          {draft.length > 0 && (
+            <button
+              aria-label="清空输入"
+              className="absolute right-2 inline-flex h-5 w-5 items-center justify-center rounded text-[var(--bm-text-tertiary)] transition-colors hover:bg-[var(--bm-surface-hover)] hover:text-[var(--bm-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
+              type="button"
+              onClick={() => {
+                setDraft("");
+                if (inputError) setInputError("");
+              }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         <Button
           aria-label="添加收藏夹"
@@ -130,7 +142,7 @@ export function FavoriteFolderManager(props: {
           variant="primary"
           onClick={addFolder}
         >
-          添加收藏夹
+          添加
         </Button>
       </div>
 
@@ -145,17 +157,17 @@ export function FavoriteFolderManager(props: {
       )}
 
       {props.folderIds.length > 0 ? (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 dark:divide-[#30343c] dark:border-[#30343c]">
+        <ul className="divide-y divide-[var(--bm-divider)] overflow-hidden rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface-subtle)]">
           {props.folderIds.map((folderId, index) => {
             const result = refreshResults[folderId];
             return (
               <li
                 key={folderId}
-                className="flex min-w-0 items-start justify-between gap-3 px-3 py-3"
+                className="flex min-w-0 items-start justify-between gap-3 px-3.5 py-3"
               >
                 <div className="min-w-0">
                   <p className="bm-text-label flex items-center gap-2 text-sm font-medium">
-                    <Folder className="h-4 w-4 shrink-0 text-bili-blue" />
+                    <Folder className="h-4 w-4 shrink-0 text-[var(--bm-accent)]" />
                     收藏夹 {index + 1}
                   </p>
                   <p className="bm-text-muted mt-1 truncate pl-6 text-xs">ID {folderId}</p>
@@ -168,7 +180,7 @@ export function FavoriteFolderManager(props: {
                       }
                       role={result.ok ? undefined : "alert"}
                     >
-                      {result.ok ? `已获取 ${result.videoCount} 个视频` : result.error}
+                      {result.ok ? `已同步 ${result.videoCount} 个视频` : result.error}
                     </p>
                   )}
                 </div>
@@ -186,8 +198,8 @@ export function FavoriteFolderManager(props: {
           })}
         </ul>
       ) : (
-        <p className="bm-text-muted rounded-lg border border-dashed border-slate-200 px-3 py-3 text-sm dark:border-[#30343c]">
-          尚未添加收藏夹
+        <p className="rounded-lg border border-dashed border-[var(--bm-border)] bg-[var(--bm-surface-subtle)] px-3.5 py-3 text-xs text-[var(--bm-text-secondary)]">
+          还没添加收藏夹，复制 B 站收藏夹页面的网址粘贴到上方即可
         </p>
       )}
 
@@ -199,7 +211,7 @@ export function FavoriteFolderManager(props: {
           variant="secondary"
           onClick={() => void refreshFolders()}
         >
-          {isRefreshing ? "获取中" : "获取收藏夹视频"}
+          {isRefreshing ? "同步中..." : "同步视频列表"}
         </Button>
         {refreshMessage && (
           <span className="bm-text-muted text-xs" role="status">

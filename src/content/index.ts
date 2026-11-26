@@ -1,10 +1,12 @@
 import type { ExtensionMessage } from "../shared/messaging";
 import { sendMessage } from "../shared/messaging";
+import { CUSTOM_BACKGROUND_IMAGE_KEY } from "../shared/customBackgroundStorage";
 import { hasExtensionContext, isExtensionContextInvalidated } from "../shared/extensionContext";
 import { getSettings, SETTINGS_KEY } from "../shared/storage";
 import { getUploaderBlocklist, UPLOADER_BLOCKLIST_KEY } from "../shared/uploaderBlocklist";
 import type { BlockedUploader } from "../shared/uploaderBlocklist";
 import type {
+  ExtensionSettings,
   FavoriteRecommendationSettings,
   PlayerPersonalizationSettings,
   RuntimeSnapshot,
@@ -16,9 +18,10 @@ import type {
 import {
   applyPlayerPersonalization,
   getPlayerObservationTargets,
+  isIgnoredPlayerMutation,
   isPlayerPage,
 } from "./playerPersonalization";
-import { applyCustomBackground } from "./customBackground";
+import { applyCustomBackground, isCustomBackgroundSupportedPage } from "./customBackground";
 import { bindBilibiliPageThemeUpdates } from "./pageThemeEvents";
 import { applyPlayerWatchTimer } from "./playerWatchTimer";
 import { applyPlayerWatchReminder } from "./playerWatchReminder";
@@ -43,7 +46,8 @@ const disabledPersonalization: PlayerPersonalizationSettings = {
   disableDanmakuOnVideoEnter: false,
   customBackground: {
     enabled: false,
-    imageDataUrl: "",
+    hasImage: false,
+    imageRevision: 0,
     maskOpacity: 0.18,
     positionX: 50,
     positionY: 50,
@@ -58,9 +62,11 @@ const unavailableSearchStats: SearchFilterStats = {
   updatedAt: new Date(0).toISOString(),
 };
 
+const URL_POLL_INTERVAL_MS = 1500;
+
 let rescanTimer: number | undefined;
 let observer: MutationObserver | undefined;
-let urlPollTimer: number | undefined;
+let unbindUrlChanges: (() => void) | undefined;
 let currentUrl = location.href;
 let scanQueued = false;
 let unbindPageThemeUpdates: (() => void) | undefined;
@@ -68,6 +74,15 @@ let scanGeneration = 0;
 let scanRequest = 0;
 let managedPageActive = false;
 let extensionContextInvalidated = false;
+let cachedSettings: ExtensionSettings | undefined;
+let cachedUploaderBlocklist: BlockedUploader[] | undefined;
+let pendingSettingsPromise: Promise<ExtensionSettings> | undefined;
+let pendingBlocklistPromise: Promise<BlockedUploader[]> | undefined;
+
+type NavigationEventTarget = {
+  addEventListener: (type: "navigatesuccess", listener: () => void) => void;
+  removeEventListener: (type: "navigatesuccess", listener: () => void) => void;
+};
 
 function getSnapshot(): RuntimeSnapshot {
   return {
@@ -106,6 +121,12 @@ async function scanCurrentPage() {
 
   startManagedPage();
   const searchPage = isSearchPage();
+  const shouldWatchTheme =
+    searchPage ||
+    (settings.personalization.customBackground.enabled &&
+      settings.personalization.customBackground.hasImage &&
+      isCustomBackgroundSupportedPage());
+  syncPageThemeUpdates(shouldWatchTheme);
   applySearchCleanup(settings.personalization.filterTrending);
   applyPlayerPersonalization(settings.personalization);
   applyCustomBackground(settings.personalization.customBackground);
@@ -155,6 +176,50 @@ async function scanCurrentPage() {
   };
 }
 
+async function loadCachedSettings(): Promise<ExtensionSettings> {
+  if (cachedSettings) return cachedSettings;
+  if (!pendingSettingsPromise) {
+    const request = getSettings()
+      .then(settings => {
+        if (pendingSettingsPromise === request) {
+          cachedSettings = settings;
+          pendingSettingsPromise = undefined;
+        }
+        return settings;
+      })
+      .catch(error => {
+        if (pendingSettingsPromise === request) {
+          pendingSettingsPromise = undefined;
+        }
+        throw error;
+      });
+    pendingSettingsPromise = request;
+  }
+  return pendingSettingsPromise;
+}
+
+async function loadCachedUploaderBlocklist(): Promise<BlockedUploader[]> {
+  if (cachedUploaderBlocklist) return cachedUploaderBlocklist;
+  if (!pendingBlocklistPromise) {
+    const request = getUploaderBlocklist()
+      .then(blocklist => {
+        if (pendingBlocklistPromise === request) {
+          cachedUploaderBlocklist = blocklist;
+          pendingBlocklistPromise = undefined;
+        }
+        return blocklist;
+      })
+      .catch(error => {
+        if (pendingBlocklistPromise === request) {
+          pendingBlocklistPromise = undefined;
+        }
+        throw error;
+      });
+    pendingBlocklistPromise = request;
+  }
+  return pendingBlocklistPromise;
+}
+
 async function getContentSettings(): Promise<{
   searchFilter: SearchFilterSettings;
   favoriteRecommendation: FavoriteRecommendationSettings;
@@ -167,7 +232,10 @@ async function getContentSettings(): Promise<{
   uploaderBlockingEnabled: boolean;
   pluginEnabled: boolean;
 }> {
-  const [settings, uploaderBlocklist] = await Promise.all([getSettings(), getUploaderBlocklist()]);
+  const [settings, uploaderBlocklist] = await Promise.all([
+    loadCachedSettings(),
+    loadCachedUploaderBlocklist(),
+  ]);
   const pluginEnabled = settings.features.enabled;
 
   return {
@@ -205,8 +273,7 @@ function startManagedPage(): void {
   if (managedPageActive) return;
 
   managedPageActive = true;
-  if (!urlPollTimer) watchUrlChanges();
-  bindPageThemeUpdates();
+  watchUrlChanges();
   watchManagedPage();
 }
 
@@ -217,11 +284,10 @@ function stopManagedPage(): void {
   observer = undefined;
   window.clearTimeout(rescanTimer);
   rescanTimer = undefined;
-  window.clearInterval(urlPollTimer);
-  urlPollTimer = undefined;
+  unbindUrlChanges?.();
+  unbindUrlChanges = undefined;
   scanQueued = false;
-  unbindPageThemeUpdates?.();
-  unbindPageThemeUpdates = undefined;
+  syncPageThemeUpdates(false);
 }
 
 function watchManagedPage() {
@@ -240,30 +306,87 @@ function watchManagedPage() {
   if (!isPlayerPage()) return;
 
   const targets = getPlayerObservationTargets();
-  observer = new MutationObserver(() => scheduleScan(80));
+  observer = new MutationObserver(records => {
+    if (records.every(isIgnoredPlayerMutation)) return;
+    scheduleScan(80);
+  });
   targets.forEach(target => {
     observer?.observe(target, { childList: true, subtree: true });
   });
 }
 
+function handleUrlCheck(): void {
+  if (location.href === currentUrl) return;
+
+  currentUrl = location.href;
+  watchManagedPage();
+  scheduleScan(0);
+}
+
+function getWindowNavigation(): NavigationEventTarget | undefined {
+  if (!("navigation" in window)) return undefined;
+  const candidate = (window as Window & { navigation?: unknown }).navigation;
+  if (
+    candidate &&
+    typeof candidate === "object" &&
+    "addEventListener" in candidate &&
+    "removeEventListener" in candidate &&
+    typeof candidate.addEventListener === "function" &&
+    typeof candidate.removeEventListener === "function"
+  ) {
+    return candidate as NavigationEventTarget;
+  }
+  return undefined;
+}
+
 function watchUrlChanges() {
-  if (urlPollTimer) return;
+  if (unbindUrlChanges) return;
 
-  urlPollTimer = window.setInterval(() => {
-    if (location.href === currentUrl) return;
+  window.addEventListener("popstate", handleUrlCheck);
+  window.addEventListener("hashchange", handleUrlCheck);
+  const navigation = getWindowNavigation();
+  navigation?.addEventListener("navigatesuccess", handleUrlCheck);
+  const timerId = window.setInterval(handleUrlCheck, URL_POLL_INTERVAL_MS);
 
-    currentUrl = location.href;
-    watchManagedPage();
-    scheduleScan(0);
-  }, 500);
+  unbindUrlChanges = () => {
+    window.removeEventListener("popstate", handleUrlCheck);
+    window.removeEventListener("hashchange", handleUrlCheck);
+    navigation?.removeEventListener("navigatesuccess", handleUrlCheck);
+    window.clearInterval(timerId);
+  };
 }
 
 function bindStorageChanges() {
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && (changes[SETTINGS_KEY] || changes[UPLOADER_BLOCKLIST_KEY])) {
-      scheduleScan(0);
+    if (areaName !== "local") return;
+
+    let shouldScan = false;
+    if (changes[SETTINGS_KEY]) {
+      cachedSettings = undefined;
+      pendingSettingsPromise = undefined;
+      shouldScan = true;
     }
+    if (changes[UPLOADER_BLOCKLIST_KEY]) {
+      cachedUploaderBlocklist = undefined;
+      pendingBlocklistPromise = undefined;
+      shouldScan = true;
+    }
+    if (changes[CUSTOM_BACKGROUND_IMAGE_KEY]) {
+      shouldScan = true;
+    }
+
+    if (shouldScan) scheduleScan(0);
   });
+}
+
+function syncPageThemeUpdates(shouldWatch: boolean): void {
+  if (shouldWatch && managedPageActive) {
+    bindPageThemeUpdates();
+    return;
+  }
+
+  unbindPageThemeUpdates?.();
+  unbindPageThemeUpdates = undefined;
 }
 
 function bindPageThemeUpdates() {
@@ -291,6 +414,10 @@ function bindRuntimeMessages() {
       }
 
       if (message.type === "BILI_FILTER_SETTINGS_UPDATED") {
+        cachedSettings = undefined;
+        pendingSettingsPromise = undefined;
+        cachedUploaderBlocklist = undefined;
+        pendingBlocklistPromise = undefined;
         runContentTask(
           scanCurrentPage().then(stats => {
             sendResponse({

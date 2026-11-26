@@ -1,41 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BellRing, Clock, Download, Filter, Settings2, Sparkles, UserX } from "lucide-react";
 import "../styles/globals.css";
 import "../styles/options-controls.css";
-import { defaultSettings, getSettings, saveSettings, SETTINGS_KEY } from "../shared/storage";
-import type {
-  CustomBackgroundSettings,
-  ExtensionSettings,
-  FavoriteRecommendationSettings,
-  PlayerPersonalizationSettings,
-  SearchFilterSettings,
-  WatchReminderSettings,
-  WatchTimerSettings,
-} from "../shared/types";
+import { getCustomBackgroundImage } from "../shared/customBackgroundStorage";
+import type { StoredCustomBackgroundImage } from "../shared/customBackgroundStorage";
+import { defaultSettings, getSettings } from "../shared/storage";
+import type { ExtensionSettings } from "../shared/types";
+import { getUploaderBlocklist } from "../shared/uploaderBlocklist";
+import type { BlockedUploader } from "../shared/uploaderBlocklist";
+import { isEffectiveDarkTheme, useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
+import { Button } from "./components/button";
+import { SettingNotice, SwitchButton } from "./components/settingPrimitives";
+import { BlocklistSettingsPanel } from "./panels/blocklistSettingsPanel";
+import { DataPanel } from "./panels/dataPanel";
 import { GeneralSettingsPanel } from "./panels/generalSettingsPanel";
 import { PersonalizationPanel } from "./panels/personalizationPanel";
 import { SearchFilterPanel } from "./panels/searchFilterPanel";
-import { WatchTimerPanel } from "./panels/watchTimerPanel";
 import { WatchReminderPanel } from "./panels/watchReminderPanel";
-import type { FavoriteFolderRefreshResult } from "./components/favoriteFolderManager";
-import type { DataExportKind } from "./dataTransfer";
-import {
-  createDataExportPayload,
-  getExportFileName,
-  getExportMessage,
-  importDataBackup,
-} from "./dataTransfer";
-import { useEffectiveDarkTheme } from "../shared/useEffectiveDarkTheme";
-import { createBackgroundDataUrl, formatDateForFile } from "./utils";
-import { sendMessage } from "../shared/messaging";
-import {
-  getUploaderBlocklist,
-  removeBlockedUploader,
-  UPLOADER_BLOCKLIST_KEY,
-} from "../shared/uploaderBlocklist";
-import type { BlockedUploader } from "../shared/uploaderBlocklist";
-import { BlocklistSettingsPanel } from "./panels/blocklistSettingsPanel";
+import { WatchTimerPanel } from "./panels/watchTimerPanel";
+import { useOptionsSettings } from "./useOptionsSettings";
 
 type SectionId =
   | "search-filter"
@@ -47,12 +31,12 @@ type SectionId =
   | "data";
 
 const sectionNavItems = [
-  { id: "search-filter", label: "过滤搜索", icon: Filter },
-  { id: "blocklist", label: "屏蔽列表", icon: UserX },
+  { id: "search-filter", label: "搜索过滤", icon: Filter },
+  { id: "blocklist", label: "屏蔽规则", icon: UserX },
   { id: "playback", label: "播放器", icon: Sparkles },
-  { id: "watch-timer", label: "计时器", icon: Clock },
-  { id: "watch-reminder", label: "定时器", icon: BellRing },
-  { id: "general-appearance", label: "界面", icon: Settings2 },
+  { id: "watch-timer", label: "观看计时器", icon: Clock },
+  { id: "watch-reminder", label: "休息提醒", icon: BellRing },
+  { id: "general-appearance", label: "界面与外观", icon: Settings2 },
   { id: "data", label: "数据管理", icon: Download },
 ] as const satisfies ReadonlyArray<{
   id: SectionId;
@@ -60,399 +44,346 @@ const sectionNavItems = [
   icon: typeof Filter;
 }>;
 
-function OptionsApp() {
-  const [settings, setSettings] = useState<ExtensionSettings>(defaultSettings);
-  const [importMessage, setImportMessage] = useState("");
-  const [backgroundMessage, setBackgroundMessage] = useState("");
-  const [uploaderBlocklist, setUploaderBlocklist] = useState<BlockedUploader[]>([]);
-  const [activeSection, setActiveSection] = useState<SectionId>("search-filter");
-  const importInputRef = useRef<HTMLInputElement>(null);
-  const isDark = useEffectiveDarkTheme(settings.theme);
+applyOptionsTheme(isEffectiveDarkTheme("system"));
+void bootOptions();
 
-  useEffect(() => {
-    void Promise.all([getSettings(), getUploaderBlocklist()]).then(
-      ([nextSettings, nextUploaderBlocklist]) => {
-        setSettings(nextSettings);
-        setUploaderBlocklist(nextUploaderBlocklist);
-      },
-    );
-  }, []);
-
-  useEffect(() => {
-    if (typeof chrome === "undefined" || !chrome.storage?.onChanged) return;
-
-    const syncStoredSettings = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName !== "local") return;
-      if (changes[SETTINGS_KEY]) void getSettings().then(setSettings);
-      if (changes[UPLOADER_BLOCKLIST_KEY]) {
-        void getUploaderBlocklist().then(setUploaderBlocklist);
-      }
-    };
-
-    chrome.storage.onChanged.addListener(syncStoredSettings);
-    return () => chrome.storage.onChanged.removeListener(syncStoredSettings);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
-  }, [isDark]);
-
-  useEffect(() => {
-    let frameId: number | null = null;
-
-    const updateActiveSection = () => {
-      const scrollThreshold = window.scrollY + 96;
-      let nextSection: SectionId = sectionNavItems[0].id;
-
-      for (const item of sectionNavItems) {
-        const section = document.getElementById(item.id);
-        if (!section) continue;
-
-        const sectionTop = section.getBoundingClientRect().top + window.scrollY;
-        if (sectionTop <= scrollThreshold) nextSection = item.id;
-      }
-
-      const isAtPageBottom =
-        window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
-      const lastSectionId = sectionNavItems.at(-1)?.id;
-      if (isAtPageBottom && lastSectionId) nextSection = lastSectionId;
-
-      setActiveSection(nextSection);
-    };
-
-    const handleScroll = () => {
-      if (frameId !== null) return;
-
-      frameId = window.requestAnimationFrame(() => {
-        frameId = null;
-        updateActiveSection();
-      });
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  async function updateSettings(next: ExtensionSettings) {
-    setSettings(next);
-    await saveSettings(next);
-  }
-
-  async function unblockUploader(id: string) {
-    await removeBlockedUploader(id);
-  }
-
-  async function updateSearchFilter(patch: Partial<SearchFilterSettings>) {
-    const searchFilter = {
-      ...settings.searchFilter,
-      ...patch,
-    };
-    if (searchFilter.filterMissingTitleHighlight) {
-      searchFilter.grayscaleMissingTitleHighlight = true;
-    }
-    if (searchFilter.filterLowDanmakuViewRate) {
-      searchFilter.grayscaleLowDanmakuViewRate = true;
-    }
-    await updateSettings({
-      ...settings,
-      searchFilter,
-    });
-  }
-
-  async function updateFavoriteRecommendation(patch: Partial<FavoriteRecommendationSettings>) {
-    await updateSettings({
-      ...settings,
-      favoriteRecommendation: {
-        ...settings.favoriteRecommendation,
-        ...patch,
-      },
-    });
-  }
-
-  async function refreshFavoriteRecommendation(
-    folderIds: string[],
-  ): Promise<FavoriteFolderRefreshResult[]> {
-    const uniqueFolderIds = [...new Set(folderIds.filter(folderId => /^\d+$/.test(folderId)))];
-    return Promise.all(
-      uniqueFolderIds.map(async folderId => {
-        try {
-          const response = await sendMessage({
-            type: "BILI_FILTER_REFRESH_FAVORITE_VIDEOS",
-            payload: { folderId },
-          });
-          if (!response || !response.ok) {
-            return {
-              folderId,
-              ok: false,
-              error: response?.error ?? `收藏夹 ID ${folderId} 获取失败`,
-            } satisfies FavoriteFolderRefreshResult;
-          }
-          if (!("favoriteFolder" in response)) {
-            return {
-              folderId,
-              ok: false,
-              error: `收藏夹 ID ${folderId} 响应格式无效`,
-            } satisfies FavoriteFolderRefreshResult;
-          }
-          return {
-            folderId,
-            ok: true,
-            videoCount: response.favoriteFolder.videos.length,
-          } satisfies FavoriteFolderRefreshResult;
-        } catch (error) {
-          return {
-            folderId,
-            ok: false,
-            error: error instanceof Error ? error.message : `收藏夹 ID ${folderId} 获取失败`,
-          } satisfies FavoriteFolderRefreshResult;
-        }
-      }),
-    );
-  }
-
-  async function updatePersonalization(patch: Partial<PlayerPersonalizationSettings>) {
-    const personalization = {
-      ...settings.personalization,
-      ...patch,
-    };
-    if (personalization.blockRelatedVideos) {
-      personalization.disableRecommendationAutoplay = true;
-    }
-
-    await updateSettings({
-      ...settings,
-      personalization,
-    });
-  }
-
-  async function updateWatchTimer(patch: Partial<WatchTimerSettings>) {
-    await updateSettings({
-      ...settings,
-      watchTimer: {
-        ...settings.watchTimer,
-        ...patch,
-      },
-    });
-  }
-
-  async function updateWatchTimerEnabled(enabled: boolean) {
-    await updateSettings({
-      ...settings,
-      features: {
-        ...settings.features,
-        watchTimer: enabled,
-      },
-    });
-  }
-
-  async function updateWatchReminder(patch: Partial<WatchReminderSettings>) {
-    await updateSettings({
-      ...settings,
-      watchReminder: {
-        ...settings.watchReminder,
-        ...patch,
-      },
-    });
-  }
-
-  async function updateWatchReminderEnabled(enabled: boolean) {
-    await updateSettings({
-      ...settings,
-      features: {
-        ...settings.features,
-        watchReminder: enabled,
-      },
-    });
-  }
-
-  // 自定义背景属于 personalization 的子设置，所有背景改动都从这里进入以复用功能启用状态推导。
-  async function updateCustomBackground(patch: Partial<CustomBackgroundSettings>) {
-    const customBackground = {
-      ...settings.personalization.customBackground,
-      ...patch,
-    };
-    await updatePersonalization({ customBackground });
-  }
-
-  // 上传背景图会先压缩成可存入 chrome.storage 的 data URL，再复用背景设置更新链路。
-  async function uploadCustomBackground(file: File) {
-    try {
-      const imageDataUrl = await createBackgroundDataUrl(file);
-      await updateCustomBackground({
-        enabled: true,
-        imageDataUrl,
-        maskOpacity: settings.personalization.customBackground.maskOpacity,
-        positionX: settings.personalization.customBackground.positionX,
-        positionY: settings.personalization.customBackground.positionY,
-      });
-      setBackgroundMessage("已更新背景图");
-    } catch (error) {
-      setBackgroundMessage(error instanceof Error ? error.message : "背景图上传失败");
-    }
-  }
-
-  async function clearCustomBackground() {
-    await updateCustomBackground({
-      enabled: false,
-      imageDataUrl: "",
-      maskOpacity: defaultSettings.personalization.customBackground.maskOpacity,
-      positionX: 50,
-      positionY: 50,
-    });
-    setBackgroundMessage("已清除背景图");
-  }
-
-  async function updateTheme(theme: ExtensionSettings["theme"]) {
-    await updateSettings({ ...settings, theme });
-  }
-
-  // 导入入口只负责文件读取和提示文案；格式解析与字段归一化交给 settingsImport 统一处理。
-  async function importSettings(file: File) {
-    try {
-      const result = await importDataBackup(await file.text(), settings);
-      if (result.settings) await updateSettings(result.settings);
-      setImportMessage(result.message);
-    } catch (error) {
-      setImportMessage(error instanceof Error ? error.message : "导入失败");
-    } finally {
-      if (importInputRef.current) importInputRef.current.value = "";
-    }
-  }
-
-  async function exportSettings(kind: DataExportKind) {
-    const payload = await createDataExportPayload(kind, settings);
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = getExportFileName(kind, formatDateForFile(new Date()));
-    link.click();
-    URL.revokeObjectURL(url);
-    setImportMessage(getExportMessage(kind));
-  }
-
-  function scrollToSection(sectionId: SectionId) {
-    setActiveSection(sectionId);
-    document.getElementById(sectionId)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-
-  return (
-    <main className="min-h-screen bg-bili-canvas px-3 py-4 text-slate-900 transition-colors duration-300 ease-out sm:px-4 lg:px-6 dark:bg-[#111318] dark:text-slate-100">
-      <div className="mx-auto w-full max-w-[80rem]">
-        <header className="mb-4 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition-colors duration-300 ease-out sm:px-5 lg:mb-6 dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold tracking-normal">
-                <span className="text-bili-blue">Bili</span>{" "}
-                <span className="text-slate-950 dark:text-white">Manager</span>
-              </h1>
-            </div>
-            <p className="bm-text-muted mt-2 text-sm">
-              规则会自动保存，并同步到已经打开的 B 站页面
-            </p>
-          </div>
-        </header>
-
-        <div className="grid gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
-          <nav
-            aria-label="偏好分类"
-            className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition-colors duration-300 ease-out lg:sticky lg:top-4 lg:flex lg:h-fit lg:flex-col dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none"
-          >
-            {sectionNavItems.map(item => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  className={
-                    activeSection === item.id
-                      ? "flex min-h-10 items-center justify-center gap-2 rounded-lg bg-sky-50 px-3 py-2 text-sm font-medium text-bili-blue transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 lg:justify-start dark:bg-bili-blue/15 dark:text-sky-200"
-                      : "flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors duration-200 ease-out hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 lg:justify-start dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-100"
-                  }
-                  aria-current={activeSection === item.id ? "location" : undefined}
-                  onClick={() => scrollToSection(item.id)}
-                  type="button"
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="space-y-4">
-            <SearchFilterPanel
-              favoriteRecommendation={settings.favoriteRecommendation}
-              filterTrending={settings.personalization.filterTrending}
-              settings={settings.searchFilter}
-              onFavoriteRecommendationChange={patch => void updateFavoriteRecommendation(patch)}
-              onFilterTrendingChange={enabled =>
-                void updatePersonalization({ filterTrending: enabled })
-              }
-              onRefreshFavoriteRecommendation={refreshFavoriteRecommendation}
-              onChange={patch => void updateSearchFilter(patch)}
-            />
-
-            <BlocklistSettingsPanel
-              searchFilter={settings.searchFilter}
-              uploaderBlocklist={uploaderBlocklist}
-              onSearchFilterChange={patch => void updateSearchFilter(patch)}
-              onUploaderRemove={id => void unblockUploader(id)}
-            />
-
-            <PersonalizationPanel
-              settings={settings.personalization}
-              onChange={patch => void updatePersonalization(patch)}
-            />
-
-            <div className="space-y-4">
-              <WatchTimerPanel
-                enabled={settings.features.watchTimer}
-                settings={settings.watchTimer}
-                onChange={patch => void updateWatchTimer(patch)}
-                onEnabledChange={enabled => void updateWatchTimerEnabled(enabled)}
-              />
-              <WatchReminderPanel
-                enabled={settings.features.watchReminder}
-                settings={settings.watchReminder}
-                onChange={patch => void updateWatchReminder(patch)}
-                onEnabledChange={enabled => void updateWatchReminderEnabled(enabled)}
-              />
-            </div>
-
-            <div className="space-y-4">
-              <GeneralSettingsPanel
-                background={settings.personalization.customBackground}
-                backgroundMessage={backgroundMessage}
-                importInputRef={importInputRef}
-                importMessage={importMessage}
-                theme={settings.theme}
-                onBackgroundChange={patch => void updateCustomBackground(patch)}
-                onBackgroundClear={() => void clearCustomBackground()}
-                onBackgroundUpload={file => void uploadCustomBackground(file)}
-                onExport={kind => void exportSettings(kind)}
-                onImport={file => void importSettings(file)}
-                onThemeChange={updateTheme}
-              />
-            </div>
-            <footer className="h-28" aria-hidden="true" />
-          </div>
-        </div>
-      </div>
-    </main>
+async function bootOptions() {
+  const [initialSettings, initialUploaderBlocklist, initialBackgroundImage] = await Promise.all([
+    getSettings().catch(() => defaultSettings),
+    getUploaderBlocklist().catch(() => []),
+    getCustomBackgroundImage().catch(() => null),
+  ]);
+  applyOptionsTheme(isEffectiveDarkTheme(initialSettings.theme));
+  createRoot(document.getElementById("root")!).render(
+    <OptionsApp
+      initialBackgroundImage={initialBackgroundImage}
+      initialSettings={initialSettings}
+      initialUploaderBlocklist={initialUploaderBlocklist}
+    />,
   );
 }
 
-createRoot(document.getElementById("root")!).render(<OptionsApp />);
+function applyOptionsTheme(isDark: boolean) {
+  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+}
+
+function isValidSectionId(candidate: string): candidate is SectionId {
+  return sectionNavItems.some(item => item.id === candidate);
+}
+
+function resolveSectionFromHash(hash: string): SectionId {
+  const candidate = hash.replace(/^#/, "");
+  return isValidSectionId(candidate) ? candidate : "search-filter";
+}
+
+function OptionsApp(props: {
+  initialSettings: ExtensionSettings;
+  initialUploaderBlocklist: BlockedUploader[];
+  initialBackgroundImage: StoredCustomBackgroundImage | null;
+}) {
+  const {
+    settings,
+    uploaderBlocklist,
+    backgroundImage,
+    backgroundMessage,
+    importMessage,
+    importInputRef,
+    updatePluginEnabled,
+    updateSearchFilter,
+    updateFavoriteRecommendation,
+    refreshFavoriteRecommendation,
+    updatePersonalization,
+    updateWatchTimer,
+    updateWatchTimerEnabled,
+    updateWatchReminder,
+    updateWatchReminderEnabled,
+    updateCustomBackground,
+    uploadCustomBackground,
+    clearCustomBackground,
+    updateTheme,
+    unblockUploader,
+    importSettings,
+    exportSettings,
+  } = useOptionsSettings(props);
+
+  const [activeSection, setActiveSection] = useState<SectionId>(() =>
+    resolveSectionFromHash(window.location.hash),
+  );
+  const manualScrollLockRef = useRef<{ targetId: SectionId; timerId: number } | null>(null);
+  const isDark = useEffectiveDarkTheme(settings.theme);
+  const extensionVersion = chrome.runtime?.getManifest?.()?.version ?? "0.2.0";
+
+  useEffect(() => {
+    applyOptionsTheme(isDark);
+  }, [isDark]);
+
+  const scrollToSection = useCallback((sectionId: SectionId) => {
+    if (manualScrollLockRef.current !== null) {
+      window.clearTimeout(manualScrollLockRef.current.timerId);
+    }
+    const timerId = window.setTimeout(() => {
+      manualScrollLockRef.current = null;
+    }, 700);
+    manualScrollLockRef.current = { targetId: sectionId, timerId };
+
+    setActiveSection(sectionId);
+    const nextHash = `#${sectionId}`;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, "", nextHash);
+    }
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  useEffect(() => {
+    const candidate = window.location.hash.replace(/^#/, "");
+    if (!isValidSectionId(candidate)) return;
+    const rafId = window.requestAnimationFrame(() => {
+      document.getElementById(candidate)?.scrollIntoView({ behavior: "auto", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(rafId);
+  }, []);
+
+  useEffect(() => {
+    let rafId = 0;
+
+    const computeActiveSection = (): SectionId => {
+      if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 8) {
+        return "data";
+      }
+      let current: SectionId = sectionNavItems[0].id;
+      for (const item of sectionNavItems) {
+        const element = document.getElementById(item.id);
+        if (!element) continue;
+        if (element.getBoundingClientRect().top <= 120) {
+          current = item.id;
+        }
+      }
+      return current;
+    };
+
+    const syncActiveSection = () => {
+      rafId = 0;
+      const lock = manualScrollLockRef.current;
+      if (lock) {
+        const targetElement = document.getElementById(lock.targetId);
+        const reachedTarget =
+          targetElement !== null && Math.abs(targetElement.getBoundingClientRect().top - 80) <= 12;
+        if (!reachedTarget) {
+          return;
+        }
+        window.clearTimeout(lock.timerId);
+        manualScrollLockRef.current = null;
+      }
+
+      const nextSection = computeActiveSection();
+      setActiveSection(prev => (prev === nextSection ? prev : nextSection));
+      const nextHash = `#${nextSection}`;
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState(null, "", nextHash);
+      }
+    };
+
+    const scheduleSync = () => {
+      if (rafId !== 0) return;
+      rafId = window.requestAnimationFrame(syncActiveSection);
+    };
+
+    const handleHashChange = () => {
+      const target = resolveSectionFromHash(window.location.hash);
+      scrollToSection(target);
+    };
+
+    window.addEventListener("scroll", scheduleSync, { passive: true });
+    window.addEventListener("resize", scheduleSync);
+    window.addEventListener("hashchange", handleHashChange);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleSync);
+      window.removeEventListener("resize", scheduleSync);
+      window.removeEventListener("hashchange", handleHashChange);
+      if (rafId !== 0) {
+        window.cancelAnimationFrame(rafId);
+      }
+      if (manualScrollLockRef.current !== null) {
+        window.clearTimeout(manualScrollLockRef.current.timerId);
+        manualScrollLockRef.current = null;
+      }
+    };
+  }, [scrollToSection]);
+
+  return (
+    <div className="min-h-screen bg-[var(--bm-bg)] text-[var(--bm-text-primary)] transition-colors duration-200">
+      <header className="sticky top-0 z-30 border-b border-[var(--bm-border)] bg-[#f6f7f9]/90 backdrop-blur-md transition-colors duration-200 dark:bg-[#0e1013]/90">
+        <div className="mx-auto flex max-w-[64rem] items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <h1 className="text-base font-semibold tracking-tight text-[var(--bm-text-primary)]">
+              <span className="text-[var(--bm-accent)]">Bili</span>Manager
+            </h1>
+            <span className="text-xs text-[var(--bm-text-tertiary)]">修改自动保存，即时生效</span>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3">
+            <span
+              className={
+                settings.features.enabled
+                  ? "inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
+                  : "inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-400/10 dark:text-amber-300"
+              }
+            >
+              <span
+                aria-hidden="true"
+                className={
+                  settings.features.enabled
+                    ? "h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"
+                    : "h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400"
+                }
+              />
+              {settings.features.enabled ? "运行中" : "已暂停"}
+            </span>
+            <SwitchButton
+              ariaLabel={settings.features.enabled ? "暂停 BiliManager" : "启用 BiliManager"}
+              checked={settings.features.enabled}
+              onChange={updatePluginEnabled}
+            />
+          </div>
+        </div>
+      </header>
+
+      <nav
+        aria-label="页面目录"
+        className="border-b border-[var(--bm-border)] bg-[var(--bm-surface)] lg:hidden"
+      >
+        <div className="bm-scrollbar mx-auto flex max-w-[64rem] items-center gap-1.5 overflow-x-auto px-4 py-2.5 sm:px-6">
+          {sectionNavItems.map(item => {
+            const Icon = item.icon;
+            const active = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                aria-current={active ? "location" : undefined}
+                className={
+                  active
+                    ? "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--bm-accent-soft)] px-3 py-1.5 text-xs font-medium text-[var(--bm-accent)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
+                    : "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-[var(--bm-text-secondary)] transition-colors hover:bg-[var(--bm-surface-hover)] hover:text-[var(--bm-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
+                }
+                type="button"
+                onClick={() => scrollToSection(item.id)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <main className="mx-auto grid w-full max-w-[64rem] gap-10 px-4 py-7 sm:px-6 lg:grid-cols-[minmax(0,1fr)_12rem]">
+        <div className="min-w-0 space-y-8 pb-24">
+          {!settings.features.enabled && (
+            <SettingNotice
+              action={
+                <Button size="sm" variant="primary" onClick={() => updatePluginEnabled(true)}>
+                  恢复运行
+                </Button>
+              }
+              tone="warning"
+            >
+              <span role="status">
+                BiliManager 当前已暂停，所有过滤、净化、壁纸与计时功能均暂不生效
+              </span>
+            </SettingNotice>
+          )}
+
+          <SearchFilterPanel
+            favoriteRecommendation={settings.favoriteRecommendation}
+            filterTrending={settings.personalization.filterTrending}
+            settings={settings.searchFilter}
+            onChange={updateSearchFilter}
+            onFavoriteRecommendationChange={updateFavoriteRecommendation}
+            onFilterTrendingChange={enabled => updatePersonalization({ filterTrending: enabled })}
+            onRefreshFavoriteRecommendation={refreshFavoriteRecommendation}
+          />
+
+          <BlocklistSettingsPanel
+            searchFilter={settings.searchFilter}
+            uploaderBlocklist={uploaderBlocklist}
+            onSearchFilterChange={updateSearchFilter}
+            onUploaderRemove={id => void unblockUploader(id)}
+          />
+
+          <PersonalizationPanel
+            settings={settings.personalization}
+            onChange={updatePersonalization}
+          />
+
+          <WatchTimerPanel
+            enabled={settings.features.watchTimer}
+            settings={settings.watchTimer}
+            onChange={updateWatchTimer}
+            onEnabledChange={updateWatchTimerEnabled}
+          />
+
+          <WatchReminderPanel
+            enabled={settings.features.watchReminder}
+            settings={settings.watchReminder}
+            onChange={updateWatchReminder}
+            onEnabledChange={updateWatchReminderEnabled}
+          />
+
+          <GeneralSettingsPanel
+            background={settings.personalization.customBackground}
+            backgroundImageDataUrl={backgroundImage?.dataUrl ?? null}
+            backgroundMessage={backgroundMessage}
+            theme={settings.theme}
+            onBackgroundChange={updateCustomBackground}
+            onBackgroundClear={() => void clearCustomBackground()}
+            onBackgroundUpload={file => void uploadCustomBackground(file)}
+            onThemeChange={updateTheme}
+          />
+
+          <DataPanel
+            importInputRef={importInputRef}
+            importMessage={importMessage}
+            onExport={kind => void exportSettings(kind)}
+            onImport={file => void importSettings(file)}
+          />
+
+          <footer className="pt-2 text-center text-xs text-[var(--bm-text-tertiary)]">
+            BiliManager v{extensionVersion} · 所有设置与记录仅保存在本地浏览器，不会上传任何数据
+          </footer>
+        </div>
+
+        <div className="hidden lg:block">
+          <aside aria-label="页面目录" className="sticky top-20 h-fit">
+            <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--bm-text-tertiary)]">
+              页面目录
+            </p>
+            <nav className="relative flex flex-col border-l border-[var(--bm-border)]">
+              {sectionNavItems.map(item => {
+                const Icon = item.icon;
+                const active = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    aria-current={active ? "location" : undefined}
+                    className={
+                      active
+                        ? "-ml-[1px] flex items-center gap-2 border-l-2 border-[var(--bm-accent)] py-2 pl-3.5 text-left text-[13px] font-medium text-[var(--bm-accent)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
+                        : "-ml-[1px] flex items-center gap-2 border-l-2 border-transparent py-2 pl-3.5 text-left text-[13px] text-[var(--bm-text-secondary)] transition-colors hover:border-[var(--bm-border-strong)] hover:text-[var(--bm-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
+                    }
+                    type="button"
+                    onClick={() => scrollToSection(item.id)}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      </main>
+    </div>
+  );
+}

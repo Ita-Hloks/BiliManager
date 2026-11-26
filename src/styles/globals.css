@@ -5,6 +5,43 @@
 :root {
   color-scheme: light;
   font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --bm-bg: #f6f7f9;
+  --bm-surface: #ffffff;
+  --bm-surface-subtle: #f8f9fb;
+  --bm-surface-hover: #f2f4f7;
+  --bm-surface-active: #eef1f5;
+  --bm-border: #e5e7eb;
+  --bm-border-strong: #d1d5db;
+  --bm-divider: #eef0f3;
+  --bm-text-primary: #111827;
+  --bm-text-secondary: #4b5563;
+  --bm-text-tertiary: #6b7280;
+  --bm-accent: #00aeec;
+  --bm-accent-hover: #009bd3;
+  --bm-accent-soft: rgb(0 174 236 / 0.1);
+  --bm-switch-off: #d1d5db;
+  --bm-input-bg: #f9fafb;
+  --bm-input-bg-focus: #ffffff;
+}
+
+html.dark {
+  --bm-bg: #0e1013;
+  --bm-surface: #16181d;
+  --bm-surface-subtle: #1c1f26;
+  --bm-surface-hover: rgb(255 255 255 / 0.04);
+  --bm-surface-active: rgb(255 255 255 / 0.07);
+  --bm-border: #262a33;
+  --bm-border-strong: #343946;
+  --bm-divider: #20242c;
+  --bm-text-primary: #f3f4f6;
+  --bm-text-secondary: #9ca3af;
+  --bm-text-tertiary: #6b7280;
+  --bm-accent: #00aeec;
+  --bm-accent-hover: #26bef3;
+  --bm-accent-soft: rgb(0 174 236 / 0.14);
+  --bm-switch-off: #374151;
+  --bm-input-bg: #111318;
+  --bm-input-bg-focus: #151820;
 }
 
 body {
@@ -12,37 +49,34 @@ body {
 }
 
 @layer components {
-  .bm-panel {
-    @apply rounded-xl border border-slate-200 bg-white shadow-sm transition-colors duration-300 ease-out dark:border-[#30343c] dark:bg-[#1c1f26] dark:shadow-none;
-  }
-  .bm-section-header {
-    @apply flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-4 py-4 transition-colors duration-300 ease-out sm:px-5 dark:border-[#30343c];
-  }
-  .bm-content-wrap {
-    @apply flex w-full flex-wrap items-center justify-between gap-4;
-  }
   .bm-text-heading {
-    @apply text-slate-900 transition-colors duration-300 ease-out dark:text-slate-100;
+    @apply text-[var(--bm-text-primary)] transition-colors duration-200;
   }
   .bm-text-label {
-    @apply text-slate-800 transition-colors duration-300 ease-out dark:text-slate-100;
+    @apply text-[var(--bm-text-primary)] transition-colors duration-200;
   }
   .bm-text-muted {
-    @apply text-slate-600 transition-colors duration-300 ease-out dark:text-slate-400;
+    @apply text-[var(--bm-text-secondary)] transition-colors duration-200;
   }
   .bm-notice {
-    @apply rounded-lg border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-800 transition-colors duration-300 ease-out dark:border-bili-blue/30 dark:bg-bili-blue/10 dark:text-sky-100;
+    @apply rounded-lg border border-sky-200/80 bg-sky-50/70 px-3 py-2 text-xs text-sky-900 transition-colors duration-200 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200;
+  }
+  .bm-notice-warning {
+    @apply rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-800 transition-colors duration-200 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200;
+  }
+  .bm-notice-error {
+    @apply rounded-lg border border-rose-200/80 bg-rose-50/80 px-3 py-2 text-xs text-rose-700 transition-colors duration-200 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200;
   }
   .bm-text-input {
-    @apply min-w-0 flex-1 rounded-lg border border-slate-200 bg-bili-canvas px-3 py-2 text-sm text-slate-900 outline-none transition-colors duration-300 ease-out placeholder:text-slate-400 focus:border-bili-blue focus:ring-2 focus:ring-bili-blue/15 dark:border-[#30343c] dark:bg-[#15181e] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-bili-blue;
+    @apply h-9 min-w-0 flex-1 rounded-lg border border-[var(--bm-border)] bg-[var(--bm-input-bg)] px-3 text-sm text-[var(--bm-text-primary)] shadow-[inset_0_1px_2px_rgb(15_23_42/0.04)] outline-none transition-colors duration-200 placeholder:text-[var(--bm-text-tertiary)] hover:border-[var(--bm-border-strong)] focus:border-[var(--bm-accent)] focus:bg-[var(--bm-input-bg-focus)] focus:ring-[3px] focus:ring-[var(--bm-accent-soft)] dark:shadow-none;
   }
   .bm-number-input-group {
-    @apply flex w-28 overflow-hidden rounded-lg border border-slate-200 bg-bili-canvas transition-colors duration-300 ease-out focus-within:border-bili-blue focus-within:ring-2 focus-within:ring-bili-blue/15 dark:border-[#30343c] dark:bg-[#15181e] dark:focus-within:border-bili-blue;
+    @apply flex h-9 w-28 overflow-hidden rounded-lg border border-[var(--bm-border)] bg-[var(--bm-input-bg)] shadow-[inset_0_1px_2px_rgb(15_23_42/0.04)] transition-colors duration-200 hover:border-[var(--bm-border-strong)] focus-within:border-[var(--bm-accent)] focus-within:bg-[var(--bm-input-bg-focus)] focus-within:ring-[3px] focus-within:ring-[var(--bm-accent-soft)] dark:shadow-none;
   }
   .bm-number-input-field {
-    @apply min-w-0 flex-1 border-0 bg-transparent px-2 py-1.5 text-right text-sm text-slate-900 outline-none dark:text-slate-100;
+    @apply min-w-0 flex-1 border-0 bg-transparent px-2.5 text-right text-sm tabular-nums text-[var(--bm-text-primary)] outline-none;
   }
   .bm-number-suffix {
-    @apply flex w-6 items-center justify-center text-sm text-slate-500 dark:text-slate-400;
+    @apply flex shrink-0 select-none items-center justify-center whitespace-nowrap pr-2.5 text-xs text-[var(--bm-text-tertiary)];
   }
 }

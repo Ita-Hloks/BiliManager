@@ -36,16 +36,17 @@ BiliManager/
     │   ├── popupApp.tsx            # 全局总开关、正则错误横幅、StatsCard、RecentVideosCard
     │   └── components/             # SegmentedControl、StatsCard、Charts、RecentVideosCard
     ├── options/                    # 扩展完整设置页
-    │   ├── main.tsx                # 侧边锚点导航、配置状态编排与所有面板挂载
+    │   ├── main.tsx                # 预加载配置、吸顶顶栏、一拉到底全量分区与右侧实时滚动目录（Scroll-Spy）
+    │   ├── useOptionsSettings.ts   # 统一状态管理 Hook（防抖保存、卸载/隐藏强刷、自写回环抑制、背景独立存储联动）
     │   ├── dataTransfer.ts         # JSON 备份导出/导入（all / settings / watchHistory）与纯文本规则导入
-    │   ├── settingsImport.ts       # [已废弃死代码] 早期导入解析器，见 docs/tech-debt.md
-    │   ├── utils.ts                # 规则拆分、百分比换算、图片压缩转 JPEG data URL
-    │   ├── components/             # Switch、Button、ThemeSwitch、RuleListEditor、Dialog 等控件
-    │   └── panels/                 # 7 大设置分区面板
+    │   ├── utils.ts                # 规则拆分、百分比换算、图片缩放与 WebP/JPEG 压缩
+    │   ├── components/             # SettingSection/SettingRow/SettingToggleRow 原语、Switch、Button、NumberInput 等控件
+    │   └── panels/                 # 7 大扁平化设置分区面板（数据管理独立展示）
     └── shared/                     # 跨端复用纯逻辑与持久化契约
         ├── types.ts                # 全量设置与运行时状态 TypeScript 类型
         ├── settingsSchema.ts       # 默认配置与 normalizeSettings() 唯一归一化入口
         ├── storage.ts              # ExtensionSettings 读写封装
+        ├── customBackgroundStorage.ts # 自定义背景图独立存储键读写、格式校验与配额错误提示
         ├── uploaderBlocklist.ts    # 已屏蔽 UP 列表读写与匹配规则（mid 优先）
         ├── favoriteFolder.ts       # 收藏夹视频数据结构
         ├── messaging.ts            # ExtensionMessage / ExtensionResponse 联合类型与 sendMessage 封装
@@ -81,20 +82,20 @@ flowchart LR
 
 ## 3. Content Script 生命周期与调度（`src/content/index.ts`）
 
-Content 脚本通过 `boot()` 自举，采用**“单次全量扫描 + 竞态代数保护 + 多事件源触发”**的编排模式：
+Content 脚本通过 `boot()` 自举，采用**“设置缓存 + 单次全量扫描 + 竞态代数保护 + 按需监听触发”**的编排模式：
 
-1. **启动与监听绑定**：
+1. **启动与缓存同步**：
    - 注册全局 `unhandledrejection` 监听，捕获 `Extension context invalidated` 后调用 `invalidateExtensionContext()` 彻底摘除所有定时器与 `MutationObserver`，避免扩展热更新后在旧标签页持续报错。
-   - 绑定 `chrome.runtime.onMessage` 与 `chrome.storage.onChanged`（监听 `biliFilter.settings` 与 `biliFilter.uploaderBlocklist`）。
+   - 绑定 `chrome.runtime.onMessage` 与 `chrome.storage.onChanged`（监听 `biliFilter.settings`、`biliFilter.uploaderBlocklist` 与 `biliManager.customBackgroundImage`）；读取设置与 UP 黑名单采用并发去重内存缓存，仅在存储变更时失效重读。
    - 执行首次 `scanCurrentPage()`，随后向 Background 发送 `BILI_FILTER_HELLO` 握手。
 2. **竞态与重绘保护**：
    - `scanCurrentPage()` 每次执行都会递增 `scanRequest` 并捕获当前 `scanGeneration`；在读取设置（`await getContentSettings()`）和异步拉取收藏夹推荐池（`await loadFavoriteRecommendationPool()`）之后均校验 `generation === scanGeneration && request === scanRequest`，过期异步结果直接丢弃。
    - `scheduleScan(delay)` 先防抖（搜索页默认 `150ms`、播放页 `80ms`、配置/URL/主题变化 `0ms`），再通过 `requestAnimationFrame` 合并同帧重绘。
 3. **页面变化感知策略**：
    - **搜索页**：对 `document.body` 开启 `{ childList: true, subtree: true }` 的 `MutationObserver`。
-   - **播放页**：优先仅监听 `getPlayerObservationTargets()` 返回的局部容器（`.right-container`、`.bpx-player-container` 等，去除嵌套重复节点），找不到时回退到 `document.body`。
-   - **SPA 路由切换**：通过 `setInterval(..., 500)` 轮询 `location.href` 变化，切换后重建 `MutationObserver` 并触发即时扫描。
-   - **B 站主题联动**：`pageThemeEvents.ts` 监听页面点击、键盘确认及根元素主题属性变更（延时 `80ms / 260ms / 520ms` 重扫），同步遮罩与背景蒙版明暗。
+   - **播放页**：优先仅监听 `getPlayerObservationTargets()` 返回的局部容器（`.right-container`、`.bpx-player-control-wrap` / `.bpx-player-sending-bar` 等，找不到时回退），并通过 `isIgnoredPlayerMutation` 过滤弹幕渲染层高频 DOM 变动。
+   - **SPA 路由切换**：结合 `popstate`、`hashchange`、`window.navigation`（`navigatesuccess`，存在时）以及 `1500ms` 低频兜底轮询检测 `location.href` 变化，切换后重建 `MutationObserver` 并触发即时扫描。
+   - **B 站主题联动**：`pageThemeEvents.ts` 仅在搜索页或已启用自定义背景的主站页按需绑定，通过根元素/body 非子树属性监听与顶栏控件交互触发，并对比 `detectBilibiliPageTheme()` 结果仅在主题实际变化时回调重扫。
 
 ---
 
@@ -120,20 +121,21 @@ Content 脚本通过 `boot()` 自举，采用**“单次全量扫描 + 竞态代
 
 所有数据均存储在 `chrome.storage.local`，禁用 `chrome.storage.sync`。
 
-| Storage Key / 前缀                                                       | 写入方                             | 内容摘要                                                          | 清理/过期策略                              |
-| :----------------------------------------------------------------------- | :--------------------------------- | :---------------------------------------------------------------- | :----------------------------------------- |
-| `biliFilter.settings`                                                    | Popup / Options / WatchTimer(关闭) | `ExtensionSettings` 全量配置（含压缩后自定义背景 JPEG data URL）  | 持久化，随设置保存更新                     |
-| `biliFilter.uploaderBlocklist`                                           | Content (`blockMenu`) / Options    | `BlockedUploader[]`（`id`, `mid`, `name`, `addedAt`）             | 持久化                                     |
-| `biliFilter.favoriteFolderCache`                                         | Background (`favoriteFolderApi`)   | `{ [folderId]: { version: 3, result, cachedAt } }` 收藏夹视频缓存 | 手动刷新覆盖；Content 侧另有 5min 内存缓存 |
-| `biliManager.playerWatchTimer`                                           | Content (`playerWatchTimer`)       | `{ left, top }` 浮层拖拽坐标                                      | 持久化                                     |
-| `biliManager.playerWatchTimerActiveSession`                              | Content (`playerWatchTimer`)       | 当前播放页断点续传状态（总时长/今日时长及前后台拆分）             | 读取时超过 **12 小时** 自动失效            |
-| `biliManager.watchReminder.session`                                      | Content (`playerWatchReminder`)    | `{ accumulatedMs, lastPlaybackAt, updatedAt }` 连续观看累计       | 停止播放超过设定中断间隔自动清零           |
-| `biliManager.watchTimer.dateIndex`                                       | Background                         | 已有记录的本地日期键（`YYYY-MM-DD`）有序列表                      | 裁剪时同步移除过期日期                     |
-| `biliManager.watchTimer.recentVideos`                                    | Background                         | 最近观看视频列表                                                  | 按 `updatedAt` 倒序，最多保留 **100** 条   |
-| `biliManager.watchTimer.dailyTotal:{dateKey}`                            | Background                         | 当日总计 / 前台 / 后台毫秒数                                      | 随历史裁剪移除                             |
-| `biliManager.watchTimer.session:{dateKey}:{id}`                          | Background                         | 单次会话明细（仅保存 `> 3000ms` 的会话）                          | 最长保留 **370 天**                        |
-| `biliManager.watchTimer.video:{dateKey}:{pageKey}`                       | Background                         | 当日观看过的视频元数据（标题、URL、更新时间）                     | 全局索引总量上限 **5000** 条               |
-| `biliManager.watchTimer.sessionIndex:{dateKey}` / `videoIndex:{dateKey}` | Background                         | 某日对应的 session/video key 列表，便于按日批量加载与清理         | 随对应日期一同裁剪                         |
+| Storage Key / 前缀                                                       | 写入方                             | 内容摘要                                                                  | 清理/过期策略                              |
+| :----------------------------------------------------------------------- | :--------------------------------- | :------------------------------------------------------------------------ | :----------------------------------------- |
+| `biliFilter.settings`                                                    | Popup / Options / WatchTimer(关闭) | `ExtensionSettings` 全量配置（不含背景图本体，仅存开关/修订号/遮罩/坐标） | 持久化，随设置保存更新                     |
+| `biliManager.customBackgroundImage`                                      | Options (`useOptionsSettings`)     | `{ dataUrl, revision, width?, height? }` 压缩后的自定义背景图（≤2MB）     | 持久化，清除或替换背景时更新               |
+| `biliFilter.uploaderBlocklist`                                           | Content (`blockMenu`) / Options    | `BlockedUploader[]`（`id`, `mid`, `name`, `addedAt`）                     | 持久化                                     |
+| `biliFilter.favoriteFolderCache`                                         | Background (`favoriteFolderApi`)   | `{ [folderId]: { version: 3, result, cachedAt } }` 收藏夹视频缓存         | 手动刷新覆盖；Content 侧另有 5min 内存缓存 |
+| `biliManager.playerWatchTimer`                                           | Content (`playerWatchTimer`)       | `{ left, top }` 浮层拖拽坐标                                              | 持久化                                     |
+| `biliManager.playerWatchTimerActiveSession`                              | Content (`playerWatchTimer`)       | 当前播放页断点续传状态（总时长/今日时长及前后台拆分）                     | 读取时超过 **12 小时** 自动失效            |
+| `biliManager.watchReminder.session`                                      | Content (`playerWatchReminder`)    | `{ accumulatedMs, lastPlaybackAt, updatedAt }` 连续观看累计               | 停止播放超过设定中断间隔自动清零           |
+| `biliManager.watchTimer.dateIndex`                                       | Background                         | 已有记录的本地日期键（`YYYY-MM-DD`）有序列表                              | 裁剪时同步移除过期日期                     |
+| `biliManager.watchTimer.recentVideos`                                    | Background                         | 最近观看视频列表                                                          | 按 `updatedAt` 倒序，最多保留 **100** 条   |
+| `biliManager.watchTimer.dailyTotal:{dateKey}`                            | Background                         | 当日总计 / 前台 / 后台毫秒数                                              | 随历史裁剪移除                             |
+| `biliManager.watchTimer.session:{dateKey}:{id}`                          | Background                         | 单次会话明细（仅保存 `> 3000ms` 的会话）                                  | 最长保留 **370 天**                        |
+| `biliManager.watchTimer.video:{dateKey}:{pageKey}`                       | Background                         | 当日观看过的视频元数据（标题、URL、更新时间）                             | 全局索引总量上限 **5000** 条               |
+| `biliManager.watchTimer.sessionIndex:{dateKey}` / `videoIndex:{dateKey}` | Background                         | 某日对应的 session/video key 列表，便于按日批量加载与清理                 | 随对应日期一同裁剪                         |
 
 ---
 

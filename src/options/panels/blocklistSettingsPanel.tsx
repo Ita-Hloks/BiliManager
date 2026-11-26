@@ -1,11 +1,13 @@
 import { ListFilter, UserX } from "lucide-react";
-import type { MouseEvent, ReactNode } from "react";
+import type { MouseEvent } from "react";
 import { useRef, useState } from "react";
 import type { SearchFilterSettings } from "../../shared/types";
 import type { BlockedUploader } from "../../shared/uploaderBlocklist";
 import { BlocklistManagerDialog } from "../components/blocklistManagerDialog";
 import type { BlocklistPanelItem } from "../components/blocklistManagerDialog";
+import { Button } from "../components/button";
 import { RuleListEditor } from "../components/ruleListEditor";
+import { SettingRow, SettingSection } from "../components/settingPrimitives";
 
 type ManagerId = "uploader";
 type BlocklistPatternSettings = Pick<SearchFilterSettings, "titlePattern" | "uploaderPattern">;
@@ -29,13 +31,13 @@ export function BlocklistSettingsPanel(props: {
   const activeDialog =
     activeManager === "uploader"
       ? {
-          closeLabel: "关闭 UP 拦截管理",
-          countUnit: "个 UP",
-          dialogTitle: "已拦截 UP",
-          emptyText: "没有匹配的 UP",
+          closeLabel: "关闭已屏蔽 UP 主",
+          countUnit: "位 UP 主",
+          dialogTitle: "已屏蔽 UP 主",
+          emptyText: "没有找到匹配的 UP 主",
           items: uploaderItems,
-          searchLabel: "搜索已拦截 UP",
-          searchPlaceholder: "搜索 UP 名称或 UID",
+          searchLabel: "搜索已屏蔽 UP 主",
+          searchPlaceholder: "搜索 UP 主名字或 UID",
           onRemove: props.onUploaderRemove,
         }
       : null;
@@ -47,42 +49,49 @@ export function BlocklistSettingsPanel(props: {
 
   return (
     <>
-      <section id="blocklist" className="bm-panel scroll-mt-6">
-        <div className="bm-section-header">
-          <div className="flex items-start gap-3">
-            <UserX className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
-            <div>
-              <h2 className="bm-text-heading text-base font-medium">屏蔽列表</h2>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-5 px-4 py-5 sm:px-5">
+      <SettingSection
+        description="按标题关键词、UP 主名或黑名单屏蔽，不受上方过滤开关影响"
+        icon={<UserX className="h-4 w-4" />}
+        id="blocklist"
+        title="屏蔽规则"
+      >
+        <SettingRow
+          description="标题包含这些词的视频会被遮住；支持用 | 一次添加多个，也支持正则"
+          title="标题屏蔽词"
+        >
           <RuleListEditor
-            label="标题过滤词正则"
-            placeholder="输入后回车，参考：震惊 | 迷惑行为 | 的一集"
+            placeholder="输入关键词按回车添加，例如：震惊 | 迷惑行为 | 营销号"
             value={props.searchFilter.titlePattern}
             onChange={titlePattern => props.onSearchFilterChange({ titlePattern })}
           />
+        </SettingRow>
+
+        <SettingRow description="名字包含这些词的 UP 主会被屏蔽，支持正则" title="UP 主名称屏蔽词">
           <RuleListEditor
-            label="UP 主过滤词正则"
-            placeholder="输入后回车，参考：影视 | 好剧 | 经典"
+            placeholder="输入关键词按回车添加，例如：影视解说 | 搬运"
             value={props.searchFilter.uploaderPattern}
             onChange={uploaderPattern => props.onSearchFilterChange({ uploaderPattern })}
           />
-        </div>
+        </SettingRow>
 
-        <div className="divide-y divide-slate-100 dark:divide-[#30343c]">
-          <BlocklistEntry
-            count={props.uploaderBlocklist.length}
-            disabled={uploaderItems.length === 0}
-            icon={<UserX className="h-4 w-4" />}
-            label="UP 拦截"
-            unit="个 UP"
-            onClick={event => openManager("uploader", event)}
-          />
-        </div>
-      </section>
+        <SettingRow
+          control={
+            <Button
+              disabled={uploaderItems.length === 0}
+              icon={<ListFilter className="h-4 w-4" />}
+              onClick={event => openManager("uploader", event)}
+            >
+              查看与管理
+            </Button>
+          }
+          description={
+            props.uploaderBlocklist.length > 0
+              ? `已屏蔽 ${props.uploaderBlocklist.length} 位 UP 主，可在弹窗中搜索或取消屏蔽`
+              : "在搜索结果卡片右下角点「屏蔽」，就能把不想看的 UP 主加进来"
+          }
+          title="已屏蔽 UP 主"
+        />
+      </SettingSection>
 
       {activeDialog && (
         <BlocklistManagerDialog
@@ -92,39 +101,5 @@ export function BlocklistSettingsPanel(props: {
         />
       )}
     </>
-  );
-}
-
-function BlocklistEntry(props: {
-  count: number;
-  disabled: boolean;
-  icon: ReactNode;
-  label: string;
-  unit: string;
-  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
-}) {
-  return (
-    <button
-      className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-bili-blue/10"
-      disabled={props.disabled}
-      type="button"
-      onClick={props.onClick}
-    >
-      <span className="flex min-w-0 items-center gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sky-50 text-bili-blue dark:bg-bili-blue/10 dark:text-sky-200">
-          {props.icon}
-        </span>
-        <span className="min-w-0">
-          <span className="bm-text-label block text-sm font-medium">{props.label}</span>
-          <span className="bm-text-muted mt-0.5 block text-xs">
-            {props.count} {props.unit}
-          </span>
-        </span>
-      </span>
-      <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-bili-blue dark:text-sky-200">
-        <ListFilter className="h-4 w-4" />
-        管理
-      </span>
-    </button>
   );
 }

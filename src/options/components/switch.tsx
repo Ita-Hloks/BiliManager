@@ -1,19 +1,19 @@
 export function Switch(props: { disabled?: boolean; enabled: boolean }) {
   return (
     <span
+      aria-hidden="true"
       className={[
-        "inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-300 ease-out",
-        props.disabled
-          ? "bg-slate-300/70 dark:bg-slate-600/70"
-          : props.enabled
-            ? "bg-bili-blue"
-            : "bg-slate-300",
-      ].join(" ")}
+        "inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 ease-out",
+        props.enabled ? "bg-[var(--bm-accent)]" : "bg-[var(--bm-switch-off)]",
+        props.disabled ? "opacity-50" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <span
+        aria-hidden="true"
         className={[
-          "block h-4 w-4 shrink-0 rounded-full bg-white transition-transform duration-300 ease-out shadow-sm",
-          props.disabled ? "opacity-85" : "",
+          "block h-4 w-4 shrink-0 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out",
           props.enabled ? "translate-x-4" : "translate-x-0",
         ].join(" ")}
       />

@@ -44,7 +44,8 @@ export const defaultSettings: ExtensionSettings = {
     disableDanmakuOnVideoEnter: false,
     customBackground: {
       enabled: false,
-      imageDataUrl: "",
+      hasImage: false,
+      imageRevision: 0,
       maskOpacity: 0.18,
       positionX: 50,
       positionY: 50,
@@ -157,9 +158,14 @@ export function normalizeSearchFilter(
   return {
     ...currentSearchFilter,
     enabled: typeof value?.enabled === "boolean" ? value.enabled : currentSearchFilter.enabled,
-    titlePattern: getStringPattern(value?.titlePattern) || currentSearchFilter.titlePattern,
+    titlePattern:
+      typeof value?.titlePattern === "string"
+        ? value.titlePattern
+        : currentSearchFilter.titlePattern,
     uploaderPattern:
-      getStringPattern(value?.uploaderPattern) || currentSearchFilter.uploaderPattern,
+      typeof value?.uploaderPattern === "string"
+        ? value.uploaderPattern
+        : currentSearchFilter.uploaderPattern,
     minViewCount:
       typeof value?.minViewCount === "number"
         ? Math.round(clamp(value.minViewCount, 0, MAX_VIEW_COUNT_THRESHOLD))
@@ -241,8 +247,11 @@ export function normalizeCustomBackground(
   return {
     ...currentBackground,
     enabled: typeof value?.enabled === "boolean" ? value.enabled : currentBackground.enabled,
-    imageDataUrl:
-      typeof value?.imageDataUrl === "string" ? value.imageDataUrl : currentBackground.imageDataUrl,
+    hasImage: typeof value?.hasImage === "boolean" ? value.hasImage : currentBackground.hasImage,
+    imageRevision:
+      typeof value?.imageRevision === "number" && Number.isFinite(value.imageRevision)
+        ? Math.max(0, Math.floor(value.imageRevision))
+        : currentBackground.imageRevision,
     maskOpacity:
       typeof value?.maskOpacity === "number"
         ? clamp(value.maskOpacity, 0, 1)
@@ -290,8 +299,4 @@ export function normalizeWatchReminder(
 
 function normalizeTheme(value: unknown, fallback: ExtensionSettings["theme"]) {
   return value === "system" || value === "light" || value === "dark" ? value : fallback;
-}
-
-function getStringPattern(value: unknown) {
-  return typeof value === "string" ? value : "";
 }

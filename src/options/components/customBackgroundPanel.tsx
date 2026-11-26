@@ -1,15 +1,16 @@
 import { ImagePlus, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import type { CustomBackgroundSettings } from "../../shared/types";
-
+import type { OptionsStatusMessage, UpdateCommitOptions } from "../useOptionsSettings";
 import { clamp, getRangeProgressStyle } from "../utils";
 import { Button } from "./button";
-import { Switch } from "./switch";
+import { SettingNotice, SwitchButton } from "./settingPrimitives";
 
 export function CustomBackgroundPanel(props: {
   background: CustomBackgroundSettings;
-  message: string;
-  onChange: (patch: Partial<CustomBackgroundSettings>) => void;
+  imageDataUrl: string | null;
+  message: OptionsStatusMessage | null;
+  onChange: (patch: Partial<CustomBackgroundSettings>, options?: UpdateCommitOptions) => void;
   onClear: () => void;
   onUpload: (file: File) => void;
 }) {
@@ -19,19 +20,28 @@ export function CustomBackgroundPanel(props: {
     width: number;
     height: number;
   } | null>(null);
-  const hasImage = !!props.background.imageDataUrl;
+  const hasImage = props.background.hasImage && !!props.imageDataUrl;
   const maskOpacityPercent = Math.round(props.background.maskOpacity * 100);
   const maskOpacityStyle = getRangeProgressStyle(props.background.maskOpacity * 100);
   const rangeXStyle = getRangeProgressStyle(props.background.positionX);
   const rangeYStyle = getRangeProgressStyle(props.background.positionY);
   const loadedDimensions =
-    imageDimensions?.src === props.background.imageDataUrl ? imageDimensions : null;
+    props.imageDataUrl && imageDimensions?.src === props.imageDataUrl ? imageDimensions : null;
   const imageAspectRatio = loadedDimensions
     ? loadedDimensions.width / loadedDimensions.height
     : null;
   const previewAspectRatio = 16 / 9;
   const canAdjustHorizontal = imageAspectRatio !== null && imageAspectRatio > previewAspectRatio;
   const canAdjustVertical = imageAspectRatio !== null && imageAspectRatio < previewAspectRatio;
+
+  const messageBanner = props.message && (
+    <SettingNotice
+      className={!hasImage ? "mt-3" : undefined}
+      tone={props.message.tone === "error" ? "error" : "info"}
+    >
+      <span role={props.message.tone === "error" ? "alert" : "status"}>{props.message.text}</span>
+    </SettingNotice>
+  );
 
   const fileInput = (
     <input
@@ -49,37 +59,39 @@ export function CustomBackgroundPanel(props: {
 
   if (!hasImage) {
     return (
-      <div className="rounded-lg bg-bili-canvas p-3 dark:bg-[#15181e]">
+      <div>
         {fileInput}
         <button
-          className="bm-text-muted flex min-h-36 w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 bg-white/45 p-5 text-sm transition-colors hover:border-bili-blue/60 hover:bg-sky-50/70 hover:text-bili-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 dark:border-slate-600 dark:bg-slate-950/20 dark:hover:border-bili-blue/60 dark:hover:bg-bili-blue/10 dark:hover:text-sky-200"
-          onClick={() => inputRef.current?.click()}
+          className="flex min-h-36 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--bm-border-strong)] bg-[var(--bm-surface-subtle)] p-5 text-sm transition-colors hover:border-[var(--bm-accent)] hover:bg-[var(--bm-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
           type="button"
+          onClick={() => inputRef.current?.click()}
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-bili-blue dark:bg-bili-blue/15 dark:text-sky-200">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--bm-border)] bg-[var(--bm-surface)] text-[var(--bm-accent)]">
             <ImagePlus aria-hidden="true" className="h-5 w-5" />
           </span>
           <span className="flex flex-col items-center gap-1">
-            <span className="font-medium">选择背景图</span>
-            <span className="text-xs font-normal opacity-70">支持 PNG、JPEG 和 WebP</span>
+            <span className="font-medium text-[var(--bm-text-primary)]">点击上传本地图片</span>
+            <span className="text-xs font-normal text-[var(--bm-text-secondary)]">
+              支持 PNG / JPG / WebP，会自动压缩至 1920px、2MB 以内
+            </span>
           </span>
         </button>
-        {props.message && <p className="bm-notice mt-3 text-xs">{props.message}</p>}
+        {messageBanner}
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 rounded-lg bg-bili-canvas p-3 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] dark:bg-[#15181e]">
+    <div className="grid gap-5 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
       {fileInput}
-      <div className="relative aspect-video w-full overflow-hidden rounded-md border border-sky-300/35 text-left shadow-sm">
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-[var(--bm-border)] bg-[var(--bm-surface-subtle)] text-left">
         <span className="absolute left-2 top-2 z-10 rounded border border-white/15 bg-slate-950/55 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">
           预览
         </span>
         <img
           alt=""
           className="h-full w-full object-cover"
-          src={props.background.imageDataUrl}
+          src={props.imageDataUrl ?? undefined}
           style={{
             objectPosition: `${props.background.positionX}% ${props.background.positionY}%`,
           }}
@@ -98,35 +110,36 @@ export function CustomBackgroundPanel(props: {
         />
       </div>
 
-      <div className="min-w-0 space-y-3">
+      <div className="min-w-0 space-y-3.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <span className="bm-text-label block text-sm font-medium">背景图</span>
-            <span className="bm-text-muted mt-1 block text-xs">调整图片位置与遮罩透明度</span>
+            <span className="bm-text-label block text-sm font-medium">启用自定义背景</span>
+            <span className="bm-text-muted mt-0.5 block text-xs">在 B 站主要页面显示这张壁纸</span>
           </div>
-          <button
-            aria-label={props.background.enabled ? "关闭背景图" : "启用背景图"}
-            className="inline-flex shrink-0 items-center justify-center rounded-full p-1 transition-opacity duration-300 ease-out"
-            onClick={() => props.onChange({ enabled: !props.background.enabled })}
-            type="button"
-          >
-            <Switch enabled={props.background.enabled} />
-          </button>
+          <SwitchButton
+            ariaLabel={props.background.enabled ? "关闭自定义背景" : "启用自定义背景"}
+            checked={props.background.enabled}
+            onChange={enabled => props.onChange({ enabled })}
+          />
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button icon={<Upload className="h-4 w-4" />} onClick={() => inputRef.current?.click()}>
-            更换
+          <Button
+            icon={<Upload className="h-4 w-4" />}
+            variant="secondary"
+            onClick={() => inputRef.current?.click()}
+          >
+            更换图片
           </Button>
-          <Button icon={<Trash2 className="h-4 w-4" />} onClick={props.onClear}>
-            清除
+          <Button icon={<Trash2 className="h-4 w-4" />} variant="danger" onClick={props.onClear}>
+            移除图片
           </Button>
         </div>
 
         <label className="block min-w-0">
-          <span className="bm-text-muted mb-2 flex items-center justify-between text-xs font-medium">
-            <span>遮罩透明度</span>
-            <span>{maskOpacityPercent}%</span>
+          <span className="bm-text-muted mb-1.5 flex items-center justify-between text-xs font-medium">
+            <span>背景遮罩浓度</span>
+            <span className="tabular-nums">{maskOpacityPercent}%</span>
           </span>
           <input
             className="bm-range w-full"
@@ -137,14 +150,25 @@ export function CustomBackgroundPanel(props: {
             type="range"
             value={props.background.maskOpacity.toString()}
             onChange={event =>
-              props.onChange({ maskOpacity: clamp(Number(event.target.value), 0, 1) })
+              props.onChange(
+                { maskOpacity: clamp(Number(event.target.value), 0, 1) },
+                { debounce: true },
+              )
             }
           />
+          <span className="mt-1 block text-[11px] text-[var(--bm-text-tertiary)]">
+            向右拖动遮罩更浓，页面文字会更清楚（0% 为原图）
+          </span>
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block min-w-0">
-            <span className="bm-text-muted mb-2 block text-xs font-medium">横向位置</span>
+            <span className="bm-text-muted mb-1.5 flex items-center justify-between text-xs font-medium">
+              <span>左右裁切位置</span>
+              <span className="tabular-nums">
+                {canAdjustHorizontal ? `${props.background.positionX}%` : "无需调整"}
+              </span>
+            </span>
             <input
               className="bm-range w-full"
               disabled={!canAdjustHorizontal}
@@ -154,11 +178,18 @@ export function CustomBackgroundPanel(props: {
               style={rangeXStyle}
               type="range"
               value={props.background.positionX.toString()}
-              onChange={event => props.onChange({ positionX: Number(event.target.value) })}
+              onChange={event =>
+                props.onChange({ positionX: Number(event.target.value) }, { debounce: true })
+              }
             />
           </label>
           <label className="block min-w-0">
-            <span className="bm-text-muted mb-2 block text-xs font-medium">纵向位置</span>
+            <span className="bm-text-muted mb-1.5 flex items-center justify-between text-xs font-medium">
+              <span>上下裁切位置</span>
+              <span className="tabular-nums">
+                {canAdjustVertical ? `${props.background.positionY}%` : "无需调整"}
+              </span>
+            </span>
             <input
               className="bm-range w-full"
               disabled={!canAdjustVertical}
@@ -168,12 +199,19 @@ export function CustomBackgroundPanel(props: {
               style={rangeYStyle}
               type="range"
               value={props.background.positionY.toString()}
-              onChange={event => props.onChange({ positionY: Number(event.target.value) })}
+              onChange={event =>
+                props.onChange({ positionY: Number(event.target.value) }, { debounce: true })
+              }
             />
           </label>
         </div>
+        {loadedDimensions && !canAdjustHorizontal && !canAdjustVertical && (
+          <p className="text-[11px] text-[var(--bm-text-tertiary)]">
+            当前图片刚好是 16:9 比例，无需调整裁切位置
+          </p>
+        )}
 
-        {props.message && <p className="bm-notice text-xs">{props.message}</p>}
+        {messageBanner}
       </div>
     </div>
   );

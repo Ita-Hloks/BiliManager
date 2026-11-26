@@ -1,3 +1,9 @@
+import {
+  getCustomBackgroundImage,
+  isValidBackgroundImageDataUrl,
+} from "../shared/customBackgroundStorage";
+import { isExtensionContextInvalidated } from "../shared/extensionContext";
+import { clamp } from "../shared/number";
 import type { CustomBackgroundSettings } from "../shared/types";
 import { detectBilibiliPageTheme } from "./pageTheme";
 
@@ -5,33 +11,72 @@ const ROOT_ID = "bili-manager-custom-background";
 const STYLE_ID = "bili-manager-custom-background-style";
 const ENABLED_ATTR = "data-bili-manager-custom-background";
 
+let appliedRevision: number | null = null;
+let cachedImageUrl: string | null = null;
+let lastMaskOpacity: string | null = null;
+let lastPosition: string | null = null;
+let lastTheme: string | null = null;
+let loadGeneration = 0;
+
 export function applyCustomBackground(settings: CustomBackgroundSettings): void {
-  if (!shouldApplyCustomBackground(settings)) {
+  if (!settings.enabled || !settings.hasImage || !isCustomBackgroundSupportedPage()) {
     removeBackground();
     return;
   }
 
   ensureStyle();
   const root = ensureRoot();
-  root.style.backgroundImage = `url("${settings.imageDataUrl}")`;
-  root.style.setProperty(
-    "--bili-manager-custom-background-mask-opacity",
-    clamp(settings.maskOpacity, 0, 1).toString(),
-  );
-  root.style.backgroundPosition = `${clamp(settings.positionX, 0, 100)}% ${clamp(
-    settings.positionY,
-    0,
-    100,
-  )}%`;
-  applyBackgroundThemeClass(root);
+
+  const nextMaskOpacity = clamp(settings.maskOpacity, 0, 1).toString();
+  if (lastMaskOpacity !== nextMaskOpacity) {
+    root.style.setProperty("--bili-manager-custom-background-mask-opacity", nextMaskOpacity);
+    lastMaskOpacity = nextMaskOpacity;
+  }
+
+  const nextPosition = `${clamp(settings.positionX, 0, 100)}% ${clamp(settings.positionY, 0, 100)}%`;
+  if (lastPosition !== nextPosition) {
+    root.style.backgroundPosition = nextPosition;
+    lastPosition = nextPosition;
+  }
+
+  const nextTheme = detectBilibiliPageTheme();
+  if (lastTheme !== nextTheme) {
+    root.classList.toggle("bili-manager-page-dark", nextTheme === "dark");
+    root.classList.toggle("bili-manager-page-light", nextTheme === "light");
+    lastTheme = nextTheme;
+  }
+
   document.documentElement.dataset.biliManagerCustomBackground = "true";
+
+  if (appliedRevision === settings.imageRevision && cachedImageUrl) {
+    if (!root.style.backgroundImage) {
+      root.style.backgroundImage = `url("${cachedImageUrl}")`;
+    }
+    return;
+  }
+
+  const generation = ++loadGeneration;
+  const targetRevision = settings.imageRevision;
+  void getCustomBackgroundImage()
+    .then(image => {
+      if (generation !== loadGeneration) return;
+      if (!image || !isValidBackgroundImageDataUrl(image.dataUrl)) {
+        removeBackground();
+        return;
+      }
+
+      appliedRevision = targetRevision;
+      cachedImageUrl = image.dataUrl;
+      const currentRoot = ensureRoot();
+      currentRoot.style.backgroundImage = `url("${image.dataUrl}")`;
+    })
+    .catch(error => {
+      if (isExtensionContextInvalidated(error)) return;
+      console.error("[BiliManager] Failed to load custom background image", error);
+    });
 }
 
-function shouldApplyCustomBackground(settings: CustomBackgroundSettings) {
-  return settings.enabled && !!settings.imageDataUrl && isMajorBilibiliPage();
-}
-
-function isMajorBilibiliPage() {
+export function isCustomBackgroundSupportedPage(): boolean {
   const hostname = location.hostname;
   const pathname = location.pathname;
 
@@ -57,19 +102,22 @@ function ensureRoot() {
   let root = document.getElementById(ROOT_ID);
   if (root) return root;
 
+  lastMaskOpacity = null;
+  lastPosition = null;
+  lastTheme = null;
   root = document.createElement("div");
   root.id = ROOT_ID;
   document.body.prepend(root);
   return root;
 }
 
-function applyBackgroundThemeClass(root: HTMLElement) {
-  const theme = detectBilibiliPageTheme();
-  root.classList.toggle("bili-manager-page-dark", theme === "dark");
-  root.classList.toggle("bili-manager-page-light", theme === "light");
-}
-
 function removeBackground() {
+  loadGeneration += 1;
+  appliedRevision = null;
+  cachedImageUrl = null;
+  lastMaskOpacity = null;
+  lastPosition = null;
+  lastTheme = null;
   document.getElementById(ROOT_ID)?.remove();
   document.getElementById(STYLE_ID)?.remove();
   document.documentElement.removeAttribute(ENABLED_ATTR);
@@ -123,9 +171,4 @@ function ensureStyle() {
     }
   `;
   document.head.append(style);
-}
-
-function clamp(value: number, min: number, max: number) {
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
 }

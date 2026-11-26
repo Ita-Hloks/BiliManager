@@ -6,13 +6,17 @@ export function ThemeSwitch(props: {
   onChange: (theme: ExtensionSettings["theme"]) => void;
 }) {
   const options = [
-    { value: "system", label: "系统", icon: Monitor },
-    { value: "light", label: "亮色", icon: Sun },
-    { value: "dark", label: "暗色", icon: Moon },
+    { value: "system", label: "跟随系统", icon: Monitor },
+    { value: "light", label: "浅色", icon: Sun },
+    { value: "dark", label: "深色", icon: Moon },
   ] as const;
 
   return (
-    <div className="inline-flex rounded-lg bg-slate-100 p-1 transition-colors duration-300 ease-out dark:bg-[#15181e]">
+    <div
+      aria-label="外观主题"
+      className="inline-flex h-9 items-center rounded-lg border border-[var(--bm-border)] bg-[var(--bm-input-bg)] p-0.5 transition-colors duration-200 ease-out"
+      role="radiogroup"
+    >
       {options.map(option => {
         const Icon = option.icon;
         const selected = props.value === option.value;
@@ -20,14 +24,16 @@ export function ThemeSwitch(props: {
         return (
           <button
             key={option.value}
+            aria-checked={selected}
             className={[
-              "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40",
+              "inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 sm:text-[13px]",
               selected
-                ? "bg-white text-bili-blue shadow-sm dark:bg-[#2a2e36] dark:text-sky-200"
-                : "text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/[0.06]",
+                ? "bg-[var(--bm-surface)] text-[var(--bm-text-primary)] shadow-sm"
+                : "text-[var(--bm-text-secondary)] hover:text-[var(--bm-text-primary)]",
             ].join(" ")}
-            onClick={() => props.onChange(option.value)}
+            role="radio"
             type="button"
+            onClick={() => props.onChange(option.value)}
           >
             <Icon className="h-4 w-4" />
             {option.label}

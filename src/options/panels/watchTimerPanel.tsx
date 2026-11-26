@@ -1,44 +1,39 @@
-import type { WatchTimerSettings } from "../../shared/types";
 import { Clock, X } from "lucide-react";
-import { Button } from "../components/button";
-import { Switch } from "../components/switch";
+import type { WatchTimerSettings } from "../../shared/types";
+import { NumberField } from "../components/numberInput";
+import { SettingRow, SettingSection, SwitchButton } from "../components/settingPrimitives";
+import type { UpdateCommitOptions } from "../useOptionsSettings";
 import { clamp, getRangeProgressStyle } from "../utils";
 
 export function WatchTimerPanel(props: {
   enabled: boolean;
   settings: WatchTimerSettings;
-  onChange: (patch: Partial<WatchTimerSettings>) => void;
+  onChange: (patch: Partial<WatchTimerSettings>, options?: UpdateCommitOptions) => void;
   onEnabledChange: (enabled: boolean) => void;
 }) {
   const opacityPercent = Math.round(props.settings.opacity * 100);
   const opacityProgress = ((props.settings.opacity - 0.45) / 0.55) * 100;
 
   return (
-    <section id="watch-timer" className="bm-panel scroll-mt-6">
-      <div className="bm-section-header">
-        <div className="bm-content-wrap">
-          <div className="flex items-start gap-3">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-bili-blue" />
-            <div>
-              <h2 className="bm-text-heading text-base font-medium">计时器</h2>
-              <p className="bm-text-muted mt-1 text-sm">统计当前播放器实际播放时间</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-5 px-4 py-5 sm:px-5">
-        <Button onClick={() => props.onEnabledChange(!props.enabled)} variant="toggleRow">
-          <span>
-            <span className="block font-medium">启用计时器</span>
-            <span className="bm-text-muted mt-1 block text-xs">
-              播放器浮层可拖动，全屏时自动隐藏
-            </span>
-          </span>
-          <Switch enabled={props.enabled} />
-        </Button>
-
-        <div className="grid gap-4 rounded-lg bg-bili-canvas p-3 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center dark:bg-[#15181e]">
+    <SettingSection
+      description="在播放页显示悬浮计时卡片并统计观看时长；卡片可拖动，全屏自动隐藏"
+      disabled={!props.enabled}
+      headerAction={
+        <SwitchButton
+          ariaLabel={props.enabled ? "关闭观看计时器" : "启用观看计时器"}
+          checked={props.enabled}
+          onChange={props.onEnabledChange}
+        />
+      }
+      icon={<Clock className="h-4 w-4" />}
+      id="watch-timer"
+      title="观看计时器"
+    >
+      <SettingRow
+        description="数值越高卡片背景越实、文字越清晰；拖动滑块可实时看左侧效果"
+        title="浮层背景浓度"
+      >
+        <div className="grid gap-5 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center">
           <div className="group relative w-full overflow-hidden rounded-[14px] px-3 pb-2.5 pt-3 text-slate-50 shadow-[0_12px_26px_rgba(2,8,23,0.24)]">
             <span
               aria-hidden="true"
@@ -60,43 +55,41 @@ export function WatchTimerPanel(props: {
             </span>
           </div>
 
-          <label className="block min-w-0">
-            <span className="bm-text-label mb-2 block text-sm font-medium">计时器透明度</span>
-            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
-              <input
-                className="bm-range min-w-0 flex-1"
-                max="1"
-                min="0.45"
-                step="0.01"
-                style={getRangeProgressStyle(opacityProgress)}
-                type="range"
-                value={props.settings.opacity.toString()}
-                onChange={event =>
-                  props.onChange({
-                    opacity: clamp(Number(event.target.value), 0.45, 1),
-                  })
-                }
-              />
-              <div className="bm-number-input-group">
-                <input
-                  className="bm-number-input bm-number-input-field"
-                  max="100"
-                  min="45"
-                  step="1"
-                  type="number"
-                  value={opacityPercent.toString()}
-                  onChange={event =>
-                    props.onChange({
-                      opacity: clamp(Number(event.target.value) / 100, 0.45, 1),
-                    })
-                  }
-                />
-                <span className="bm-number-suffix">%</span>
-              </div>
-            </div>
-          </label>
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+            <input
+              aria-label="浮层背景浓度"
+              className="bm-range min-w-0 flex-1"
+              max="1"
+              min="0.45"
+              step="0.01"
+              style={getRangeProgressStyle(opacityProgress)}
+              type="range"
+              value={props.settings.opacity.toString()}
+              onChange={event =>
+                props.onChange(
+                  { opacity: clamp(Number(event.target.value), 0.45, 1) },
+                  { debounce: true },
+                )
+              }
+            />
+            <NumberField
+              ariaLabel="浮层背景浓度"
+              integer
+              max={100}
+              min={45}
+              step={1}
+              suffix="%"
+              value={opacityPercent}
+              widthClassName="w-28"
+              onCommit={percent =>
+                props.onChange({
+                  opacity: clamp(percent / 100, 0.45, 1),
+                })
+              }
+            />
+          </div>
         </div>
-      </div>
-    </section>
+      </SettingRow>
+    </SettingSection>
   );
 }

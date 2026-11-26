@@ -22,7 +22,8 @@ export type FavoriteRecommendationSettings = {
 
 export type CustomBackgroundSettings = {
   enabled: boolean;
-  imageDataUrl: string;
+  hasImage: boolean;
+  imageRevision: number;
   maskOpacity: number;
   positionX: number;
   positionY: number;

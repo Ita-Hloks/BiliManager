@@ -11,6 +11,9 @@ const DANMAKU_SWITCH_SELECTOR = [
   ".bpx-player-dm-switch input.bui-danmaku-switch-input",
   '.bilibili-player-video-danmaku-switch input[type="checkbox"]',
 ].join(", ");
+const DANMAKU_RENDER_SELECTOR =
+  '.bpx-player-row-dm-wrap, .bpx-player-dm-root, .bili-danmaku-x-dm, [class*="bpx-player-dm"]';
+const DANMAKU_SWITCH_CONTAINER_SELECTOR = ".bpx-player-dm-switch";
 const MAX_DANMAKU_DISABLE_ATTEMPTS = 3;
 
 const RELATED_VIDEO_SELECTOR = [
@@ -43,7 +46,8 @@ let latestSettings: PlayerPersonalizationSettings = {
   disableDanmakuOnVideoEnter: false,
   customBackground: {
     enabled: false,
-    imageDataUrl: "",
+    hasImage: false,
+    imageRevision: 0,
     maskOpacity: 0.18,
     positionX: 50,
     positionY: 50,
@@ -97,18 +101,44 @@ export function applyPlayerPersonalization(settings: PlayerPersonalizationSettin
 }
 
 export function getPlayerObservationTargets(): HTMLElement[] {
+  const playerControlTargets = [
+    document.querySelector<HTMLElement>(".bpx-player-control-wrap"),
+    document.querySelector<HTMLElement>(".bpx-player-sending-bar"),
+  ].filter((target): target is HTMLElement => !!target);
+  const playerTargets =
+    playerControlTargets.length > 0
+      ? playerControlTargets
+      : [document.querySelector<HTMLElement>(".bpx-player-container")].filter(
+          (target): target is HTMLElement => !!target,
+        );
+
   const targets = [
     document.querySelector<HTMLElement>(".right-container"),
-    document.querySelector<HTMLElement>(".bpx-player-container"),
+    ...playerTargets,
     document.querySelector<HTMLElement>(".rec-list"),
     document.querySelector<HTMLElement>(".bpx-player-ending-related"),
     document.querySelector<HTMLElement>(".video-card-ad-small"),
     document.querySelector<HTMLElement>("#slide_ad"),
     document.querySelector<HTMLElement>(".slide-ad-exp"),
     ...document.querySelectorAll<HTMLElement>(".activity-m-v1"),
-  ].filter(Boolean) as HTMLElement[];
+  ].filter((target): target is HTMLElement => !!target);
 
   return targets.length > 0 ? removeNestedModules(targets) : [document.body];
+}
+
+export function isIgnoredPlayerMutation(record: MutationRecord): boolean {
+  if (isDanmakuRenderNode(record.target)) return true;
+  if (record.type !== "childList") return false;
+
+  const changedNodes = [...record.addedNodes, ...record.removedNodes];
+  return changedNodes.length > 0 && changedNodes.every(isDanmakuRenderNode);
+}
+
+function isDanmakuRenderNode(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  if (!element) return false;
+  if (element.closest(DANMAKU_SWITCH_CONTAINER_SELECTOR) !== null) return false;
+  return element.closest(DANMAKU_RENDER_SELECTOR) !== null;
 }
 
 function applyDanmakuPreference(enabled: boolean) {

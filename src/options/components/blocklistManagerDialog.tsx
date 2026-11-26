@@ -97,10 +97,10 @@ export function BlocklistManagerDialog(props: BlocklistManagerDialogProps) {
         ref={dialogRef}
         aria-label={props.dialogTitle}
         aria-modal="true"
-        className="flex max-h-[calc(100vh-2rem)] min-h-96 w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-[#30343c] dark:bg-[#1c1f26]"
+        className="flex max-h-[calc(100vh-2rem)] min-h-96 w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[var(--bm-border)] bg-[var(--bm-surface)] shadow-2xl"
         role="dialog"
       >
-        <header className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 dark:border-[#30343c]">
+        <header className="flex items-center justify-between gap-4 border-b border-[var(--bm-divider)] px-5 py-3.5">
           <div className="min-w-0">
             <h3 className="bm-text-heading text-sm font-semibold">{props.dialogTitle}</h3>
             <p className="bm-text-muted mt-0.5 text-xs">
@@ -109,7 +109,7 @@ export function BlocklistManagerDialog(props: BlocklistManagerDialogProps) {
           </div>
           <button
             aria-label={props.closeLabel}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-200"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--bm-text-tertiary)] transition-colors hover:bg-[var(--bm-surface-hover)] hover:text-[var(--bm-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
             type="button"
             onClick={closeDialog}
           >
@@ -117,13 +117,13 @@ export function BlocklistManagerDialog(props: BlocklistManagerDialogProps) {
           </button>
         </header>
 
-        <div className="border-b border-slate-100 p-4 dark:border-[#30343c]">
-          <label className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        <div className="border-b border-[var(--bm-divider)] px-5 py-3.5">
+          <div className="relative flex items-center">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--bm-text-tertiary)]" />
             <input
               ref={searchInputRef}
               aria-label={props.searchLabel}
-              className="bm-text-input w-full pl-9"
+              className="bm-text-input w-full pl-9 pr-8 [&::-webkit-search-cancel-button]:hidden"
               placeholder={props.searchPlaceholder}
               type="search"
               value={query}
@@ -132,14 +132,28 @@ export function BlocklistManagerDialog(props: BlocklistManagerDialogProps) {
                 setPage(1);
               }}
             />
-          </label>
+            {query.length > 0 && (
+              <button
+                aria-label="清空搜索"
+                className="absolute right-2 inline-flex h-5 w-5 items-center justify-center rounded text-[var(--bm-text-tertiary)] transition-colors hover:bg-[var(--bm-surface-hover)] hover:text-[var(--bm-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bili-blue/40"
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setPage(1);
+                  searchInputRef.current?.focus();
+                }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="bm-scrollbar min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto dark:divide-[#30343c]">
+        <div className="bm-scrollbar min-h-0 flex-1 divide-y divide-[var(--bm-divider)] overflow-y-auto">
           {visibleItems.map(item => (
             <div
               key={item.id}
-              className="flex min-w-0 items-center justify-between gap-3 px-4 py-2.5"
+              className="flex min-w-0 items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-[var(--bm-surface-hover)]"
             >
               <div className="min-w-0">
                 <p className="bm-text-label truncate text-sm font-medium">{item.primary}</p>
@@ -149,7 +163,7 @@ export function BlocklistManagerDialog(props: BlocklistManagerDialogProps) {
               </div>
               <button
                 aria-label={`解除屏蔽 ${item.removeLabel}`}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 dark:text-slate-500 dark:hover:bg-rose-400/10 dark:hover:text-rose-300"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--bm-text-tertiary)] transition-colors hover:bg-rose-500/10 hover:text-rose-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50"
                 title="解除屏蔽"
                 type="button"
                 onClick={() => props.onRemove(item.id)}
@@ -165,7 +179,7 @@ export function BlocklistManagerDialog(props: BlocklistManagerDialogProps) {
         </div>
 
         {filtered.length > PAGE_SIZE && (
-          <footer className="flex items-center justify-between gap-4 border-t border-slate-100 px-4 py-3 dark:border-[#30343c]">
+          <footer className="flex items-center justify-between gap-4 border-t border-[var(--bm-divider)] px-5 py-3">
             <span className="bm-text-muted text-xs tabular-nums">
               {safePage} / {pageCount}
             </span>

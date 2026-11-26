@@ -231,41 +231,49 @@ export async function writeWatchTimerSession(session: WatchTimerSessionStorage):
   const sessionIndexKey = getSessionIndexKey(normalized.dateKey);
   const videoKey = getVideoKey(normalized.dateKey, normalized.pageKey);
   const videoIndexKey = getVideoIndexKey(normalized.dateKey);
+  const dailyTotalKey = getDailyTotalKey(normalized.dateKey);
   const saved = await chrome.storage.local.get([
     sessionIndexKey,
     videoIndexKey,
     sessionKey,
-    getDailyTotalKey(normalized.dateKey),
+    dailyTotalKey,
     WATCH_TIMER_DATE_INDEX_KEY,
     WATCH_TIMER_RECENT_VIDEOS_KEY,
   ]);
   const video = toVideoRecord(normalized);
   const previousSession = normalizeSession(saved[sessionKey]);
-  const previousDailyTotal = normalizeDurationBreakdown(
-    saved[getDailyTotalKey(normalized.dateKey)],
-  );
+  const previousDailyTotal = normalizeDurationBreakdown(saved[dailyTotalKey]);
   const sessionDelta = subtractDurationBreakdown(
     normalized,
     previousSession ?? createEmptyDurationBreakdown(),
   );
+  const prevSessionIndex = normalizeKeyList(saved[sessionIndexKey]);
+  const nextSessionIndex = appendUnique(prevSessionIndex, sessionKey);
+  const prevVideoIndex = normalizeKeyList(saved[videoIndexKey]);
+  const nextVideoIndex = appendUnique(prevVideoIndex, videoKey);
+  const prevDateIndex = normalizeDateIndex(saved[WATCH_TIMER_DATE_INDEX_KEY]);
 
-  await chrome.storage.local.set({
+  const updates: Record<string, unknown> = {
     [sessionKey]: normalized,
     [videoKey]: video,
-    [getDailyTotalKey(normalized.dateKey)]: addDurationBreakdown(previousDailyTotal, sessionDelta),
-  });
-  await chrome.storage.local.set({
-    [sessionIndexKey]: appendUnique(normalizeKeyList(saved[sessionIndexKey]), sessionKey),
-    [videoIndexKey]: appendUnique(normalizeKeyList(saved[videoIndexKey]), videoKey),
-    [WATCH_TIMER_DATE_INDEX_KEY]: sortDateKeys([
-      ...normalizeDateIndex(saved[WATCH_TIMER_DATE_INDEX_KEY]),
-      normalized.dateKey,
-    ]),
+    [dailyTotalKey]: addDurationBreakdown(previousDailyTotal, sessionDelta),
     [WATCH_TIMER_RECENT_VIDEOS_KEY]: updateRecentVideos(
       normalizeVideoList(saved[WATCH_TIMER_RECENT_VIDEOS_KEY]),
       video,
     ),
-  });
+  };
+
+  if (nextSessionIndex.length !== prevSessionIndex.length) {
+    updates[sessionIndexKey] = nextSessionIndex;
+  }
+  if (nextVideoIndex.length !== prevVideoIndex.length) {
+    updates[videoIndexKey] = nextVideoIndex;
+  }
+  if (!prevDateIndex.includes(normalized.dateKey)) {
+    updates[WATCH_TIMER_DATE_INDEX_KEY] = sortDateKeys([...prevDateIndex, normalized.dateKey]);
+  }
+
+  await chrome.storage.local.set(updates);
 }
 
 export async function replaceWatchTimerHistory(backup: WatchTimerHistoryBackup): Promise<void> {
