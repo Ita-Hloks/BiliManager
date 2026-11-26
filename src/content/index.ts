@@ -28,6 +28,7 @@ import {
   getSearchSnapshot,
   isSearchPage,
 } from "./searchFilter";
+import { isSearchFilterBypassed, SEARCH_BYPASS_BAR_ID } from "./searchFilter/bypassBar";
 import { applySearchCleanup } from "./searchCleanup";
 import {
   getCachedFavoriteRecommendationPool,
@@ -111,6 +112,7 @@ async function scanCurrentPage() {
   applyPlayerWatchTimer(settings.watchTimerEnabled, settings.watchTimer);
   applyPlayerWatchReminder(settings.watchReminderEnabled, settings.watchReminder);
   if (searchPage) {
+    const onBypassChange = () => scheduleScan(0);
     const cachedRecommendationPool = getCachedFavoriteRecommendationPool(
       settings.favoriteRecommendation,
     );
@@ -119,8 +121,10 @@ async function scanCurrentPage() {
       cachedRecommendationPool ?? undefined,
       settings.uploaderBlocklist,
       settings.uploaderBlockingEnabled,
+      onBypassChange,
     );
     if (
+      isSearchFilterBypassed() ||
       !settings.searchFilter.enabled ||
       !settings.favoriteRecommendation.enabled ||
       settings.favoriteRecommendation.folderIds.length === 0 ||
@@ -139,6 +143,7 @@ async function scanCurrentPage() {
       recommendationPool,
       settings.uploaderBlocklist,
       settings.uploaderBlockingEnabled,
+      onBypassChange,
     );
   }
 
@@ -224,7 +229,10 @@ function watchManagedPage() {
   observer = undefined;
 
   if (isSearchPage()) {
-    observer = new MutationObserver(() => scheduleScan());
+    observer = new MutationObserver(records => {
+      if (records.every(isSearchBypassBarMutation)) return;
+      scheduleScan();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     return;
   }
@@ -330,6 +338,20 @@ function invalidateExtensionContext(): void {
   if (extensionContextInvalidated) return;
   extensionContextInvalidated = true;
   stopManagedPage();
+}
+
+function isSearchBypassBarMutation(record: MutationRecord): boolean {
+  if (record.target instanceof Element && record.target.closest(`#${SEARCH_BYPASS_BAR_ID}`)) {
+    return true;
+  }
+
+  const changedNodes = [...record.addedNodes, ...record.removedNodes];
+  return (
+    changedNodes.length > 0 &&
+    changedNodes.every(
+      node => node instanceof Element && node.closest(`#${SEARCH_BYPASS_BAR_ID}`) !== null,
+    )
+  );
 }
 
 async function sendRuntimeMessage(message: ExtensionMessage) {

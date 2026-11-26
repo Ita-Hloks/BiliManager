@@ -119,3 +119,49 @@
 .bili-manager-favorite-recommendation__source {
   @apply bm-w-fit bm-rounded-full bm-bg-bili-pink bm-px-2 bm-py-0.5 bm-text-[10px] bm-font-semibold bm-text-white;
 }
+#bili-manager-search-bypass-bar {
+  @apply bm-mt-3 bm-box-border bm-inline-flex bm-w-fit bm-max-w-full bm-flex-wrap bm-items-center bm-gap-3 bm-rounded-lg bm-border bm-border-slate-200/90 bm-bg-white/90 bm-px-3.5 bm-py-1.5 bm-font-sans bm-text-[13px] bm-text-slate-700 bm-shadow-sm bm-backdrop-blur-md bm-transition-colors bm-duration-150;
+}
+#bili-manager-search-bypass-bar.bili-manager-search-bypass--fixed {
+  @apply bm-fixed bm-bottom-5 bm-left-1/2 bm-z-[2147483646] bm-mt-0 bm-w-auto bm-max-w-[calc(100vw-2rem)] -bm-translate-x-1/2 bm-rounded-full bm-shadow-[0_10px_28px_rgba(15,23,42,0.14)];
+}
+#bili-manager-search-bypass-bar.bili-manager-page-dark {
+  @apply bm-border-white/15 bm-bg-[#1c1f26]/85 bm-text-slate-200 bm-shadow-[0_6px_20px_rgba(2,8,23,0.32)];
+}
+#bili-manager-search-bypass-bar.bili-manager-search-bypass--active {
+  @apply bm-border-amber-400/50;
+}
+.bili-manager-search-bypass__status {
+  @apply bm-flex bm-min-w-0 bm-items-center bm-gap-2.5;
+}
+.bili-manager-search-bypass__actions {
+  @apply bm-flex bm-shrink-0 bm-items-center bm-gap-1.5;
+}
+.bili-manager-search-bypass__dot {
+  @apply bm-h-2 bm-w-2 bm-shrink-0 bm-rounded-full bm-bg-bili-blue;
+}
+.bili-manager-search-bypass--active .bili-manager-search-bypass__dot {
+  @apply bm-bg-amber-400;
+}
+.bili-manager-search-bypass__summary {
+  @apply bm-truncate bm-font-medium bm-tabular-nums;
+}
+.bili-manager-search-bypass__action {
+  @apply bm-cursor-pointer bm-whitespace-nowrap bm-rounded-md bm-border-0 bm-bg-sky-50 bm-px-3 bm-py-1.5 bm-text-[13px] bm-font-semibold bm-leading-none bm-text-bili-blue bm-transition-colors bm-duration-150 hover:bm-bg-sky-100 focus-visible:bm-outline-none focus-visible:bm-ring-2 focus-visible:bm-ring-bili-blue/40;
+}
+#bili-manager-search-bypass-bar.bili-manager-page-dark .bili-manager-search-bypass__action {
+  @apply bm-bg-bili-blue/20 bm-text-sky-200 hover:bm-bg-bili-blue/30;
+}
+.bili-manager-search-bypass--active .bili-manager-search-bypass__action {
+  @apply bm-bg-bili-blue bm-text-white hover:bm-bg-[#009bd3];
+}
+#bili-manager-search-bypass-bar.bili-manager-page-dark.bili-manager-search-bypass--active
+  .bili-manager-search-bypass__action {
+  @apply bm-bg-bili-blue bm-text-white hover:bm-bg-[#009bd3];
+}
+.bili-manager-search-bypass__dismiss {
+  @apply bm-inline-flex bm-h-7 bm-w-7 bm-cursor-pointer bm-items-center bm-justify-center bm-rounded-md bm-border-0 bm-bg-transparent bm-p-0 bm-text-base bm-leading-none bm-text-slate-400 bm-transition-colors hover:bm-bg-slate-100 hover:bm-text-slate-700 focus-visible:bm-outline-none focus-visible:bm-ring-2 focus-visible:bm-ring-bili-blue/40;
+}
+#bili-manager-search-bypass-bar.bili-manager-page-dark .bili-manager-search-bypass__dismiss {
+  @apply bm-text-slate-400 hover:bm-bg-white/10 hover:bm-text-slate-100;
+}

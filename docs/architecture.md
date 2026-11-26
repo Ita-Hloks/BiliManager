@@ -21,7 +21,7 @@ BiliManager/
     ├── content/                    # 注入 B 站页面的内容脚本与模块化功能单元
     │   ├── index.ts                # 总控编排：生命周期、URL 轮询、MutationObserver、配置同步
     │   ├── style.css               # Content 总样式入口（带 bm- 前缀的 Tailwind utilities + 各模块 CSS）
-    │   ├── searchFilter/           # 搜索页过滤流水线（adapter / ruleEngine / cardPresenter / filterGate）
+    │   ├── searchFilter/           # 搜索页过滤流水线（adapter / ruleEngine / cardPresenter / filterGate / bypassBar）
     │   ├── searchCleanup/          # 搜索页热榜隐藏（html[data-bili-manager-filter-trending]）
     │   ├── blockMenu/              # 视频卡片右下角悬浮“屏蔽”菜单 UI
     │   ├── uploaderBlock/          # 屏蔽 UP 主调用封装
@@ -144,7 +144,8 @@ Content 脚本通过 `boot()` 自举，采用**“单次全量扫描 + 竞态代
 
 1. **DOM 采集（`pageAdapter.ts`）**：扫描搜索页视频卡片，提取标题、高亮状态、UP 主名与 `mid`、课程标记、播放量与弹幕数（支持 `万`/`亿` 中文单位解析及 `.bili-video-card__stats--item` 顺序回退）。
 2. **规则评估（`ruleEngine.ts` + `searchFilter/index.ts`）**：预编译标题与 UP 正则并收集语法错误（透传给 Popup 展示），依次判定正则、课程标签、未命中搜索词、播放量下限、弹幕/播放互动率以及 UP 主屏蔽列表。
-3. **呈现与门控（`cardPresenter.ts` + `filterGate.ts`）**：
+3. **呈现、门控与即时放行（`cardPresenter.ts` + `filterGate.ts` + `bypassBar.ts`）**：
+   - 若处于 `bypassBar` 临时放行会话（按搜索关键词键隔离于内存，不落盘）：跳过卡片遮罩/移除/灰化并还原所有已移除卡片，同时保留屏蔽菜单与统计计数，底部控制条提供“恢复过滤”按钮；
    - 若命中规则且开启 `strictInterception`：创建 HTML Comment 占位节点替换卡片布局根元素（存入 `strictlyRemovedCards` Map），规则变更或切页时可原地恢复。
    - 若命中规则且非严格拦截：按 `favoriteRecommendation` 配置从收藏夹视频池抽样——使用 **FNV-1a 32 位哈希** 对卡片稳定标识分别计算抽样概率与视频索引（排除原卡片自身 BV 号），保证同一页同一卡片在 DOM 重扫时替换结果稳定不闪烁；随后通过 `filterGate.ts` 绑定文档捕获阶段事件实现三态右键解锁。
    - 未命中规则但开启了对应的仅黑白降权选项：添加 `bili-manager-unhighlighted-title` 与 `bili-manager-grayscale-cover`。

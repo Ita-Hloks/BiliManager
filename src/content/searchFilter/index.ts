@@ -6,6 +6,12 @@ import type { FavoriteRecommendationPool } from "../favoriteRecommendation";
 import { pickFavoriteRecommendation } from "../favoriteRecommendation";
 import { detectBilibiliPageTheme } from "../pageTheme";
 import {
+  clearSearchBypassBar,
+  renderSearchBypassBar,
+  resetSearchBypassState,
+  syncSearchSessionKey,
+} from "./bypassBar";
+import {
   applyGrayscaleState,
   clearAllFilterStates,
   clearFilterState,
@@ -45,12 +51,59 @@ export function applySearchFilter(
   recommendationPool: FavoriteRecommendationPool = EMPTY_RECOMMENDATION_POOL,
   uploaderBlocklist: BlockedUploader[] = [],
   uploaderBlockingEnabled = false,
+  onBypassChange: () => void = () => undefined,
 ): SearchFilterStats {
   if (!isSearchPage()) {
+    resetSearchBypassState();
+    clearSearchBypassBar();
     clearBlockMenuControls();
     clearAllFilterStates();
     strictInterceptionWasEnabled = false;
     return createStats(false, settings.enabled, 0, 0, []);
+  }
+
+  const bypassed = syncSearchSessionKey();
+  const evaluator = createSearchCardEvaluator(settings);
+  const pageTheme = detectBilibiliPageTheme();
+
+  if (bypassed) {
+    clearAllFilterStates();
+    strictInterceptionWasEnabled = false;
+    const cards = collectSearchCards();
+    let wouldFilter = 0;
+    let wouldGrayscale = 0;
+
+    for (const card of cards) {
+      const evaluation = evaluateCard(
+        card,
+        evaluator,
+        settings,
+        uploaderBlocklist,
+        uploaderBlockingEnabled,
+      );
+      syncBlockMenuControl({
+        cardEl: card.cardEl,
+        uploader:
+          uploaderBlockingEnabled && !evaluation.blockedUploader
+            ? { mid: card.uploaderMid, name: card.uploader }
+            : null,
+      });
+
+      if (evaluation.activeReasons.length > 0) wouldFilter += 1;
+      else if (shouldGrayscaleCard(settings, evaluation)) wouldGrayscale += 1;
+    }
+
+    renderSearchBypassBar({
+      total: cards.length,
+      filtered: wouldFilter,
+      grayscaled: wouldGrayscale,
+      bypassed: true,
+      regexErrorCount: evaluator.regexErrors.length,
+      pageTheme,
+      onToggleBypass: onBypassChange,
+    });
+
+    return createStats(true, false, cards.length, 0, evaluator.regexErrors);
   }
 
   const pageKey = `${location.pathname}${location.search}`;
@@ -62,12 +115,11 @@ export function applySearchFilter(
   strictInterceptionWasEnabled = settings.strictInterception;
   if (!settings.strictInterception) restoreStrictlyRemovedCards();
 
-  const evaluator = createSearchCardEvaluator(settings);
   const cards = collectSearchCards();
-  const pageTheme = detectBilibiliPageTheme();
   const strictlyRemovedCards = settings.strictInterception ? getStrictlyRemovedCards() : [];
   const restoredCards: SearchCard[] = [];
   let filtered = 0;
+  let grayscaled = 0;
 
   for (const card of strictlyRemovedCards) {
     const evaluation = evaluateCard(
@@ -119,33 +171,45 @@ export function applySearchFilter(
       markFiltered(card, evaluation.activeReasons, pageTheme, recommendation);
     } else {
       clearFilterState(card.cardEl);
-      applyGrayscaleState(
-        card,
-        settings.enabled &&
-          ((settings.grayscaleMissingTitleHighlight &&
-            !settings.filterMissingTitleHighlight &&
-            !evaluation.searchTermMatched) ||
-            (settings.grayscaleLowDanmakuViewRate &&
-              !settings.filterLowDanmakuViewRate &&
-              evaluation.result.lowInteractionRate !== null)),
-      );
+      const shouldGrayscale = shouldGrayscaleCard(settings, evaluation);
+      if (shouldGrayscale) grayscaled += 1;
+      applyGrayscaleState(card, shouldGrayscale);
     }
   }
 
-  return createStats(
-    true,
-    settings.enabled,
-    cards.length + strictlyRemovedCards.length,
+  const total = cards.length + strictlyRemovedCards.length;
+  renderSearchBypassBar({
+    total,
     filtered,
-    evaluator.regexErrors,
-  );
+    grayscaled,
+    bypassed: false,
+    regexErrorCount: evaluator.regexErrors.length,
+    pageTheme,
+    onToggleBypass: onBypassChange,
+  });
+
+  return createStats(true, settings.enabled, total, filtered, evaluator.regexErrors);
 }
 
 export function clearSearchFilter(): void {
   strictInterceptionWasEnabled = false;
+  resetSearchBypassState();
+  clearSearchBypassBar();
   clearAllFilterStates();
   clearBlockMenuControls();
   unbindFilterGateEvents();
+}
+
+function shouldGrayscaleCard(settings: SearchFilterSettings, evaluation: CardEvaluation): boolean {
+  return (
+    settings.enabled &&
+    ((settings.grayscaleMissingTitleHighlight &&
+      !settings.filterMissingTitleHighlight &&
+      !evaluation.searchTermMatched) ||
+      (settings.grayscaleLowDanmakuViewRate &&
+        !settings.filterLowDanmakuViewRate &&
+        evaluation.result.lowInteractionRate !== null))
+  );
 }
 
 function evaluateCard(

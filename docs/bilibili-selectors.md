@@ -36,10 +36,11 @@ BiliManager 直接依赖 B 站网页 DOM 结构、样式变量及公开 Web API�
 | 播放量 / 弹幕数            | `.bili-video-card__stats`, `.so-icon`, `.tags`, `.des`                                                                                                                                                                    | 优先按 `播放量/播放/观看`、`弹幕` 标签解析 `万`/`亿`；缺失时按 `.bili-video-card__stats--item`（回退 `.bili-video-card__stats span, .so-icon`）顺序取 `[0]=播放, [1]=弹幕` |
 | 封面与预览遮罩             | `thumbnail`: `.bili-video-card__cover`, `.bili-video-card__cover img`, `.img`, `.cover`, `img`<br>`preview`: `video`, `.bili-video-card__cover--mask`, `.bili-video-card__cover--hover`, `.v-img__mask`, `.cover-preview` | 遮罩宿主优先取 `.bili-video-card__image`（见 `cardPresenter.ts`）                                                                                                          |
 
-### 2.2 搜索页净化与门控（`searchCleanup/style.css`、`filterGate.ts`）
+### 2.2 搜索页净化、门控与悬浮控制条（`searchCleanup/style.css`、`filterGate.ts`、`bypassBar.ts`）
 
 - **热榜容器**：`html[data-bili-manager-filter-trending="true"] .trending`（隐藏热榜）。
 - **门控导航目标**：`filterGate.ts` 监听 `a[href*='/video/']`、`a[href*='bilibili.com/video/']`、`a[href*='/cheese/play/']`、`a[href*='bilibili.com/cheese/play/']` 及卡片根元素，以处理点击外卡片时的自动重锁。
+- **临时放行控制条**：`#bili-manager-search-bypass-bar` 优先挂载在 `.search-conditions` 末尾（位于排序条件栏下方、结果列表网格之外，继承 `.i_wrapper` 居中对齐）；未找到时依次回退插入到 `.search-page-wrapper` / `.search-page` / `.video-list` 之前或 `document.body`（`src/content/index.ts` 的 `MutationObserver` 会忽略来自该节点内部的变更）。
 
 ---
 
