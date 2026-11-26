@@ -30,7 +30,7 @@
 
 ## 3. 不可违背的工程约束（Hard Rules）
 
-1. **禁止直推/直提交主干**：`scripts/guardBranch.mjs` 与 `.husky/pre-commit` 会拦截 `master`/`main` 分支上的提交；所有开发必须在独立功能/修复分支进行。
+1. **提交前必跑检查**：个人项目允许直接在 `master` 分支提交与推送（较大重构仍建议开功能分支），但每次提交前必须保证 `npm run check && npm run build` 通过。
 2. **双 Vite 构建不可破坏**：
    - `vite.config.ts` 构建 `popup`、`options`、`background`（ES Module）与 `contentStyle`（`dist/assets/content.css`）。
    - `vite.content.config.ts` 必须保持 `formats: ["iife"]` 构建 `dist/assets/content.js`，不得引入顶层 `import`/`export`（`scripts/validateContentBuild.mjs` 会校验并在违规时阻断构建）。

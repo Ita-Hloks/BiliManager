@@ -12,8 +12,7 @@ BiliManager/
 ├── scripts/                        # 构建辅助与工程防呆脚本
 │   ├── prepareHtml.mjs             # 构建前将 src/{popup,options}/index.html 复制到根目录供 Vite 作为入口
 │   ├── validateContentBuild.mjs    # 校验 dist/assets/content.js 非空且不含顶层 import/export
-│   ├── copyManifest.mjs            # 拷贝 manifest.json 到 dist/，并（历史兼容）同步产物到项目根目录
-│   └── guardBranch.mjs             # 拦截向 master/main 分支直接提交
+│   └── copyManifest.mjs            # 拷贝 manifest.json 到 dist/，并（历史兼容）同步产物到项目根目录
 └── src/
     ├── background/                 # Service Worker（独立后台上下文）
     │   ├── index.ts                # 消息路由、watchTimerWriteQueue 串行写入队列

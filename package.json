@@ -5,26 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "node scripts/prepareHtml.mjs \u0026\u0026 vite build \u0026\u0026 vite build --config vite.content.config.ts \u0026\u0026 node scripts/validateContentBuild.mjs \u0026\u0026 node scripts/copyManifest.mjs",
+    "build": "node scripts/prepareHtml.mjs && vite build && vite build --config vite.content.config.ts && node scripts/validateContentBuild.mjs && node scripts/copyManifest.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "format": "prettier \"**/*.{ts,tsx,js,jsx,json,css,md,html,mjs,cjs,yml,yaml}\" --write",
     "format:check": "prettier \"**/*.{ts,tsx,js,jsx,json,css,md,html,mjs,cjs,yml,yaml}\" --check",
-    "check": "npm run typecheck \u0026\u0026 npm run lint \u0026\u0026 npm run format:check",
-    "guard:branch": "node scripts/guardBranch.mjs",
-    "precommit": "npm run guard:branch \u0026\u0026 lint-staged \u0026\u0026 npm run typecheck \u0026\u0026 npm run format:check",
-    "prepare": "husky"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,css,md,html}": [
-      "prettier --write"
-    ]
+    "check": "npm run typecheck && npm run lint && npm run format:check"
   },
   "dependencies": {
     "@types/chrome": "^0.0.287",
@@ -50,8 +38,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.0.8",
     "prettier": "^3.9.4",
     "typescript-eslint": "^8.62.1"
   }
